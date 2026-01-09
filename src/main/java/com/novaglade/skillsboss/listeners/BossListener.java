@@ -22,7 +22,6 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -104,7 +103,7 @@ public class BossListener implements Listener {
         event.setCancelled(true);
         Player player = event.getPlayer();
         ItemStack hand = player.getInventory().getItemInMainHand();
-        if (hand.getType() == Material.AIR)
+        if (hand == null || hand.getType() == Material.AIR)
             return;
 
         if (ItemManager.isCustomItem(hand)) {
@@ -190,7 +189,11 @@ public class BossListener implements Listener {
         BossBar bar = activeBars.get(standUuid);
         if (bar != null) {
             double progress = currentMobs / 6.0;
-            bar.setProgress(Math.max(0.0, Math.min(1.0, progress)));
+            if (progress < 0)
+                progress = 0;
+            if (progress > 1)
+                progress = 1;
+            bar.setProgress(progress);
         }
     }
 
@@ -290,20 +293,13 @@ public class BossListener implements Listener {
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
         if (waveId == 1) {
             for (int i = 0; i < 4; i++) {
-                Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", null, stand.getUniqueId(),
-                        mobs, "MHF_Skeleton");
-                e.getEquipment().setHelmet(createSkull("MHF_Skeleton"));
-                e.getEquipment().setItemInMainHand(new ItemStack(Material.BOW));
-                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(60);
-                e.setHealth(60);
+                Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
+                        stand.getUniqueId(), mobs);
+                e.getEquipment().setHelmet(new ItemStack(Material.GOLDEN_HELMET));
             }
         } else if (waveId == 2) {
             for (int i = 0; i < 2; i++) {
-                Evoker e = (Evoker) spawnMob(loc, EntityType.EVOKER, "§6Ember Mage", null, stand.getUniqueId(), mobs,
-                        "MHF_Blaze");
-                e.getEquipment().setHelmet(createSkull("MHF_Blaze"));
-                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(80);
-                e.setHealth(80);
+                Evoker e = (Evoker) spawnMob(loc, EntityType.EVOKER, "§6Ember Mage", null, stand.getUniqueId(), mobs);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -319,18 +315,14 @@ public class BossListener implements Listener {
         } else if (waveId == 3) {
             for (int i = 0; i < 2; i++) {
                 WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Commander",
-                        Material.NETHERITE_AXE, stand.getUniqueId(), mobs, "MHF_WitherSkeleton");
-                e.getEquipment().setHelmet(createSkull("MHF_WitherSkeleton"));
+                        Material.NETHERITE_AXE, stand.getUniqueId(), mobs);
                 e.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
-                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(200);
-                e.setHealth(200);
-                e.getAttribute(Attribute.SCALE).setBaseValue(1.2);
             }
         }
     }
 
     private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
-            Set<UUID> mobs, String skin) {
+            Set<UUID> mobs) {
         Location spawn = loc.clone().add(Math.random() * 10 - 5, 0, Math.random() * 10 - 5);
         LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(spawn, type);
         e.setCustomName(name);
@@ -343,33 +335,23 @@ public class BossListener implements Listener {
         return e;
     }
 
-    private ItemStack createSkull(String owner) {
-        ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
-        SkullMeta meta = (SkullMeta) skull.getItemMeta();
-        if (meta != null) {
-            meta.setOwningPlayer(Bukkit.getOfflinePlayer(owner));
-            skull.setItemMeta(meta);
-        }
-        return skull;
-    }
-
     private void spawnBosses(Location loc) {
         playerBroadcast(loc.getWorld(), Component.text("THE OVERLORDS OF THE AVERNUS MATERIALIZE!",
                 NamedTextColor.DARK_RED, TextDecoration.BOLD));
         String[] titles = { "§4§lIgnis", "§5§lAnima", "§1§lAbyss", "§c§lAres" };
         BarColor[] colors = { BarColor.RED, BarColor.PURPLE, BarColor.BLUE, BarColor.RED };
-        String[] skinOwners = { "MHF_LavaSlime", "MHF_Enderman", "MHF_WitherSkeleton", "MHF_CaveSpider" };
 
         for (int i = 0; i < 4; i++) {
             Location spawn = loc.clone().add(Math.cos(i * Math.PI / 2) * 5, 0, Math.sin(i * Math.PI / 2) * 5);
             WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
             boss.setCustomName(titles[i]);
             boss.setCustomNameVisible(true);
-            boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(600);
-            boss.setHealth(600);
-            boss.getAttribute(Attribute.SCALE).setBaseValue(1.3);
 
-            boss.getEquipment().setHelmet(createSkull(skinOwners[i]));
+            if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
+                boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(600);
+                boss.setHealth(600);
+            }
+
             boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
             boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
             boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
@@ -377,9 +359,9 @@ public class BossListener implements Listener {
             Material weapon = i == 3 ? Material.NETHERITE_AXE : Material.NETHERITE_SWORD;
             boss.getEquipment().setItemInMainHand(new ItemStack(weapon));
 
-            if (i == 0)
+            if (i == 0 && boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                 boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.45);
-            if (i == 3)
+            if (i == 3 && boss.getAttribute(Attribute.KNOCKBACK_RESISTANCE) != null)
                 boss.getAttribute(Attribute.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
 
             ritualTeam.addEntry(boss.getUniqueId().toString());
@@ -401,7 +383,11 @@ public class BossListener implements Listener {
                         return;
                     }
                     double progress = boss.getHealth() / 600.0;
-                    bar.setProgress(Math.max(0.0, Math.min(1.0, progress)));
+                    if (progress < 0)
+                        progress = 0;
+                    if (progress > 1)
+                        progress = 1;
+                    bar.setProgress(progress);
 
                     Location bLoc = boss.getLocation();
                     if (type == 0)
