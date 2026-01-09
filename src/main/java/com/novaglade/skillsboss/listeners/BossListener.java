@@ -23,6 +23,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.EulerAngle;
@@ -36,8 +38,6 @@ public class BossListener implements Listener {
 
     private static final NamespacedKey ALTAR_KEY = new NamespacedKey(SkillsBoss.getInstance(), "boss_altar");
     private static final NamespacedKey WAVE_MOB_KEY = new NamespacedKey(SkillsBoss.getInstance(), "wave_mob");
-    private static final NamespacedKey BOSS_COLLISION_KEY = new NamespacedKey(SkillsBoss.getInstance(),
-            "boss_collision");
 
     private static boolean transitionActive = false;
     private static Location transitionPortal = null;
@@ -50,7 +50,6 @@ public class BossListener implements Listener {
     private Team bossTeam;
 
     public BossListener() {
-        // Setup team to prevent friendly fire between bosses
         org.bukkit.scoreboard.Scoreboard sb = Bukkit.getScoreboardManager().getMainScoreboard();
         bossTeam = sb.getTeam("AvernusBosses");
         if (bossTeam == null) {
@@ -69,30 +68,27 @@ public class BossListener implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK)
             return;
         if (event.getHand() != EquipmentSlot.HAND)
-            return; // Prevent double trigger
-
-        ItemStack item = event.getItem();
-        if (item == null || item.getType() == Material.AIR)
             return;
 
-        if (ItemManager.isBossSpawnItem(item)) {
-            event.setCancelled(true);
-            Block block = event.getClickedBlock();
-            if (block == null)
-                return;
+        ItemStack item = event.getItem();
+        if (item == null || !ItemManager.isBossSpawnItem(item))
+            return;
 
-            Location center = block.getLocation().add(0.5, 1, 0.5);
-            item.setAmount(item.getAmount() - 1);
+        event.setCancelled(true);
+        Block block = event.getClickedBlock();
+        if (block == null)
+            return;
 
-            playerBroadcast(center.getWorld(),
-                    Component.text("The fabrics of space-time rupture... The Avernus has arrived.", NamedTextColor.RED,
-                            TextDecoration.BOLD));
-            generateSmallAltar(center);
-            spawnAltarArmorStand(center.clone().add(0, 0.1, 0));
+        Location center = block.getLocation().add(0.5, 1, 0.5);
+        item.setAmount(item.getAmount() - 1);
 
-            center.getWorld().strikeLightningEffect(center);
-            center.getWorld().playSound(center, Sound.ENTITY_WITHER_SPAWN, 1f, 0.5f);
-        }
+        playerBroadcast(center.getWorld(),
+                Component.text("A rift in the Avernus opens...", NamedTextColor.RED, TextDecoration.BOLD));
+        generateSmallAltar(center);
+        spawnAltarArmorStand(center.clone().add(0, 0.1, 0));
+
+        center.getWorld().strikeLightningEffect(center);
+        center.getWorld().playSound(center, Sound.ENTITY_WITHER_SPAWN, 1f, 0.5f);
     }
 
     @EventHandler
@@ -150,7 +146,6 @@ public class BossListener implements Listener {
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
 
-        // Handle Wave Mob tracking
         if (entity.getPersistentDataContainer().has(WAVE_MOB_KEY, PersistentDataType.STRING)) {
             String standUuidStr = entity.getPersistentDataContainer().get(WAVE_MOB_KEY, PersistentDataType.STRING);
             if (standUuidStr != null) {
@@ -163,10 +158,8 @@ public class BossListener implements Listener {
             }
         }
 
-        // Handle Boss Group tracking
         if (bossGroup.contains(entity.getUniqueId())) {
             bossGroup.remove(entity.getUniqueId());
-
             BossBar bar = activeBars.get(entity.getUniqueId());
             if (bar != null) {
                 bar.removeAll();
@@ -176,9 +169,7 @@ public class BossListener implements Listener {
             if (bossGroup.isEmpty()) {
                 Location deathLoc = entity.getLocation();
                 playerBroadcast(deathLoc.getWorld(),
-                        Component.text("THE OVERLORDS ARE DEFEATED! PROCEED TO THE PORTAL!", NamedTextColor.GOLD,
-                                TextDecoration.BOLD));
-
+                        Component.text("THE OVERLORDS ARE DEFEATED!", NamedTextColor.GOLD, TextDecoration.BOLD));
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -224,7 +215,6 @@ public class BossListener implements Listener {
             activatingStands.add(standUuid);
 
             activeWaveMobs.put(standUuid, Collections.synchronizedSet(new HashSet<>()));
-
             BossBar bar = Bukkit.createBossBar("§4§lThe Avernus Ritual", BarColor.RED, BarStyle.SEGMENTED_10);
             for (Player p : stand.getWorld().getPlayers()) {
                 bar.addPlayer(p);
@@ -246,9 +236,7 @@ public class BossListener implements Listener {
                         cancel();
                         return;
                     }
-
                     Set<UUID> mobs = activeWaveMobs.get(standUuid);
-
                     if (inTransition) {
                         transitionTicks--;
                         if (transitionTicks <= 0) {
@@ -257,12 +245,11 @@ public class BossListener implements Listener {
                         }
                         return;
                     }
-
                     if (mobs != null && !mobs.isEmpty()) {
                         mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
                         if (mobs.isEmpty()) {
                             stage++;
-                            stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.2f, 1.8f);
+                            stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_ENDER_EYE_DEATH, 1.5f, 0.5f);
                             if (stage < 3) {
                                 inTransition = true;
                                 transitionTicks = 5;
@@ -271,23 +258,20 @@ public class BossListener implements Listener {
                             return;
                         }
                     }
-
                     if (stage == 0 && !inTransition && (mobs == null || mobs.isEmpty())) {
                         bar.setTitle("§c§lWave 1: Soul Stalkers");
-                        playerBroadcast(stand.getWorld(),
-                                Component.text("The air grows cold with the whispers of souls...", NamedTextColor.RED));
+                        playerBroadcast(stand.getWorld(), Component.text("The air grows cold...", NamedTextColor.RED));
                         inTransition = true;
                         transitionTicks = 5;
                     } else if (stage == 1 && !inTransition) {
                         bar.setTitle("§6§lWave 2: Infernal Phalanx");
-                        playerBroadcast(stand.getWorld(),
-                                Component.text("The nether erupts from below!", NamedTextColor.GOLD));
+                        playerBroadcast(stand.getWorld(), Component.text("The nether erupts!", NamedTextColor.GOLD));
                         inTransition = true;
                         transitionTicks = 5;
                     } else if (stage == 2 && !inTransition) {
                         bar.setTitle("§4§lWave 3: The Pit Lords");
-                        playerBroadcast(stand.getWorld(), Component
-                                .text("The elite guardians of the pit have come for you!", NamedTextColor.DARK_RED));
+                        playerBroadcast(stand.getWorld(),
+                                Component.text("The elite have come!", NamedTextColor.DARK_RED));
                         inTransition = true;
                         transitionTicks = 5;
                     } else if (stage == 3) {
@@ -309,7 +293,6 @@ public class BossListener implements Listener {
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
         if (mobs == null)
             return;
-
         if (waveNum == 1) {
             for (int i = 0; i < 10; i++) {
                 Location spawn = loc.clone().add(Math.random() * 8 - 4, 0, Math.random() * 8 - 4);
@@ -328,7 +311,6 @@ public class BossListener implements Listener {
                 b.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
                         stand.getUniqueId().toString());
                 mobs.add(b.getUniqueId());
-
                 Blaze f = (Blaze) loc.getWorld().spawnEntity(spawn.clone().add(0, 3, 0), EntityType.BLAZE);
                 f.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
                         stand.getUniqueId().toString());
@@ -349,35 +331,33 @@ public class BossListener implements Listener {
 
     private void spawnBosses(Location loc) {
         playerBroadcast(loc.getWorld(),
-                Component.text("THE OVERLORDS OF AVERNUS HAVE ARRIVED!", NamedTextColor.DARK_RED, TextDecoration.BOLD));
-
+                Component.text("THE OVERLORDS HAVE ARRIVED!", NamedTextColor.DARK_RED, TextDecoration.BOLD));
         String[] titles = { "§4§lIgnis", "§4§lSoul", "§4§lVoid", "§4§lKane" };
         BarColor[] colors = { BarColor.RED, BarColor.PURPLE, BarColor.BLUE, BarColor.WHITE };
-
         for (int i = 0; i < 4; i++) {
             Location spawn = loc.clone().add(Math.cos(i * Math.PI / 2) * 5, 0, Math.sin(i * Math.PI / 2) * 5);
             WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
-            boss.setCustomName(titles[i] + " - Avernus Overlord");
+            boss.setCustomName(titles[i]);
             boss.setCustomNameVisible(true);
             boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(800);
             boss.setHealth(800);
-            boss.getAttribute(Attribute.SCALE).setBaseValue(2.5);
-
+            boss.getAttribute(Attribute.SCALE).setBaseValue(2.0);
             boss.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
             boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
             boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
             boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
             boss.getEquipment().setItemInMainHand(new ItemStack(Material.NETHERITE_SWORD));
-
+            if (i == 0)
+                boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.4);
+            if (i == 3)
+                boss.getAttribute(Attribute.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
             bossTeam.addEntry(boss.getUniqueId().toString());
             bossGroup.add(boss.getUniqueId());
-
             BossBar bar = Bukkit.createBossBar(titles[i], colors[i], BarStyle.SOLID);
             for (Player p : boss.getWorld().getPlayers()) {
                 bar.addPlayer(p);
             }
             activeBars.put(boss.getUniqueId(), bar);
-
             final int type = i;
             new BukkitRunnable() {
                 @Override
@@ -389,35 +369,44 @@ public class BossListener implements Listener {
                         return;
                     }
                     bar.setProgress(Math.clamp(boss.getHealth() / 800.0, 0, 1));
-
-                    // Specialized Abilities
                     double rand = Math.random();
-                    if (rand < 0.1) {
-                        if (type == 0) { // Ignis: Fire Blast
-                            boss.getWorld().spawnParticle(Particle.FLAME, boss.getLocation(), 100, 3, 1, 3, 0.1);
-                            for (Entity e : boss.getNearbyEntities(6, 6, 6)) {
+                    if (rand < 0.12) {
+                        if (type == 0) { // Ignis
+                            boss.getWorld().spawnParticle(Particle.FLAME, boss.getLocation(), 200, 4, 1, 4, 0.2);
+                            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 1f);
+                            for (Entity e : boss.getNearbyEntities(8, 6, 8)) {
                                 if (e instanceof Player p && !p.isOp())
-                                    p.setFireTicks(100);
+                                    p.setFireTicks(160);
                             }
-                        } else if (type == 1) { // Soul: Healing pulse
-                            boss.getWorld().spawnParticle(Particle.SOUL, boss.getLocation(), 50, 2, 2, 2, 0.05);
+                        } else if (type == 1) { // Soul
+                            boss.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), 100, 3, 2, 3,
+                                    0.05);
                             for (UUID id : bossGroup) {
                                 LivingEntity b = (LivingEntity) Bukkit.getEntity(id);
                                 if (b != null && b.isValid())
-                                    b.setHealth(Math.min(800, b.getHealth() + 30));
+                                    b.setHealth(Math.min(800, b.getHealth() + 40));
                             }
-                        } else if (type == 2) { // Void: Massive Pull
+                            for (Entity e : boss.getNearbyEntities(10, 10, 10)) {
+                                if (e instanceof Player p && !p.isOp())
+                                    p.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 100, 1));
+                            }
+                        } else if (type == 2) { // Void
                             boss.getWorld().spawnParticle(Particle.PORTAL, boss.getLocation(), 200, 10, 2, 10, 0);
                             for (Entity e : boss.getNearbyEntities(12, 12, 12)) {
                                 if (e instanceof Player p && !p.isOp())
                                     p.setVelocity(boss.getLocation().subtract(p.getLocation()).toVector().normalize()
-                                            .multiply(1.5));
+                                            .multiply(1.6));
                             }
-                        } else if (type == 3) { // Kane: Earthquake
-                            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_ROAR, 1f, 0.5f);
-                            for (Entity e : boss.getNearbyEntities(8, 5, 8)) {
-                                if (e instanceof Player p && !p.isOp())
-                                    p.setVelocity(new Vector(0, 1.5, 0));
+                        } else if (type == 3) { // Kane
+                            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, 2f,
+                                    0.5f);
+                            boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 5, 4, 0.5, 4,
+                                    0);
+                            for (Entity e : boss.getNearbyEntities(10, 5, 10)) {
+                                if (e instanceof Player p && !p.isOp()) {
+                                    p.setVelocity(new Vector(0, 1.8, 0));
+                                    p.damage(8, boss);
+                                }
                             }
                         }
                     }
@@ -427,7 +416,6 @@ public class BossListener implements Listener {
     }
 
     private void generateSmallAltar(Location center) {
-        // Simple 3x3 Nether Altar
         for (int x = -1; x <= 1; x++) {
             for (int z = -1; z <= 1; z++) {
                 Location l = center.clone().add(x, -1, z);
@@ -435,10 +423,8 @@ public class BossListener implements Listener {
                     l.getBlock().setType(Material.NETHERITE_BLOCK);
                 else
                     l.getBlock().setType(Material.CRYING_OBSIDIAN);
-
-                if (Math.abs(x) == 1 && Math.abs(z) == 1) {
+                if (Math.abs(x) == 1 && Math.abs(z) == 1)
                     center.clone().add(x, 0, z).getBlock().setType(Material.SOUL_LANTERN);
-                }
             }
         }
     }
