@@ -84,13 +84,13 @@ public class AdminCommand implements CommandExecutor {
             SkillsBoss.setProgressionLevel(0);
             player.getWorld().setSpawnLocation(player.getLocation());
             player.getWorld().getWorldBorder().setCenter(player.getLocation());
-            player.getWorld().getWorldBorder().setSize(10);
+            player.getWorld().getWorldBorder().setSize(15);
 
             for (Player online : Bukkit.getOnlinePlayers()) {
                 online.teleport(player.getLocation());
             }
 
-            sender.sendMessage(Component.text("Progression 0 set: Spawn updated, All players TPed, Border set to 10.",
+            sender.sendMessage(Component.text("Progression 0 set: Spawn updated, All players TPed, Border set to 15.",
                     NamedTextColor.GREEN));
         } else if (level == 1) {
             startProgressionOneCountdown(player);
@@ -109,7 +109,7 @@ public class AdminCommand implements CommandExecutor {
             public void run() {
                 int seconds = (int) Math.ceil(ticks / 20.0);
 
-                // Once per second: Show Title & Play Sound
+                // Once per second: Show Localized Title & Play Sound
                 if (ticks % 20 == 0) {
                     Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.RED,
                             TextDecoration.BOLD);
@@ -119,9 +119,11 @@ public class AdminCommand implements CommandExecutor {
                             Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800), Duration.ofMillis(100)));
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
-                        online.showTitle(title);
-                        online.playSound(online.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_PLING, 1f,
-                                0.5f + (5 - seconds) * 0.2f);
+                        if (online.getLocation().distance(center) <= 50.0) {
+                            online.showTitle(title);
+                            online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f,
+                                    0.5f + (5 - seconds) * 0.2f);
+                        }
                     }
                 }
 
@@ -176,6 +178,11 @@ public class AdminCommand implements CommandExecutor {
                     Component chatMsg = Component.text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD)
                             .append(Component.text("A New Beginning", NamedTextColor.DARK_AQUA, TextDecoration.BOLD));
 
+                    // Slow fade times: 1s in, 4s stay, 2s out
+                    Title.Times times = Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(4),
+                            Duration.ofSeconds(2));
+                    Title finalTitle = Title.title(mainTitle, subTitle, times);
+
                     // Final impact effects
                     center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 10, 2, 2, 2, 0.1);
                     center.getWorld().playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
@@ -185,9 +192,11 @@ public class AdminCommand implements CommandExecutor {
                     center.getWorld().getWorldBorder().setSize(750);
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
-                        online.sendMessage(chatMsg);
-                        online.showTitle(Title.title(mainTitle, subTitle));
-                        online.removePotionEffect(PotionEffectType.NAUSEA);
+                        if (online.getLocation().distance(center) <= 50.0) {
+                            online.sendMessage(chatMsg);
+                            online.showTitle(finalTitle);
+                            online.removePotionEffect(PotionEffectType.NAUSEA);
+                        }
                     }
                     cancel();
                 }
