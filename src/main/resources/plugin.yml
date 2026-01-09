@@ -1,0 +1,11 @@
+name: SkillsBoss
+version: '${project.version}'
+main: com.novaglade.skillsboss.SkillsBoss
+api-version: '1.21'
+author: NovaGlade
+description: A powerful skills and boss plugin.
+commands:
+  admin:
+    description: Administration command for SkillsBoss.
+    usage: /admin <subcommand>
+    permission: skillsboss.admin
