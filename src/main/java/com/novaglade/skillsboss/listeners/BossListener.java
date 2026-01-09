@@ -297,14 +297,10 @@ public class BossListener implements Listener {
                 Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 e.getEquipment().setHelmet(new ItemStack(Material.GOLDEN_HELMET));
-                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(60);
-                e.setHealth(60);
             }
         } else if (waveId == 2) {
             for (int i = 0; i < 2; i++) {
                 Evoker e = (Evoker) spawnMob(loc, EntityType.EVOKER, "§6Ember Mage", null, stand.getUniqueId(), mobs);
-                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(100);
-                e.setHealth(100);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -322,10 +318,6 @@ public class BossListener implements Listener {
                 WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Commander",
                         Material.NETHERITE_AXE, stand.getUniqueId(), mobs);
                 e.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
-                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(250);
-                e.setHealth(250);
-                if (e.getAttribute(Attribute.SCALE) != null)
-                    e.getAttribute(Attribute.SCALE).setBaseValue(1.2);
             }
         }
     }
@@ -361,7 +353,7 @@ public class BossListener implements Listener {
                 boss.setHealth(600);
             }
             if (boss.getAttribute(Attribute.SCALE) != null) {
-                boss.getAttribute(Attribute.SCALE).setBaseValue(1.3);
+                boss.getAttribute(Attribute.SCALE).setBaseValue(2.0); // Reverted to 34's 2.0 scale as requested
             }
 
             boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
@@ -412,48 +404,63 @@ public class BossListener implements Listener {
                         bLoc.getWorld().spawnParticle(Particle.SMOKE, bLoc.add(0, 1, 0), 3, 0.2, 0.5, 0.2, 0.02);
 
                     double rand = Math.random();
-                    if (rand < 0.15) {
+                    if (rand < 0.12) {
                         if (type == 0) { // Ignis
-                            boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 1, 0, 0, 0,
-                                    0);
-                            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1.2f);
-                            for (Entity e : boss.getNearbyEntities(6, 4, 6)) {
-                                if (e instanceof Player && !((Player) e).isOp()) {
-                                    ((Player) e).setFireTicks(100);
+                            boss.getWorld().spawnParticle(Particle.FLAME, boss.getLocation(), 200, 4, 1, 4, 0.2);
+                            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 1f);
+                            for (Entity e : boss.getNearbyEntities(8, 6, 8)) {
+                                if (e instanceof Player) {
+                                    Player target = (Player) e;
+                                    if (!target.isOp())
+                                        target.setFireTicks(160);
                                 }
                             }
                         } else if (type == 1) { // Anima
-                            for (Entity e : boss.getNearbyEntities(8, 8, 8)) {
-                                if (e instanceof Player && !((Player) e).isOp()) {
-                                    Player p = (Player) e;
-                                    p.damage(4, boss);
-                                    boss.setHealth(Math.min(600, boss.getHealth() + 15));
-                                    p.getWorld().spawnParticle(Particle.HEART, p.getLocation().add(0, 1.5, 0), 1);
+                            boss.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), 100, 3, 2, 3,
+                                    0.05);
+                            for (UUID id : bossGroup) {
+                                Entity bEnt = Bukkit.getEntity(id);
+                                if (bEnt instanceof LivingEntity) {
+                                    LivingEntity b = (LivingEntity) bEnt;
+                                    if (b.isValid())
+                                        b.setHealth(Math.min(600, b.getHealth() + 40));
+                                }
+                            }
+                            for (Entity e : boss.getNearbyEntities(10, 10, 10)) {
+                                if (e instanceof Player) {
+                                    Player target = (Player) e;
+                                    if (!target.isOp())
+                                        target.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 100, 1));
                                 }
                             }
                         } else if (type == 2) { // Abyss
-                            boss.getWorld().playSound(boss.getLocation(), Sound.BLOCK_REGENERATION_STATION_CHARGE, 1f,
-                                    0.5f);
-                            for (Entity e : boss.getNearbyEntities(10, 10, 10)) {
-                                if (e instanceof Player && !((Player) e).isOp()) {
-                                    Player p = (Player) e;
-                                    p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0));
-                                    p.setVelocity(boss.getLocation().subtract(p.getLocation()).toVector().normalize()
-                                            .multiply(1.2));
+                            boss.getWorld().spawnParticle(Particle.PORTAL, boss.getLocation(), 200, 10, 2, 10, 0);
+                            for (Entity e : boss.getNearbyEntities(12, 12, 12)) {
+                                if (e instanceof Player) {
+                                    Player target = (Player) e;
+                                    if (!target.isOp())
+                                        target.setVelocity(boss.getLocation().subtract(target.getLocation()).toVector()
+                                                .normalize().multiply(1.6));
                                 }
                             }
                         } else if (type == 3) { // Ares
-                            LivingEntity target = boss.getTarget();
-                            if (target != null) {
-                                Vector leap = target.getLocation().subtract(boss.getLocation()).toVector().normalize()
-                                        .multiply(1.5).setY(0.4);
-                                boss.setVelocity(leap);
-                                boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_RAVAGER_ATTACK, 1f, 1f);
+                            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, 2f,
+                                    0.5f);
+                            boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 5, 4, 0.5, 4,
+                                    0);
+                            for (Entity e : boss.getNearbyEntities(10, 5, 10)) {
+                                if (e instanceof Player) {
+                                    Player target = (Player) e;
+                                    if (!target.isOp()) {
+                                        target.setVelocity(new Vector(0, 1.8, 0));
+                                        target.damage(8, boss);
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }.runTaskTimer(SkillsBoss.getInstance(), 10, 10);
+            }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
         }
     }
 

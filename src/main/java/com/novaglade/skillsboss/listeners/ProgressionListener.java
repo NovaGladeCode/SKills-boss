@@ -32,11 +32,12 @@ public class ProgressionListener implements Listener {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
 
+        if (!(event.getWhoClicked() instanceof Player))
+            return;
         Player player = (Player) event.getWhoClicked();
         if (player.isOp())
             return;
 
-        // check current item, cursor, AND everything else locally
         checkAndRemove(player);
 
         ItemStack item = event.getCurrentItem();
@@ -106,7 +107,6 @@ public class ProgressionListener implements Listener {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
 
-        // Phase 1: Block Nether Entry
         if (SkillsBoss.getProgressionLevel() == 1 && event.getTo() != null
                 && event.getTo().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) {
             event.setCancelled(true);
@@ -114,7 +114,6 @@ public class ProgressionListener implements Listener {
                     net.kyori.adventure.text.format.NamedTextColor.RED));
         }
 
-        // Phase 2: Block Nether EXIT
         if (SkillsBoss.getProgressionLevel() == 2
                 && event.getFrom().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) {
             if (event.getTo() != null
@@ -132,7 +131,6 @@ public class ProgressionListener implements Listener {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
 
-        // Block Protection III+ locally
         event.getEnchantsToAdd().entrySet().removeIf(
                 entry -> entry.getKey().equals(org.bukkit.enchantments.Enchantment.PROTECTION) && entry.getValue() > 2);
     }
@@ -161,8 +159,6 @@ public class ProgressionListener implements Listener {
             return;
         checkAndRemove(event.getPlayer());
 
-        // Handle pulling missed players (Logic triggered via BossListener shared state
-        // or similar)
         if (SkillsBoss.getProgressionLevel() == 2 && BossListener.isTransitionActive() &&
                 event.getPlayer().getWorld().getEnvironment() != org.bukkit.World.Environment.NETHER) {
             BossListener.startPullingPlayer(event.getPlayer());

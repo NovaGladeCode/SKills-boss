@@ -15,8 +15,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.time.Duration;
@@ -24,8 +22,7 @@ import java.time.Duration;
 public class AdminCommand implements CommandExecutor {
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label,
-            String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
         if (!sender.isOp()) {
             sender.sendMessage(Component.text("You do not have permission to use this command.", NamedTextColor.RED));
@@ -112,7 +109,6 @@ public class AdminCommand implements CommandExecutor {
                 int seconds = (int) Math.ceil(ticks / 20.0);
                 double progress = 1.0 - ((double) ticks / maxTicks);
 
-                // Once per second: Show Localized Title & Play Sound
                 if (ticks % 20 == 0) {
                     Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.RED,
                             TextDecoration.BOLD);
@@ -130,7 +126,7 @@ public class AdminCommand implements CommandExecutor {
                     }
                 }
 
-                // 1. Eight Counter-Rotating Ground Rings (Maximum Geometry)
+                // Ritual effects logic stays same
                 int layersToShow = Math.min(8, (int) (progress * 10) + 1);
                 for (int layer = 1; layer <= layersToShow; layer++) {
                     double rSize = (2.2 * layer);
@@ -141,12 +137,9 @@ public class AdminCommand implements CommandExecutor {
                         double angle = (ticks * speed + i * (2 * Math.PI / density));
                         double x = Math.cos(angle) * rSize;
                         double z = Math.sin(angle) * rSize;
-
                         Particle p = (layer % 3 == 0 ? Particle.WITCH
                                 : (layer % 3 == 1 ? Particle.SOUL_FIRE_FLAME : Particle.END_ROD));
                         world.spawnParticle(p, center.clone().add(x, 0.1, z), 2, 0.05, 0, 0.05, 0);
-
-                        // Escalating Energy Beams (Center-focused)
                         if (ticks % 3 == 0) {
                             world.spawnParticle(Particle.ENCHANT, center.clone().add(x, progress * 15, z), 1, 0, 0, 0,
                                     0.05);
@@ -154,7 +147,6 @@ public class AdminCommand implements CommandExecutor {
                     }
                 }
 
-                // 2. Rising Soul Chains (8 compass points)
                 if (progress > 0.2) {
                     for (int i = 0; i < 8; i++) {
                         double angle = i * (Math.PI / 4);
@@ -169,7 +161,6 @@ public class AdminCommand implements CommandExecutor {
                     }
                 }
 
-                // 3. Horizontal Lightning Arcs (Ground Network)
                 if (progress > 0.4 && ticks % 3 == 0) {
                     for (int i = 0; i < 6; i++) {
                         double angle = Math.random() * 2 * Math.PI;
@@ -178,7 +169,6 @@ public class AdminCommand implements CommandExecutor {
                         Location p1 = center.clone().add(Math.cos(angle) * startR, 0.1, Math.sin(angle) * startR);
                         Location p2 = center.clone().add(Math.cos(angle + 0.2) * endR, 0.1,
                                 Math.sin(angle + 0.2) * endR);
-
                         for (double d = 0; d < 1.0; d += 0.1) {
                             Location arc = p1.clone().add(p2.clone().subtract(p1).toVector().multiply(d));
                             world.spawnParticle(Particle.ELECTRIC_SPARK, arc.add(0, Math.random() * 0.2, 0), 1, 0, 0, 0,
@@ -187,30 +177,25 @@ public class AdminCommand implements CommandExecutor {
                     }
                 }
 
-                // 4. The Ground Vortex (Sweeping Energy)
                 if (progress > 0.6) {
                     for (int i = 0; i < 16; i++) {
                         double angle = (ticks * 0.5 + i * (Math.PI / 8));
                         double vRadius = 10.0 + (progress * 15.0);
-                        double vy = (i * 0.15); // Stays extremely low
                         double vx = Math.cos(angle) * vRadius;
                         double vz = Math.sin(angle) * vRadius;
-                        world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(vx, vy, vz), 2, 0.1, 0, 0.1,
-                                0.02);
+                        world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(vx, (i * 0.15), vz), 2, 0.1, 0,
+                                0.1, 0.02);
                     }
                 }
 
-                // 5. Environmental Glow Ripples
                 if (ticks % 15 == 0) {
                     world.spawnParticle(Particle.GLOW, center, 100, 10, 0.1, 10, 0.02);
                 }
 
-                // Localized Audio (NO SCREEN SHAKE EFFECTS)
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     if (!online.getWorld().equals(world))
                         continue;
-                    double distance = online.getLocation().distance(center);
-                    if (distance <= 60.0) {
+                    if (online.getLocation().distance(center) <= 60.0) {
                         online.playSound(online.getLocation(), Sound.ENTITY_WARDEN_HEARTBEAT, 1.2f,
                                 0.3f + (float) progress * 0.9f);
                         online.playSound(online.getLocation(), Sound.BLOCK_BEACON_AMBIENT, 0.6f,
@@ -220,24 +205,16 @@ public class AdminCommand implements CommandExecutor {
 
                 if (ticks <= 0) {
                     SkillsBoss.setProgressionLevel(1);
-
                     Component mainTitle = Component.text("PROGRESSION I", NamedTextColor.GREEN, TextDecoration.BOLD);
                     Component subTitle = Component.text("A NEW BEGINNING", NamedTextColor.DARK_AQUA,
                             TextDecoration.BOLD);
-                    Component chatMsg = Component.text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD)
-                            .append(Component.text("A New Beginning", NamedTextColor.DARK_AQUA, TextDecoration.BOLD));
+                    Title finalTitle = Title.title(mainTitle, subTitle,
+                            Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(6), Duration.ofSeconds(3)));
 
-                    Title.Times times = Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(6),
-                            Duration.ofSeconds(3));
-                    Title finalTitle = Title.title(mainTitle, subTitle, times);
-
-                    // Final OMNI-IMPACT (Massive sphere and residue)
                     for (int r = 0; r < 20; r++) {
                         world.spawnParticle(Particle.FLASH, center, 100, r * 2, 0.5, r * 2, 0);
                         world.spawnParticle(Particle.SONIC_BOOM, center, 10, r, r, r, 0);
                     }
-
-                    // Super-Sphere of Light (Higher density)
                     for (int i = 0; i < 400; i++) {
                         double phi = Math.acos(-1.0 + (2.0 * i) / 400.0);
                         double theta = Math.sqrt(400.0 * Math.PI) * phi;
@@ -246,8 +223,6 @@ public class AdminCommand implements CommandExecutor {
                         double z = Math.cos(phi) * 15;
                         world.spawnParticle(Particle.END_ROD, center.clone().add(x, y + 1, z), 2, 0, 0, 0, 0.05);
                     }
-
-                    // Lingering Residue (Falling stars)
                     new BukkitRunnable() {
                         int residueTicks = 100;
 
@@ -262,14 +237,14 @@ public class AdminCommand implements CommandExecutor {
                     world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 3.5f, 0.4f);
                     world.playSound(center, Sound.ENTITY_WITHER_DEATH, 3.5f, 0.4f);
                     world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2.5f, 1.0f);
-                    world.spawnParticle(Particle.END_ROD, center, 600, 3, 3, 3, 0.6);
 
                     world.getWorldBorder().setCenter(center);
                     world.getWorldBorder().setSize(750);
-
                     for (Player online : Bukkit.getOnlinePlayers()) {
                         if (online.getWorld().equals(world) && online.getLocation().distance(center) <= 80.0) {
-                            online.sendMessage(chatMsg);
+                            online.sendMessage(Component
+                                    .text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD).append(Component
+                                            .text("A New Beginning", NamedTextColor.DARK_AQUA, TextDecoration.BOLD)));
                             online.showTitle(finalTitle);
                         }
                     }
