@@ -22,6 +22,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
 
 import java.time.Duration;
@@ -58,11 +59,10 @@ public class BossListener implements Listener {
         Location center = block.getLocation().add(0.5, 1, 0.5);
         item.setAmount(item.getAmount() - 1);
 
-        playerBroadcast(center.getWorld(),
-                Component.text("The fabrics of reality tear as the Altar of Avernus rises...",
-                        NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
-        generateRitualPit(center);
-        spawnAltarArmorStand(center.clone().add(0, 0.5, 0));
+        playerBroadcast(center.getWorld(), Component.text("The earth erupts as a shard of Hell manifests...",
+                NamedTextColor.RED, TextDecoration.BOLD));
+        generateSmallAltar(center);
+        spawnAltarArmorStand(center.clone().add(0, 0.1, 0));
     }
 
     @EventHandler
@@ -88,6 +88,7 @@ public class BossListener implements Listener {
             ItemStack chest = stand.getEquipment().getChestplate();
             ItemStack legs = stand.getEquipment().getLeggings();
             ItemStack boots = stand.getEquipment().getBoots();
+            ItemStack mainHand = stand.getEquipment().getItemInMainHand();
 
             if (type == Material.DIAMOND_HELMET && (helmet == null || helmet.getType() == Material.AIR)) {
                 stand.getEquipment().setHelmet(hand.clone());
@@ -101,11 +102,15 @@ public class BossListener implements Listener {
             } else if (type == Material.DIAMOND_BOOTS && (boots == null || boots.getType() == Material.AIR)) {
                 stand.getEquipment().setBoots(hand.clone());
                 accepted = true;
+            } else if (type == Material.DIAMOND_SWORD && (mainHand == null || mainHand.getType() == Material.AIR)) {
+                stand.getEquipment().setItemInMainHand(hand.clone());
+                stand.setRightArmPose(new EulerAngle(Math.toRadians(-90), 0, 0));
+                accepted = true;
             }
 
             if (accepted) {
                 hand.setAmount(hand.getAmount() - 1);
-                stand.getWorld().playSound(stand.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 1.2f);
+                stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_ZOMBIE_VILLAGER_CONVERTED, 1f, 0.8f);
                 checkActivation(stand);
             }
         }
@@ -114,7 +119,6 @@ public class BossListener implements Listener {
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
-
         if (entity.getPersistentDataContainer().has(WAVE_MOB_KEY, PersistentDataType.STRING)) {
             String standUuidStr = entity.getPersistentDataContainer().get(WAVE_MOB_KEY, PersistentDataType.STRING);
             if (standUuidStr != null) {
@@ -129,15 +133,13 @@ public class BossListener implements Listener {
 
         if (entity.getCustomName() != null && entity.getCustomName().contains("THE AVERNUS OVERLORD")) {
             Location deathLoc = entity.getLocation();
-            playerBroadcast(deathLoc.getWorld(),
-                    Component.text("THE OVERLORD IS EXTINGUISHED!", NamedTextColor.GOLD, TextDecoration.BOLD));
-
+            playerBroadcast(deathLoc.getWorld(), Component.text("THE OVERLORD HAS BEEN SEALED BACK TO THE ABYSS!",
+                    NamedTextColor.GOLD, TextDecoration.BOLD));
             BossBar bar = activeBars.get(entity.getUniqueId());
             if (bar != null) {
                 bar.removeAll();
                 activeBars.remove(entity.getUniqueId());
             }
-
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -150,11 +152,7 @@ public class BossListener implements Listener {
     private void updateBossBar(UUID standUuid, int currentMobs) {
         BossBar bar = activeBars.get(standUuid);
         if (bar != null) {
-            if (currentMobs <= 0) {
-                bar.setProgress(0);
-            } else {
-                bar.setProgress(Math.clamp(currentMobs / 12.0, 0.0, 1.0));
-            }
+            bar.setProgress(Math.clamp(currentMobs / 12.0, 0.0, 1.0));
         }
     }
 
@@ -163,17 +161,18 @@ public class BossListener implements Listener {
         ItemStack chest = stand.getEquipment().getChestplate();
         ItemStack legs = stand.getEquipment().getLeggings();
         ItemStack boots = stand.getEquipment().getBoots();
+        ItemStack sword = stand.getEquipment().getItemInMainHand();
 
         boolean full = helmet != null && helmet.getType() != Material.AIR &&
                 chest != null && chest.getType() != Material.AIR &&
                 legs != null && legs.getType() != Material.AIR &&
-                boots != null && boots.getType() != Material.AIR;
+                boots != null && boots.getType() != Material.AIR &&
+                sword != null && sword.getType() != Material.AIR;
 
         if (full) {
             UUID standUuid = stand.getUniqueId();
             activeWaveMobs.put(standUuid, Collections.synchronizedSet(new HashSet<>()));
-
-            BossBar bar = Bukkit.createBossBar("§5§lRitual Progress", BarColor.PURPLE, BarStyle.SEGMENTED_10);
+            BossBar bar = Bukkit.createBossBar("§4§lNether Ritual", BarColor.RED, BarStyle.SEGMENTED_10);
             for (Player p : stand.getWorld().getPlayers()) {
                 bar.addPlayer(p);
             }
@@ -193,10 +192,7 @@ public class BossListener implements Listener {
                         cancel();
                         return;
                     }
-
                     Set<UUID> mobs = activeWaveMobs.get(standUuid);
-
-                    // Handle transition between waves
                     if (waveInTransition) {
                         transitionTicks--;
                         if (transitionTicks <= 0) {
@@ -205,40 +201,37 @@ public class BossListener implements Listener {
                         }
                         return;
                     }
-
-                    // Check if current wave is cleared
                     if (mobs != null && !mobs.isEmpty()) {
                         mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
                         if (mobs.isEmpty()) {
                             stage++;
-                            stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_ENDER_EYE_DEATH, 1.5f, 0.5f);
+                            stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1f, 1.5f);
                             if (stage < 3) {
                                 waveInTransition = true;
-                                transitionTicks = 40; // 2 second delay before next wave
+                                transitionTicks = 40;
                             }
                         } else {
-                            return; // Still fighting
+                            return;
                         }
                     }
 
                     Location loc = stand.getLocation();
-                    if (stage == 0 && !waveInTransition && (mobs == null || mobs.isEmpty())) {
-                        // Start Wave 1
-                        bar.setTitle("§c§lWave 1: The Soulbound");
-                        playerBroadcast(loc.getWorld(),
-                                Component.text("THE VOID WHISPERS...", NamedTextColor.RED, TextDecoration.BOLD));
+                    if (stage == 0 && !waveInTransition) {
+                        bar.setTitle("§c§lWave 1: Soul-Seared Skeletons");
+                        playerBroadcast(loc.getWorld(), Component.text("THE SOULS OF THE DAMNED RISE!",
+                                NamedTextColor.RED, TextDecoration.BOLD));
                         waveInTransition = true;
                         transitionTicks = 40;
                     } else if (stage == 1 && !waveInTransition) {
-                        bar.setTitle("§6§lWave 2: The Infernal Legion");
-                        playerBroadcast(loc.getWorld(),
-                                Component.text("THE HEAT RISES FROM BELOW!", NamedTextColor.GOLD, TextDecoration.BOLD));
+                        bar.setTitle("§6§lWave 2: Infernal Blight");
+                        playerBroadcast(loc.getWorld(), Component.text("THE HEAT BECOMES UNBEARABLE...",
+                                NamedTextColor.GOLD, TextDecoration.BOLD));
                         waveInTransition = true;
                         transitionTicks = 40;
                     } else if (stage == 2 && !waveInTransition) {
-                        bar.setTitle("§b§lWave 3: The Void Guard");
-                        playerBroadcast(loc.getWorld(), Component.text("THE FINAL SENTINELS ARRIVE!",
-                                NamedTextColor.AQUA, TextDecoration.BOLD));
+                        bar.setTitle("§4§lWave 3: Guardians of the Pit");
+                        playerBroadcast(loc.getWorld(), Component.text("THE ELITE GUARD HAS ARRIVED!",
+                                NamedTextColor.DARK_RED, TextDecoration.BOLD));
                         waveInTransition = true;
                         transitionTicks = 40;
                     } else if (stage == 3) {
@@ -261,95 +254,44 @@ public class BossListener implements Listener {
             return;
 
         if (waveNum == 1) {
+            // Soul Skeletons (Fast, Wither Skeletons with bows)
             for (int i = 0; i < 10; i++) {
                 Location spawn = loc.clone().add(Math.random() * 10 - 5, 0, Math.random() * 10 - 5);
-                Vindicator v = (Vindicator) loc.getWorld().spawnEntity(spawn, EntityType.VINDICATOR);
-                v.setCustomName("§7Echo Wraith");
-                v.getAttribute(Attribute.MAX_HEALTH).setBaseValue(40);
-                v.setHealth(40);
-                v.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
+                WitherSkeleton s = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
+                s.setCustomName("§7Soul-Seared Skeleton");
+                s.getEquipment().setItemInMainHand(new ItemStack(Material.BOW));
+                s.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.4);
+                s.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
                         stand.getUniqueId().toString());
-                mobs.add(v.getUniqueId());
-
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (!v.isValid()) {
-                            cancel();
-                            return;
-                        }
-                        Location trail = v.getLocation();
-                        trail.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, trail, 5, 0.1, 0.1, 0.1, 0);
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                trail.getWorld().spawnParticle(Particle.EXPLOSION, trail, 1, 0, 0, 0, 0);
-                                for (Entity e : trail.getWorld().getNearbyEntities(trail, 2, 2, 2)) {
-                                    if (e instanceof Player p && !p.isOp())
-                                        p.damage(4, v);
-                                }
-                            }
-                        }.runTaskLater(SkillsBoss.getInstance(), 30);
-                    }
-                }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
+                mobs.add(s.getUniqueId());
             }
         } else if (waveNum == 2) {
-            for (int i = 0; i < 8; i++) {
+            // Piglin Brutes & Blazes
+            for (int i = 0; i < 6; i++) {
                 Location spawn = loc.clone().add(Math.random() * 12 - 6, 0, Math.random() * 12 - 6);
-                Pillager p = (Pillager) loc.getWorld().spawnEntity(spawn, EntityType.PILLAGER);
-                p.setCustomName("§6Magma Cultist");
-                p.getEquipment().setItemInMainHand(new ItemStack(Material.FIRE_CHARGE));
-                p.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
+                PiglinBrute b = (PiglinBrute) loc.getWorld().spawnEntity(spawn, EntityType.PIGLIN_BRUTE);
+                b.setCustomName("§6Infernal Brute");
+                b.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
                         stand.getUniqueId().toString());
-                mobs.add(p.getUniqueId());
+                mobs.add(b.getUniqueId());
 
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (!p.isValid()) {
-                            cancel();
-                            return;
-                        }
-                        p.getWorld().playSound(p.getLocation(), Sound.ENTITY_BLAZE_SHOOT, 1f, 1f);
-                        for (double a = 0; a < Math.PI * 2; a += Math.PI / 8) {
-                            Location plume = p.getLocation().add(Math.cos(a) * 3, 0.5, Math.sin(a) * 3);
-                            p.getWorld().spawnParticle(Particle.FLAME, plume, 5, 0.1, 0.5, 0.1, 0.05);
-                            for (Entity e : p.getWorld().getNearbyEntities(plume, 1, 1, 1)) {
-                                if (e instanceof Player pl && !pl.isOp())
-                                    pl.setFireTicks(40);
-                            }
-                        }
-                    }
-                }.runTaskTimer(SkillsBoss.getInstance(), 60, 100);
+                Blaze f = (Blaze) loc.getWorld().spawnEntity(spawn.clone().add(0, 4, 0), EntityType.BLAZE);
+                f.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
+                        stand.getUniqueId().toString());
+                mobs.add(f.getUniqueId());
             }
         } else if (waveNum == 3) {
-            for (int i = 0; i < 3; i++) {
+            // Magma Giants (Large Magma Cubes with custom health)
+            for (int i = 0; i < 4; i++) {
                 Location spawn = loc.clone().add(Math.random() * 8 - 4, 0, Math.random() * 8 - 4);
-                IronGolem g = (IronGolem) loc.getWorld().spawnEntity(spawn, EntityType.IRON_GOLEM);
-                g.setCustomName("§bVoid Sentinel");
-                g.getAttribute(Attribute.MAX_HEALTH).setBaseValue(150);
-                g.setHealth(150);
-                g.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
+                MagmaCube m = (MagmaCube) loc.getWorld().spawnEntity(spawn, EntityType.MAGMA_CUBE);
+                m.setSize(6);
+                m.setCustomName("§4Magma Goliath");
+                m.getAttribute(Attribute.MAX_HEALTH).setBaseValue(100);
+                m.setHealth(100);
+                m.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
                         stand.getUniqueId().toString());
-                mobs.add(g.getUniqueId());
-
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (!g.isValid()) {
-                            cancel();
-                            return;
-                        }
-                        g.getWorld().spawnParticle(Particle.PORTAL, g.getLocation().add(0, 1, 0), 50, 4, 1, 4, 0);
-                        for (Entity e : g.getNearbyEntities(8, 8, 8)) {
-                            if (e instanceof Player pl && !pl.isOp()) {
-                                Vector pull = g.getLocation().subtract(pl.getLocation()).toVector().normalize()
-                                        .multiply(0.3);
-                                pl.setVelocity(pull);
-                            }
-                        }
-                    }
-                }.runTaskTimer(SkillsBoss.getInstance(), 40, 40);
+                mobs.add(m.getUniqueId());
             }
         }
     }
@@ -362,7 +304,7 @@ public class BossListener implements Listener {
         boss.setCustomNameVisible(true);
         boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1000);
         boss.setHealth(1000);
-        boss.getAttribute(Attribute.SCALE).setBaseValue(2.0); // Smaller as requested
+        boss.getAttribute(Attribute.SCALE).setBaseValue(2.0);
 
         boss.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
         boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
@@ -389,67 +331,23 @@ public class BossListener implements Listener {
                         Math.clamp(boss.getHealth() / boss.getAttribute(Attribute.MAX_HEALTH).getValue(), 0, 1));
 
                 double rand = Math.random();
-                // Ability 1: Earth Shatter (Launch)
-                if (rand < 0.10) {
+                if (rand < 0.15) { // Earth Shatter
                     boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_ROAR, 1.5f, 0.5f);
                     for (Entity e : boss.getNearbyEntities(12, 5, 12)) {
-                        if (e instanceof Player p && !p.isOp()) {
+                        if (e instanceof Player p && !p.isOp())
                             p.setVelocity(new Vector(0, 1.4, 0));
-                            p.sendMessage(Component.text("The Overlord shatters the earth!", NamedTextColor.RED));
-                        }
                     }
-                }
-                // Ability 2: Wither Volley
-                else if (rand < 0.20) {
-                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1f);
-                    for (Entity e : boss.getNearbyEntities(20, 10, 20)) {
-                        if (e instanceof Player p && !p.isOp()) {
-                            WitherSkull skull = boss.launchProjectile(WitherSkull.class);
-                            skull.setDirection(p.getLocation().add(0, 1, 0).subtract(boss.getEyeLocation()).toVector());
-                        }
-                    }
-                }
-                // Ability 3: Soul Siphon (Heal + Damage)
-                else if (rand < 0.25) {
-                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 2f);
+                } else if (rand < 0.25) { // Soul Siphon
                     boss.getWorld().spawnParticle(Particle.SOUL, boss.getLocation().add(0, 1, 0), 100, 5, 2, 5, 0);
-                    int count = 0;
                     for (Entity e : boss.getNearbyEntities(6, 6, 6)) {
                         if (e instanceof Player p && !p.isOp()) {
                             p.damage(6, boss);
-                            count++;
+                            boss.setHealth(Math.min(1000, boss.getHealth() + 20));
                         }
-                    }
-                    if (count > 0) {
-                        boss.setHealth(Math.min(boss.getAttribute(Attribute.MAX_HEALTH).getValue(),
-                                boss.getHealth() + (count * 20)));
                     }
                 }
             }
         }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
-    }
-
-    private void startProgressionTwoTransition(Location loc) {
-        SkillsBoss.setProgressionLevel(2);
-        transitionActive = true;
-        transitionPortal = loc.clone().add(0, 1, 0);
-
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
-                loc.clone().add(x, y + 1.5, 0).getBlock().setType(Material.NETHER_PORTAL);
-            }
-        }
-
-        Component mainTitle = Component.text("PROGRESSION II", NamedTextColor.RED, TextDecoration.BOLD);
-        Component subTitle = Component.text("ENTER THE AVERNUS", NamedTextColor.DARK_RED, TextDecoration.BOLD);
-        Title title = Title.title(mainTitle, subTitle,
-                Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(5), Duration.ofSeconds(2)));
-
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            p.showTitle(title);
-            p.sendMessage(Component.text("The Altar consumes your reality...", NamedTextColor.DARK_RED));
-            startPullingPlayer(p);
-        }
     }
 
     public static void startPullingPlayer(Player p) {
@@ -466,27 +364,22 @@ public class BossListener implements Listener {
                 }
                 Location pLoc = p.getLocation();
                 Vector dir = transitionPortal.clone().subtract(pLoc).toVector();
-
                 if (dir.length() < 1.5) {
                     p.teleport(transitionPortal);
                     cancel();
                     return;
                 }
-
                 dir.normalize().multiply(0.4);
                 Location next = pLoc.clone().add(dir);
-
                 for (int x = -1; x <= 1; x++) {
                     for (int y = 0; y <= 2; y++) {
                         for (int z = -1; z <= 1; z++) {
                             Block b = next.clone().add(x, y, z).getBlock();
-                            if (b.getType() != Material.AIR && b.getType() != Material.NETHER_PORTAL) {
+                            if (b.getType() != Material.AIR && b.getType() != Material.NETHER_PORTAL)
                                 b.breakNaturally();
-                            }
                         }
                     }
                 }
-
                 p.teleport(next);
                 p.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, pLoc, 10, 0.4, 0.4, 0.4, 0.05);
                 ticks++;
@@ -494,36 +387,40 @@ public class BossListener implements Listener {
         }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
-    private void generateRitualPit(Location center) {
+    private void generateSmallAltar(Location center) {
         World world = center.getWorld();
-        int size = 9;
-
-        for (int x = -size; x <= size; x++) {
-            for (int z = -size; z <= size; z++) {
+        // 3x3 platform
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
                 Location l = center.clone().add(x, -1, z);
-                double dist = Math.sqrt(x * x + z * z);
-
-                if (dist > size)
-                    continue;
-
-                if (dist < 3) {
+                if (x == 0 && z == 0)
                     l.getBlock().setType(Material.NETHERITE_BLOCK);
-                } else if (dist < 6) {
+                else
                     l.getBlock().setType(Material.CRYING_OBSIDIAN);
-                } else {
-                    l.getBlock().setType(Material.POLISHED_BLACKSTONE_BRICKS);
+
+                // Add some cool surrounding deco
+                if (Math.abs(x) == 1 && Math.abs(z) == 1) {
+                    world.getBlockAt(l.clone().add(0, 1, 0)).setType(Material.SOUL_LANTERN);
                 }
             }
         }
+    }
 
-        for (int i = 0; i < 4; i++) {
-            double angle = i * (Math.PI / 2);
-            int rx = (int) (Math.cos(angle) * 7);
-            int rz = (int) (Math.sin(angle) * 7);
-            for (int y = 0; y < 5; y++) {
-                Location p = center.clone().add(rx, y, rz);
-                p.getBlock().setType(y == 4 ? Material.REDSTONE_BLOCK : Material.OBSIDIAN);
+    private void startProgressionTwoTransition(Location loc) {
+        SkillsBoss.setProgressionLevel(2);
+        transitionActive = true;
+        transitionPortal = loc.clone().add(0, 1, 0);
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                loc.clone().add(x, y + 1.5, 0).getBlock().setType(Material.NETHER_PORTAL);
             }
+        }
+        Title title = Title.title(Component.text("PROGRESSION II", NamedTextColor.RED, TextDecoration.BOLD),
+                Component.text("ENTER THE AVERNUS", NamedTextColor.DARK_RED, TextDecoration.BOLD),
+                Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(5), Duration.ofSeconds(2)));
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.showTitle(title);
+            startPullingPlayer(p);
         }
     }
 
@@ -531,7 +428,7 @@ public class BossListener implements Listener {
         ArmorStand stand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
         stand.setBasePlate(false);
         stand.setArms(true);
-        stand.setCustomName("§d§lAltar of Avernus");
+        stand.setCustomName("§4§lThe Avernus Altar");
         stand.setCustomNameVisible(true);
         stand.getPersistentDataContainer().set(ALTAR_KEY, PersistentDataType.BYTE, (byte) 1);
     }
