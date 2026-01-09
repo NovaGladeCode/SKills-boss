@@ -222,7 +222,7 @@ public class BossListener implements Listener {
         activeBars.put(standUuid, ritualBar);
 
         new BukkitRunnable() {
-            int waveNum = 0;
+            int waveNum = 0; // Current wave we are waiting on
             boolean waiting = false;
 
             @Override
@@ -238,13 +238,13 @@ public class BossListener implements Listener {
                     mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
                     if (mobs.isEmpty()) {
                         waiting = false;
-                        waveNum++;
                         stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
                     } else {
                         return;
                     }
                 }
 
+                // If not waiting, spawn the next thing
                 if (waveNum == 0) {
                     startWave(stand, ritualBar, 1);
                     waveNum = 1;
