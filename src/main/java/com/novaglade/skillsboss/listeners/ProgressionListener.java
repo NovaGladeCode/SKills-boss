@@ -19,7 +19,13 @@ public class ProgressionListener implements Listener {
             Material.DIAMOND_CHESTPLATE,
             Material.DIAMOND_LEGGINGS,
             Material.DIAMOND_BOOTS,
-            Material.DIAMOND_SWORD);
+            Material.DIAMOND_SWORD,
+            Material.NETHERITE_HELMET,
+            Material.NETHERITE_CHESTPLATE,
+            Material.NETHERITE_LEGGINGS,
+            Material.NETHERITE_BOOTS,
+            Material.NETHERITE_SWORD,
+            Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -30,11 +36,14 @@ public class ProgressionListener implements Listener {
         if (player.isOp())
             return;
 
+        // check current item, cursor, AND everything else locally
+        checkAndRemove(player);
+
         ItemStack item = event.getCurrentItem();
         if (item != null && RESTRICTED_ITEMS.contains(item.getType())) {
             if (!ItemManager.isCustomItem(item)) {
                 event.setCurrentItem(null);
-                player.sendMessage(net.kyori.adventure.text.Component.text("Regular diamond gear is forbidden!",
+                player.sendMessage(net.kyori.adventure.text.Component.text("This gear is forbidden in Phase One!",
                         net.kyori.adventure.text.format.NamedTextColor.RED));
             }
         }
@@ -43,7 +52,7 @@ public class ProgressionListener implements Listener {
         if (cursor != null && RESTRICTED_ITEMS.contains(cursor.getType())) {
             if (!ItemManager.isCustomItem(cursor)) {
                 event.setCursor(null);
-                player.sendMessage(net.kyori.adventure.text.Component.text("Regular diamond gear is forbidden!",
+                player.sendMessage(net.kyori.adventure.text.Component.text("This gear is forbidden in Phase One!",
                         net.kyori.adventure.text.format.NamedTextColor.RED));
             }
         }
@@ -63,7 +72,7 @@ public class ProgressionListener implements Listener {
             if (!ItemManager.isCustomItem(item)) {
                 event.setCancelled(true);
                 event.getItem().remove();
-                player.sendMessage(net.kyori.adventure.text.Component.text("You cannot pick up regular diamond gear!",
+                player.sendMessage(net.kyori.adventure.text.Component.text("You cannot pick up this gear in Phase One!",
                         net.kyori.adventure.text.format.NamedTextColor.RED));
             }
         }
@@ -74,8 +83,6 @@ public class ProgressionListener implements Listener {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
 
-        // PrepareItemCraftEvent doesn't easily give the player until they click,
-        // but we can check the viewers.
         boolean anyNonOp = event.getViewers().stream().anyMatch(v -> v instanceof Player p && !p.isOp());
         if (!anyNonOp)
             return;
@@ -84,6 +91,60 @@ public class ProgressionListener implements Listener {
         if (result != null && RESTRICTED_ITEMS.contains(result.getType())) {
             if (!ItemManager.isCustomItem(result)) {
                 event.getInventory().setResult(null);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPortal(org.bukkit.event.player.PlayerPortalEvent event) {
+        if (SkillsBoss.getProgressionLevel() < 1)
+            return;
+        if (event.getTo() != null && event.getTo().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) {
+            event.setCancelled(true);
+            event.getPlayer().sendMessage(net.kyori.adventure.text.Component.text("The Nether is sealed in Phase One!",
+                    net.kyori.adventure.text.format.NamedTextColor.RED));
+        }
+    }
+
+    @EventHandler
+    public void onEnchant(org.bukkit.event.enchantment.EnchantItemEvent event) {
+        if (SkillsBoss.getProgressionLevel() < 1)
+            return;
+
+        // Block Protection III+ locally
+        event.getEnchantsToAdd().entrySet().removeIf(
+                entry -> entry.getKey().equals(org.bukkit.enchantments.Enchantment.PROTECTION) && entry.getValue() > 2);
+    }
+
+    @EventHandler
+    public void onVillagerInteract(org.bukkit.event.inventory.InventoryOpenEvent event) {
+        if (SkillsBoss.getProgressionLevel() < 1)
+            return;
+        if (event.getInventory().getType() == org.bukkit.event.inventory.InventoryType.MERCHANT) {
+            if (event.getPlayer() instanceof Player p && !p.isOp()) {
+                event.setCancelled(true);
+                p.sendMessage(
+                        net.kyori.adventure.text.Component.text("Villagers are too terrified to trade in Phase One!",
+                                net.kyori.adventure.text.format.NamedTextColor.RED));
+            }
+        }
+    }
+
+    @EventHandler
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        if (SkillsBoss.getProgressionLevel() < 1)
+            return;
+        checkAndRemove(event.getPlayer());
+    }
+
+    private void checkAndRemove(Player player) {
+        if (player.isOp())
+            return;
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (item != null && RESTRICTED_ITEMS.contains(item.getType())) {
+                if (!ItemManager.isCustomItem(item)) {
+                    player.getInventory().remove(item);
+                }
             }
         }
     }
