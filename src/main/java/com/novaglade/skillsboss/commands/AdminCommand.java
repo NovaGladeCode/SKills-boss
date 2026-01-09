@@ -139,7 +139,7 @@ public class AdminCommand implements CommandExecutor {
                             double angle = (ticks * speed + i * (2 * Math.PI / density));
                             double x = Math.cos(angle) * rSize;
                             double z = Math.sin(angle) * rSize;
-                            Particle p = (layer % 3 == 0 ? Particle.WITCH
+                            Particle p = (layer % 3 == 0 ? Particle.SOUL_FIRE_FLAME
                                     : (layer % 3 == 1 ? Particle.SOUL_FIRE_FLAME : Particle.END_ROD));
                             world.spawnParticle(p, center.clone().add(x, 0.1, z), 2, 0.05, 0, 0.05, 0);
                             if (ticks % 3 == 0) {
@@ -175,7 +175,7 @@ public class AdminCommand implements CommandExecutor {
                                     Math.sin(angle + 0.2) * endR);
                             for (double d = 0; d < 1.0; d += 0.1) {
                                 Location arc = p1.clone().add(p2.clone().subtract(p1).toVector().multiply(d));
-                                world.spawnParticle(Particle.ELECTRIC_SPARK, arc.add(0, Math.random() * 0.2, 0), 1, 0,
+                                world.spawnParticle(Particle.FIREWORK, arc.add(0, Math.random() * 0.2, 0), 1, 0,
                                         0, 0,
                                         0);
                             }
@@ -195,7 +195,7 @@ public class AdminCommand implements CommandExecutor {
                     }
 
                     if (ticks % 15 == 0) {
-                        world.spawnParticle(Particle.GLOW, center, 100, 10, 0.1, 10, 0.02);
+                        world.spawnParticle(Particle.ENCHANT, center, 100, 10, 0.1, 10, 0.02);
                     }
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
