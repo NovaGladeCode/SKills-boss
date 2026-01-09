@@ -297,10 +297,14 @@ public class BossListener implements Listener {
                 Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 e.getEquipment().setHelmet(new ItemStack(Material.GOLDEN_HELMET));
+                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(60);
+                e.setHealth(60);
             }
         } else if (waveId == 2) {
             for (int i = 0; i < 2; i++) {
                 Evoker e = (Evoker) spawnMob(loc, EntityType.EVOKER, "§6Ember Mage", null, stand.getUniqueId(), mobs);
+                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(100);
+                e.setHealth(100);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -318,6 +322,10 @@ public class BossListener implements Listener {
                 WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Commander",
                         Material.NETHERITE_AXE, stand.getUniqueId(), mobs);
                 e.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
+                e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(250);
+                e.setHealth(250);
+                if (e.getAttribute(Attribute.SCALE) != null)
+                    e.getAttribute(Attribute.SCALE).setBaseValue(1.2);
             }
         }
     }
@@ -352,6 +360,9 @@ public class BossListener implements Listener {
                 boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(600);
                 boss.setHealth(600);
             }
+            if (boss.getAttribute(Attribute.SCALE) != null) {
+                boss.getAttribute(Attribute.SCALE).setBaseValue(1.3);
+            }
 
             boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
             boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
@@ -361,7 +372,7 @@ public class BossListener implements Listener {
             boss.getEquipment().setItemInMainHand(new ItemStack(weapon));
 
             if (i == 0 && boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
-                boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.45);
+                boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40);
             if (i == 3 && boss.getAttribute(Attribute.KNOCKBACK_RESISTANCE) != null)
                 boss.getAttribute(Attribute.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
 
@@ -407,12 +418,14 @@ public class BossListener implements Listener {
                                     0);
                             boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1.2f);
                             for (Entity e : boss.getNearbyEntities(6, 4, 6)) {
-                                if (e instanceof Player p && !p.isOp())
-                                    p.setFireTicks(100);
+                                if (e instanceof Player && !((Player) e).isOp()) {
+                                    ((Player) e).setFireTicks(100);
+                                }
                             }
                         } else if (type == 1) { // Anima
                             for (Entity e : boss.getNearbyEntities(8, 8, 8)) {
-                                if (e instanceof Player p && !p.isOp()) {
+                                if (e instanceof Player && !((Player) e).isOp()) {
+                                    Player p = (Player) e;
                                     p.damage(4, boss);
                                     boss.setHealth(Math.min(600, boss.getHealth() + 15));
                                     p.getWorld().spawnParticle(Particle.HEART, p.getLocation().add(0, 1.5, 0), 1);
@@ -422,7 +435,8 @@ public class BossListener implements Listener {
                             boss.getWorld().playSound(boss.getLocation(), Sound.BLOCK_REGENERATION_STATION_CHARGE, 1f,
                                     0.5f);
                             for (Entity e : boss.getNearbyEntities(10, 10, 10)) {
-                                if (e instanceof Player p && !p.isOp()) {
+                                if (e instanceof Player && !((Player) e).isOp()) {
+                                    Player p = (Player) e;
                                     p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 0));
                                     p.setVelocity(boss.getLocation().subtract(p.getLocation()).toVector().normalize()
                                             .multiply(1.2));
@@ -432,7 +446,7 @@ public class BossListener implements Listener {
                             LivingEntity target = boss.getTarget();
                             if (target != null) {
                                 Vector leap = target.getLocation().subtract(boss.getLocation()).toVector().normalize()
-                                        .multiply(1.5).setY(0.5);
+                                        .multiply(1.5).setY(0.4);
                                 boss.setVelocity(leap);
                                 boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_RAVAGER_ATTACK, 1f, 1f);
                             }
