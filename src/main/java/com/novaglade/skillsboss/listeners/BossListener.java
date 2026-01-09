@@ -45,6 +45,7 @@ public class BossListener implements Listener {
     private final Map<UUID, Set<UUID>> activeWaveMobs = new ConcurrentHashMap<>();
     private final Map<UUID, BossBar> activeBars = new ConcurrentHashMap<>();
     private final Set<UUID> bossGroup = Collections.synchronizedSet(new HashSet<>());
+    private final Set<UUID> activatingStands = Collections.synchronizedSet(new HashSet<>());
 
     private Team bossTeam;
 
@@ -218,6 +219,10 @@ public class BossListener implements Listener {
 
         if (full) {
             UUID standUuid = stand.getUniqueId();
+            if (activatingStands.contains(standUuid))
+                return;
+            activatingStands.add(standUuid);
+
             activeWaveMobs.put(standUuid, Collections.synchronizedSet(new HashSet<>()));
 
             BossBar bar = Bukkit.createBossBar("§4§lThe Avernus Ritual", BarColor.RED, BarStyle.SEGMENTED_10);
@@ -237,6 +242,7 @@ public class BossListener implements Listener {
                         bar.removeAll();
                         activeBars.remove(standUuid);
                         activeWaveMobs.remove(standUuid);
+                        activatingStands.remove(standUuid);
                         cancel();
                         return;
                     }
@@ -259,7 +265,7 @@ public class BossListener implements Listener {
                             stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.2f, 1.8f);
                             if (stage < 3) {
                                 inTransition = true;
-                                transitionTicks = 40;
+                                transitionTicks = 5;
                             }
                         } else {
                             return;
@@ -271,29 +277,30 @@ public class BossListener implements Listener {
                         playerBroadcast(stand.getWorld(),
                                 Component.text("The air grows cold with the whispers of souls...", NamedTextColor.RED));
                         inTransition = true;
-                        transitionTicks = 40;
+                        transitionTicks = 5;
                     } else if (stage == 1 && !inTransition) {
                         bar.setTitle("§6§lWave 2: Infernal Phalanx");
                         playerBroadcast(stand.getWorld(),
                                 Component.text("The nether erupts from below!", NamedTextColor.GOLD));
                         inTransition = true;
-                        transitionTicks = 40;
+                        transitionTicks = 5;
                     } else if (stage == 2 && !inTransition) {
                         bar.setTitle("§4§lWave 3: The Pit Lords");
                         playerBroadcast(stand.getWorld(), Component
                                 .text("The elite guardians of the pit have come for you!", NamedTextColor.DARK_RED));
                         inTransition = true;
-                        transitionTicks = 40;
+                        transitionTicks = 5;
                     } else if (stage == 3) {
                         bar.removeAll();
                         activeBars.remove(standUuid);
                         spawnBosses(stand.getLocation());
                         stand.remove();
                         activeWaveMobs.remove(standUuid);
+                        activatingStands.remove(standUuid);
                         cancel();
                     }
                 }
-            }.runTaskTimer(SkillsBoss.getInstance(), 40, 20);
+            }.runTaskTimer(SkillsBoss.getInstance(), 0, 5);
         }
     }
 
