@@ -1,9 +1,9 @@
 target/
-*.class
-*.jar
-.classpath
-.project
 .settings/
-.idea/
-*.iml
+.classpath/
+.project/
 .DS_Store
+*.jar
+*.class
+bin/
+.vscode/
