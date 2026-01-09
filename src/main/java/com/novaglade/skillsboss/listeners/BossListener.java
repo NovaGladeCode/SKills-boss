@@ -297,10 +297,11 @@ public class BossListener implements Listener {
                 Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 e.getEquipment().setHelmet(new ItemStack(Material.GOLDEN_HELMET));
-            }
-        } else if (waveId == 2) {
-            for (int i = 0; i < 2; i++) {
-                Evoker e = (Evoker) spawnMob(loc, EntityType.EVOKER, "§6Ember Mage", null, stand.getUniqueId(), mobs);
+                if (e.getAttribute(Attribute.MAX_HEALTH) != null) {
+                    e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(40);
+                    e.setHealth(40);
+                }
+                // Custom Ability: Spectral Beam
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -308,23 +309,95 @@ public class BossListener implements Listener {
                             cancel();
                             return;
                         }
-                        e.getWorld().spawnParticle(Particle.FLAME, e.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5,
-                                0.05);
+                        shootCustomBeam(e, Particle.SOUL_FIRE_FLAME, 2.0, false);
+                    }
+                }.runTaskTimer(SkillsBoss.getInstance(), 60, 80);
+            }
+        } else if (waveId == 2) {
+            for (int i = 0; i < 2; i++) {
+                Evoker e = (Evoker) spawnMob(loc, EntityType.EVOKER, "§6Ember Mage", null, stand.getUniqueId(), mobs);
+                if (e.getAttribute(Attribute.MAX_HEALTH) != null) {
+                    e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(80);
+                    e.setHealth(80);
+                }
+                // Passive Aura
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (!e.isValid()) {
+                            cancel();
+                            return;
+                        }
+                        e.getWorld().spawnParticle(Particle.FLAME, e.getLocation().add(0, 1, 0), 10, 0.3, 0.5, 0.3,
+                                0.02);
                     }
                 }.runTaskTimer(SkillsBoss.getInstance(), 10, 10);
+                // Custom Ability: Searing Beam
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (!e.isValid()) {
+                            cancel();
+                            return;
+                        }
+                        shootCustomBeam(e, Particle.FLAME, 4.0, true);
+                    }
+                }.runTaskTimer(SkillsBoss.getInstance(), 40, 60);
             }
         } else if (waveId == 3) {
             for (int i = 0; i < 2; i++) {
                 WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Commander",
                         Material.NETHERITE_AXE, stand.getUniqueId(), mobs);
                 e.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
+                if (e.getAttribute(Attribute.MAX_HEALTH) != null) {
+                    e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(150);
+                    e.setHealth(150);
+                }
+                // Custom Ability: Void Beam
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (!e.isValid()) {
+                            cancel();
+                            return;
+                        }
+                        shootCustomBeam(e, Particle.PORTAL, 6.0, false);
+                    }
+                }.runTaskTimer(SkillsBoss.getInstance(), 50, 70);
+            }
+        }
+    }
+
+    private void shootCustomBeam(Mob shooter, Particle particle, double damage, boolean fire) {
+        LivingEntity target = shooter.getTarget();
+        if (target == null)
+            return;
+
+        Location start = shooter.getEyeLocation();
+        Location end = target.getEyeLocation();
+        double dist = start.distance(end);
+        if (dist > 20)
+            return;
+
+        Vector dir = end.toVector().subtract(start.toVector()).normalize();
+        shooter.getWorld().playSound(start, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 1.2f);
+
+        for (double d = 0; d < dist; d += 0.5) {
+            Location point = start.clone().add(dir.clone().multiply(d));
+            shooter.getWorld().spawnParticle(particle, point, 3, 0.05, 0.05, 0.05, 0.01);
+
+            if (d > 1.0 && point.distance(target.getLocation().add(0, 1, 0)) < 1.2) {
+                target.damage(damage, shooter);
+                if (fire)
+                    target.setFireTicks(60);
+                break;
             }
         }
     }
 
     private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
             Set<UUID> mobs) {
-        Location spawn = loc.clone().add(Math.random() * 10 - 5, 0, Math.random() * 10 - 5);
+        Location spawn = loc.clone().add(Math.random() * 8 - 4, 0, Math.random() * 8 - 4);
         LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(spawn, type);
         e.setCustomName(name);
         e.setCustomNameVisible(true);
