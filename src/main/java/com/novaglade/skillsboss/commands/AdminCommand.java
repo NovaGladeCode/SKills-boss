@@ -84,13 +84,13 @@ public class AdminCommand implements CommandExecutor {
             SkillsBoss.setProgressionLevel(0);
             player.getWorld().setSpawnLocation(player.getLocation());
             player.getWorld().getWorldBorder().setCenter(player.getLocation());
-            player.getWorld().getWorldBorder().setSize(15);
+            player.getWorld().getWorldBorder().setSize(20);
 
             for (Player online : Bukkit.getOnlinePlayers()) {
                 online.teleport(player.getLocation());
             }
 
-            sender.sendMessage(Component.text("Progression 0 set: Spawn updated, All players TPed, Border set to 15.",
+            sender.sendMessage(Component.text("Progression 0 set: Spawn updated, All players TPed, Border set to 20.",
                     NamedTextColor.GREEN));
         } else if (level == 1) {
             startProgressionOneCountdown(player);
@@ -129,7 +129,7 @@ public class AdminCommand implements CommandExecutor {
 
                 // Every tick: Area Animation
                 double progress = 1.0 - (ticks / 100.0);
-                double radius = 6.0 * (1.0 - progress); // Ring closing from 6 to 0
+                double radius = 6.0 * (1.0 - progress);
 
                 // Swirling energy beams
                 for (int i = 0; i < 4; i++) {
@@ -138,32 +138,44 @@ public class AdminCommand implements CommandExecutor {
                     double z = Math.sin(angle) * radius;
 
                     // Main swirling ring
-                    center.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z), 2, 0.1,
+                    center.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z), 3, 0.1,
                             0.1, 0.1, 0.02);
                     center.getWorld().spawnParticle(Particle.DRAGON_BREATH,
-                            center.clone().add(x, 0.5 + progress * 3, z), 2, 0.1, 0.1, 0.1, 0.02);
+                            center.clone().add(x, 0.5 + progress * 4, z), 3, 0.1, 0.1, 0.1, 0.02);
 
-                    // Rising pillars of light
-                    center.getWorld().spawnParticle(Particle.END_ROD, center.clone().add(x, progress * 10, z), 1, 0, 0,
+                    // Rising pillars that close in
+                    center.getWorld().spawnParticle(Particle.END_ROD, center.clone().add(x, progress * 15, z), 2, 0, 0,
                             0, 0.01);
                 }
 
-                // Ground Tremors (Area focus)
+                // Static Sky Beams (Outer perimeter)
+                for (int i = 0; i < 8; i++) {
+                    double angle = i * (Math.PI / 4);
+                    double bx = Math.cos(angle) * 7.0;
+                    double bz = Math.sin(angle) * 7.0;
+                    Location beamLoc = center.clone().add(bx, 0, bz);
+
+                    // Particle Beams shooting up
+                    for (int h = 0; h < 20; h++) {
+                        if (ticks % 5 == 0) {
+                            center.getWorld().spawnParticle(Particle.SOUL, beamLoc.clone().add(0, h, 0), 1, 0, 0, 0,
+                                    0.02);
+                        }
+                    }
+                }
+
+                // Ground Tremors
                 if (ticks % 2 == 0) {
-                    center.getWorld().spawnParticle(Particle.BLOCK, center, 10, radius + 1, 0.1, radius + 1, 0.05,
+                    center.getWorld().spawnParticle(Particle.BLOCK, center, 15, radius + 1, 0.1, radius + 1, 0.05,
                             Material.GRASS_BLOCK.createBlockData());
                 }
 
-                // Localized Focus: Shake players within 30 blocks
+                // Localized Focus: Shake players
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     double distance = online.getLocation().distance(center);
-
                     if (distance <= 30.0) {
-                        // Near the ritual: Shake vision and show crit particles
                         online.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false, false));
-                        online.spawnParticle(Particle.CRIT, online.getEyeLocation(), 8, 0.3, 0.3, 0.3, 0.1);
-
-                        // Play intense vibration sounds for locals
+                        online.spawnParticle(Particle.CRIT, online.getEyeLocation(), 12, 0.3, 0.3, 0.3, 0.1);
                         online.playSound(online.getLocation(), Sound.ENTITY_WARDEN_HEARTBEAT, 0.8f,
                                 0.5f + (float) progress);
                     }
@@ -178,13 +190,21 @@ public class AdminCommand implements CommandExecutor {
                     Component chatMsg = Component.text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD)
                             .append(Component.text("A New Beginning", NamedTextColor.DARK_AQUA, TextDecoration.BOLD));
 
-                    // Slow fade times: 1s in, 4s stay, 2s out
                     Title.Times times = Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(4),
                             Duration.ofSeconds(2));
                     Title finalTitle = Title.title(mainTitle, subTitle, times);
 
-                    // Final impact effects
-                    center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 10, 2, 2, 2, 0.1);
+                    // Impact Explosion Beams
+                    for (int i = 0; i < 16; i++) {
+                        double angle = i * (Math.PI / 8);
+                        double x = Math.cos(angle) * 2;
+                        double z = Math.sin(angle) * 2;
+                        for (int h = 0; h < 50; h++) {
+                            center.getWorld().spawnParticle(Particle.FLASH, center.clone().add(x, h, z), 1, 0, 0, 0, 0);
+                        }
+                    }
+
+                    center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0.1);
                     center.getWorld().playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
                     center.getWorld().playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2f, 1f);
 
