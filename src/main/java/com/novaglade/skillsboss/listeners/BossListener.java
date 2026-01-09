@@ -77,18 +77,23 @@ public class BossListener implements Listener {
             Material type = hand.getType();
             boolean accepted = false;
 
-            if (type == Material.DIAMOND_HELMET && stand.getEquipment().getHelmet().getType() == Material.AIR) {
+            ItemStack helmet = stand.getEquipment().getHelmet();
+            ItemStack chest = stand.getEquipment().getChestplate();
+            ItemStack legs = stand.getEquipment().getLeggings();
+            ItemStack boots = stand.getEquipment().getBoots();
+
+            if (type == Material.DIAMOND_HELMET && (helmet == null || helmet.getType() == Material.AIR)) {
                 stand.getEquipment().setHelmet(hand.clone());
                 accepted = true;
             } else if (type == Material.DIAMOND_CHESTPLATE
-                    && stand.getEquipment().getChestplate().getType() == Material.AIR) {
+                    && (chest == null || chest.getType() == Material.AIR)) {
                 stand.getEquipment().setChestplate(hand.clone());
                 accepted = true;
             } else if (type == Material.DIAMOND_LEGGINGS
-                    && stand.getEquipment().getLeggings().getType() == Material.AIR) {
+                    && (legs == null || legs.getType() == Material.AIR)) {
                 stand.getEquipment().setLeggings(hand.clone());
                 accepted = true;
-            } else if (type == Material.DIAMOND_BOOTS && stand.getEquipment().getBoots().getType() == Material.AIR) {
+            } else if (type == Material.DIAMOND_BOOTS && (boots == null || boots.getType() == Material.AIR)) {
                 stand.getEquipment().setBoots(hand.clone());
                 accepted = true;
             }
@@ -119,10 +124,15 @@ public class BossListener implements Listener {
     }
 
     private void checkActivation(ArmorStand stand) {
-        boolean full = stand.getEquipment().getHelmet().getType() != Material.AIR &&
-                stand.getEquipment().getChestplate().getType() != Material.AIR &&
-                stand.getEquipment().getLeggings().getType() != Material.AIR &&
-                stand.getEquipment().getBoots().getType() != Material.AIR;
+        ItemStack helmet = stand.getEquipment().getHelmet();
+        ItemStack chest = stand.getEquipment().getChestplate();
+        ItemStack legs = stand.getEquipment().getLeggings();
+        ItemStack boots = stand.getEquipment().getBoots();
+
+        boolean full = helmet != null && helmet.getType() != Material.AIR &&
+                chest != null && chest.getType() != Material.AIR &&
+                legs != null && legs.getType() != Material.AIR &&
+                boots != null && boots.getType() != Material.AIR;
 
         if (full) {
             new BukkitRunnable() {
@@ -155,11 +165,11 @@ public class BossListener implements Listener {
     }
 
     private void spawnWave(Location loc, int waveNum) {
-        playerBroadcast(loc.getWorld(), Component.text("WAVE " + waveNum + " IS COMMING!", NamedTextColor.RED));
+        playerBroadcast(loc.getWorld(), Component.text("WAVE " + waveNum + " IS COMING!", NamedTextColor.RED));
         for (int i = 0; i < 10; i++) {
             Location spawn = loc.clone().add(Math.random() * 10 - 5, 0, Math.random() * 10 - 5);
             Zombie z = (Zombie) loc.getWorld().spawnEntity(spawn, EntityType.ZOMBIE);
-            z.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(40);
+            z.getAttribute(Attribute.MAX_HEALTH).setBaseValue(40);
             z.setHealth(40);
             z.getEquipment().setHelmet(new ItemStack(Material.IRON_HELMET));
             z.getEquipment().setChestplate(new ItemStack(Material.IRON_CHESTPLATE));
@@ -172,9 +182,9 @@ public class BossListener implements Listener {
         WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(loc, EntityType.WITHER_SKELETON);
         boss.setCustomName("§4§lTHE AVERNUS OVERLORD");
         boss.setCustomNameVisible(true);
-        boss.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(500);
+        boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(500);
         boss.setHealth(500);
-        boss.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(3.0);
+        boss.getAttribute(Attribute.SCALE).setBaseValue(3.0);
 
         boss.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
         boss.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
