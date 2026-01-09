@@ -286,7 +286,7 @@ public class AdminCommand implements CommandExecutor {
         }
 
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Usage: /admin give <diamondarmor>", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Usage: /admin give <diamondarmor|waveboss>", NamedTextColor.RED));
             return;
         }
 
@@ -297,7 +297,7 @@ public class AdminCommand implements CommandExecutor {
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_BOOTS));
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_SWORD));
             sender.sendMessage(Component.text("Received custom diamond armor and sword!", NamedTextColor.GREEN));
-        } else if (args[1].equalsIgnoreCase("bossspawn1")) {
+        } else if (args[1].equalsIgnoreCase("bossspawn1") || args[1].equalsIgnoreCase("waveboss")) {
             player.getInventory().addItem(ItemManager.createBossSpawnItem());
             sender.sendMessage(Component.text("Received Boss Spawn Altar!", NamedTextColor.LIGHT_PURPLE));
         } else {
@@ -310,8 +310,8 @@ public class AdminCommand implements CommandExecutor {
                 Component.text("--- SkillsBoss Admin ---", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
         sender.sendMessage(Component.text("/admin progression <0|1> ", NamedTextColor.YELLOW)
                 .append(Component.text("- Start progression stages", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin give diamondarmor ", NamedTextColor.YELLOW)
-                .append(Component.text("- Give legendary armor", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/admin give <diamondarmor|waveboss> ", NamedTextColor.YELLOW)
+                .append(Component.text("- Give legendary gear or boss altar", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin reload ", NamedTextColor.YELLOW)
                 .append(Component.text("- Reload plugin config", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin version ", NamedTextColor.YELLOW)
