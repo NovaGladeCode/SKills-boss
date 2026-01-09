@@ -355,14 +355,10 @@ public class BossListener implements Listener {
             WitherSkeleton mini = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON,
                     "§0§lThe Avernus Gatekeeper", Material.NETHERITE_SWORD, stand.getUniqueId(), mobs);
             applyDiamondGear(mini, 500);
-            if (mini.getAttribute(Attribute.GENERIC_SCALE) != null)
-                mini.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(2.5);
-            else if (mini.getAttribute(Attribute.SCALE) != null)
+            if (mini.getAttribute(Attribute.SCALE) != null)
                 mini.getAttribute(Attribute.SCALE).setBaseValue(2.5);
 
-            if (mini.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED) != null)
-                mini.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.35);
-            else if (mini.getAttribute(Attribute.MOVEMENT_SPEED) != null)
+            if (mini.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                 mini.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
 
             new BukkitRunnable() {
@@ -379,7 +375,7 @@ public class BossListener implements Listener {
     }
 
     private void applyDiamondGear(LivingEntity e, double health) {
-        Attribute hpAttr = Attribute.GENERIC_MAX_HEALTH;
+        Attribute hpAttr = Attribute.MAX_HEALTH;
         if (e.getAttribute(hpAttr) != null) {
             e.getAttribute(hpAttr).setBaseValue(health);
             e.setHealth(health);
@@ -447,16 +443,14 @@ public class BossListener implements Listener {
             boss.setCustomName(titles[i]);
             boss.setCustomNameVisible(true);
 
-            Attribute hpAttr = Attribute.GENERIC_MAX_HEALTH;
+            Attribute hpAttr = Attribute.MAX_HEALTH;
             if (boss.getAttribute(hpAttr) != null) {
                 boss.getAttribute(hpAttr).setBaseValue(600);
                 boss.setHealth(600);
             }
-            Attribute scaleAttr = Attribute.GENERIC_SCALE;
+            Attribute scaleAttr = Attribute.SCALE;
             if (boss.getAttribute(scaleAttr) != null) {
-                boss.getAttribute(scaleAttr).setBaseValue(2.0); // Reverted to 34's 2.0 scale as requested
-            } else if (boss.getAttribute(Attribute.valueOf("SCALE")) != null) {
-                boss.getAttribute(Attribute.valueOf("SCALE")).setBaseValue(2.0);
+                boss.getAttribute(scaleAttr).setBaseValue(2.0);
             }
 
             boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
@@ -466,11 +460,11 @@ public class BossListener implements Listener {
             Material weapon = i == 3 ? Material.NETHERITE_AXE : Material.NETHERITE_SWORD;
             boss.getEquipment().setItemInMainHand(new ItemStack(weapon));
 
-            Attribute speedAttr = Attribute.GENERIC_MOVEMENT_SPEED;
+            Attribute speedAttr = Attribute.MOVEMENT_SPEED;
             if (i == 0 && boss.getAttribute(speedAttr) != null)
                 boss.getAttribute(speedAttr).setBaseValue(0.40);
 
-            Attribute kbAttr = Attribute.GENERIC_KNOCKBACK_RESISTANCE;
+            Attribute kbAttr = Attribute.KNOCKBACK_RESISTANCE;
             if (i == 3 && boss.getAttribute(kbAttr) != null)
                 boss.getAttribute(kbAttr).setBaseValue(1.0);
 
