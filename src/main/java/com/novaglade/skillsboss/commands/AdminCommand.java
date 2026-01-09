@@ -7,11 +7,16 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 
@@ -109,7 +114,8 @@ public class AdminCommand implements CommandExecutor {
                 if (ticks % 20 == 0) {
                     Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.RED,
                             TextDecoration.BOLD);
-                    Component subTitle = Component.text("Starting Progression 1...", NamedTextColor.YELLOW);
+                    Component subTitle = Component.text("Starting Progression I: A New Beginning...",
+                            NamedTextColor.YELLOW);
                     Title title = Title.title(mainTitle, subTitle,
                             Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800), Duration.ofMillis(100)));
 
@@ -126,31 +132,30 @@ public class AdminCommand implements CommandExecutor {
                     double angle = (ticks * 0.5 + i * (2 * Math.PI / 3));
                     double x = Math.cos(angle) * radius;
                     double z = Math.sin(angle) * radius;
-                    center.getWorld().spawnParticle(org.bukkit.Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z),
-                            1, 0, 0, 0, 0);
-                    center.getWorld().spawnParticle(org.bukkit.Particle.DRAGON_BREATH, center.clone().add(x, 1.5, z), 1,
-                            0, 0, 0, 0);
+                    center.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z), 1, 0, 0, 0,
+                            0);
+                    center.getWorld().spawnParticle(Particle.DRAGON_BREATH, center.clone().add(x, 1.5, z), 1, 0, 0, 0,
+                            0);
                 }
 
                 // Shake effect for players near or online
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     // Apply brief nausea to simulate shake
-                    online.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.NAUSEA,
-                            40, 0, false, false, false));
+                    online.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false, false));
 
                     // Spawn vibration particles around player head
-                    online.spawnParticle(org.bukkit.Particle.CRIT, online.getEyeLocation(), 5, 0.5, 0.5, 0.5, 0.1);
+                    online.spawnParticle(Particle.CRIT, online.getEyeLocation(), 5, 0.5, 0.5, 0.5, 0.1);
                 }
 
                 if (ticks <= 0) {
                     SkillsBoss.setProgressionLevel(1);
-                    Component startMsg = Component.text("PROGRESSION 1 STARTED!", NamedTextColor.GREEN,
+                    Component startMsg = Component.text("PROGRESSION I: A NEW BEGINNING", NamedTextColor.GREEN,
                             TextDecoration.BOLD);
 
                     // Final impact effects
-                    center.getWorld().spawnParticle(org.bukkit.Particle.EXPLOSION_EMITTER, center, 10, 2, 2, 2, 0.1);
-                    center.getWorld().playSound(center, org.bukkit.Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
-                    center.getWorld().playSound(center, org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 2f, 1f);
+                    center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 10, 2, 2, 2, 0.1);
+                    center.getWorld().playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
+                    center.getWorld().playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2f, 1f);
 
                     // Set world border to 500
                     center.getWorld().getWorldBorder().setSize(500);
@@ -158,7 +163,7 @@ public class AdminCommand implements CommandExecutor {
                     for (Player online : Bukkit.getOnlinePlayers()) {
                         online.sendMessage(startMsg);
                         online.showTitle(Title.title(startMsg, Component.empty()));
-                        online.removePotionEffect(org.bukkit.potion.PotionEffectType.NAUSEA);
+                        online.removePotionEffect(PotionEffectType.NAUSEA);
                     }
                     cancel();
                 }
