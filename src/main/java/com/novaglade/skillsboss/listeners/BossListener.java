@@ -47,16 +47,16 @@ public class BossListener implements Listener {
     private final Set<UUID> bossGroup = Collections.synchronizedSet(new HashSet<>());
     private final Set<UUID> activatingStands = Collections.synchronizedSet(new HashSet<>());
 
-    private Team bossTeam;
+    private Team ritualTeam;
 
     public BossListener() {
         org.bukkit.scoreboard.Scoreboard sb = Bukkit.getScoreboardManager().getMainScoreboard();
-        bossTeam = sb.getTeam("AvernusBosses");
-        if (bossTeam == null) {
-            bossTeam = sb.registerNewTeam("AvernusBosses");
+        ritualTeam = sb.getTeam("AvernusRitual");
+        if (ritualTeam == null) {
+            ritualTeam = sb.registerNewTeam("AvernusRitual");
         }
-        bossTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
-        bossTeam.setAllowFriendlyFire(false);
+        ritualTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+        ritualTeam.setAllowFriendlyFire(false);
     }
 
     public static boolean isTransitionActive() {
@@ -69,7 +69,6 @@ public class BossListener implements Listener {
             return;
         if (event.getHand() != EquipmentSlot.HAND)
             return;
-
         ItemStack item = event.getItem();
         if (item == null || !ItemManager.isBossSpawnItem(item))
             return;
@@ -102,7 +101,6 @@ public class BossListener implements Listener {
         event.setCancelled(true);
         Player player = event.getPlayer();
         ItemStack hand = player.getInventory().getItemInMainHand();
-
         if (hand.getType() == Material.AIR)
             return;
 
@@ -145,19 +143,15 @@ public class BossListener implements Listener {
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
-
         if (entity.getPersistentDataContainer().has(WAVE_MOB_KEY, PersistentDataType.STRING)) {
-            String standUuidStr = entity.getPersistentDataContainer().get(WAVE_MOB_KEY, PersistentDataType.STRING);
-            if (standUuidStr != null) {
-                UUID standUuid = UUID.fromString(standUuidStr);
-                Set<UUID> mobs = activeWaveMobs.get(standUuid);
-                if (mobs != null) {
-                    mobs.remove(entity.getUniqueId());
-                    updateBossBar(standUuid, mobs.size());
-                }
+            UUID standUuid = UUID
+                    .fromString(entity.getPersistentDataContainer().get(WAVE_MOB_KEY, PersistentDataType.STRING));
+            Set<UUID> mobs = activeWaveMobs.get(standUuid);
+            if (mobs != null) {
+                mobs.remove(entity.getUniqueId());
+                updateBossBar(standUuid, mobs.size());
             }
         }
-
         if (bossGroup.contains(entity.getUniqueId())) {
             bossGroup.remove(entity.getUniqueId());
             BossBar bar = activeBars.get(entity.getUniqueId());
@@ -165,7 +159,6 @@ public class BossListener implements Listener {
                 bar.removeAll();
                 activeBars.remove(entity.getUniqueId());
             }
-
             if (bossGroup.isEmpty()) {
                 Location deathLoc = entity.getLocation();
                 playerBroadcast(deathLoc.getWorld(),
@@ -181,9 +174,9 @@ public class BossListener implements Listener {
     }
 
     @EventHandler
-    public void onBossDamage(EntityDamageByEntityEvent event) {
-        if (bossGroup.contains(event.getDamager().getUniqueId())
-                && bossGroup.contains(event.getEntity().getUniqueId())) {
+    public void onRitualFriendlyFire(EntityDamageByEntityEvent event) {
+        if (ritualTeam.hasEntry(event.getDamager().getUniqueId().toString())
+                && ritualTeam.hasEntry(event.getEntity().getUniqueId().toString())) {
             event.setCancelled(true);
         }
     }
@@ -196,137 +189,130 @@ public class BossListener implements Listener {
     }
 
     private void checkActivation(ArmorStand stand) {
-        ItemStack helmet = stand.getEquipment().getHelmet();
-        ItemStack chest = stand.getEquipment().getChestplate();
-        ItemStack legs = stand.getEquipment().getLeggings();
-        ItemStack boots = stand.getEquipment().getBoots();
-        ItemStack sword = stand.getEquipment().getItemInMainHand();
+        if (stand.getEquipment().getHelmet() == null || stand.getEquipment().getHelmet().getType() == Material.AIR ||
+                stand.getEquipment().getChestplate() == null
+                || stand.getEquipment().getChestplate().getType() == Material.AIR ||
+                stand.getEquipment().getLeggings() == null
+                || stand.getEquipment().getLeggings().getType() == Material.AIR ||
+                stand.getEquipment().getBoots() == null || stand.getEquipment().getBoots().getType() == Material.AIR ||
+                stand.getEquipment().getItemInMainHand() == null
+                || stand.getEquipment().getItemInMainHand().getType() == Material.AIR)
+            return;
 
-        boolean full = helmet != null && helmet.getType() != Material.AIR &&
-                chest != null && chest.getType() != Material.AIR &&
-                legs != null && legs.getType() != Material.AIR &&
-                boots != null && boots.getType() != Material.AIR &&
-                sword != null && sword.getType() != Material.AIR;
+        UUID standUuid = stand.getUniqueId();
+        if (activatingStands.contains(standUuid))
+            return;
+        activatingStands.add(standUuid);
 
-        if (full) {
-            UUID standUuid = stand.getUniqueId();
-            if (activatingStands.contains(standUuid))
-                return;
-            activatingStands.add(standUuid);
+        activeWaveMobs.put(standUuid, Collections.synchronizedSet(new HashSet<>()));
+        BossBar ritualBar = Bukkit.createBossBar("§4§lThe Avernus Ritual", BarColor.RED, BarStyle.SEGMENTED_10);
+        for (Player p : stand.getWorld().getPlayers()) {
+            ritualBar.addPlayer(p);
+        }
+        activeBars.put(standUuid, ritualBar);
 
-            activeWaveMobs.put(standUuid, Collections.synchronizedSet(new HashSet<>()));
-            BossBar bar = Bukkit.createBossBar("§4§lThe Avernus Ritual", BarColor.RED, BarStyle.SEGMENTED_10);
-            for (Player p : stand.getWorld().getPlayers()) {
-                bar.addPlayer(p);
-            }
-            activeBars.put(standUuid, bar);
+        new BukkitRunnable() {
+            int wave = 0; // Current active wave (1, 2, 3) or 4 (boss)
+            boolean waitingForWave = false;
 
-            new BukkitRunnable() {
-                int stage = 0;
-                boolean inTransition = false;
-                int transitionTicks = 0;
+            @Override
+            public void run() {
+                if (!stand.isValid()) {
+                    endRitual(standUuid, ritualBar);
+                    cancel();
+                    return;
+                }
 
-                @Override
-                public void run() {
-                    if (!stand.isValid()) {
-                        bar.removeAll();
-                        activeBars.remove(standUuid);
-                        activeWaveMobs.remove(standUuid);
-                        activatingStands.remove(standUuid);
-                        cancel();
+                Set<UUID> mobs = activeWaveMobs.get(standUuid);
+                if (waitingForWave) {
+                    mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
+                    if (mobs.isEmpty()) {
+                        waitingForWave = false;
+                        wave++;
+                        stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_ENDER_EYE_DEATH, 1.5f, 0.5f);
+                    } else {
                         return;
-                    }
-                    Set<UUID> mobs = activeWaveMobs.get(standUuid);
-                    if (inTransition) {
-                        transitionTicks--;
-                        if (transitionTicks <= 0) {
-                            inTransition = false;
-                            spawnWave(stand, stage + 1);
-                        }
-                        return;
-                    }
-                    if (mobs != null && !mobs.isEmpty()) {
-                        mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
-                        if (mobs.isEmpty()) {
-                            stage++;
-                            stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_ENDER_EYE_DEATH, 1.5f, 0.5f);
-                            if (stage < 3) {
-                                inTransition = true;
-                                transitionTicks = 5;
-                            }
-                        } else {
-                            return;
-                        }
-                    }
-                    if (stage == 0 && !inTransition && (mobs == null || mobs.isEmpty())) {
-                        bar.setTitle("§c§lWave 1: Soul Stalkers");
-                        playerBroadcast(stand.getWorld(), Component.text("The air grows cold...", NamedTextColor.RED));
-                        inTransition = true;
-                        transitionTicks = 5;
-                    } else if (stage == 1 && !inTransition) {
-                        bar.setTitle("§6§lWave 2: Infernal Phalanx");
-                        playerBroadcast(stand.getWorld(), Component.text("The nether erupts!", NamedTextColor.GOLD));
-                        inTransition = true;
-                        transitionTicks = 5;
-                    } else if (stage == 2 && !inTransition) {
-                        bar.setTitle("§4§lWave 3: The Pit Lords");
-                        playerBroadcast(stand.getWorld(),
-                                Component.text("The elite have come!", NamedTextColor.DARK_RED));
-                        inTransition = true;
-                        transitionTicks = 5;
-                    } else if (stage == 3) {
-                        bar.removeAll();
-                        activeBars.remove(standUuid);
-                        spawnBosses(stand.getLocation());
-                        stand.remove();
-                        activeWaveMobs.remove(standUuid);
-                        activatingStands.remove(standUuid);
-                        cancel();
                     }
                 }
-            }.runTaskTimer(SkillsBoss.getInstance(), 0, 5);
-        }
+
+                if (wave == 0) { // Initial Trigger
+                    startWave(stand, ritualBar, 1);
+                    wave = 1;
+                    waitingForWave = true;
+                } else if (wave == 1) { // Wave 1 cleared
+                    startWave(stand, ritualBar, 2);
+                    wave = 2;
+                    waitingForWave = true;
+                } else if (wave == 2) { // Wave 2 cleared
+                    startWave(stand, ritualBar, 3);
+                    wave = 3;
+                    waitingForWave = true;
+                } else if (wave == 3) { // Wave 3 cleared
+                    ritualBar.removeAll();
+                    activeBars.remove(standUuid);
+                    spawnBosses(stand.getLocation());
+                    stand.remove();
+                    activatingStands.remove(standUuid);
+                    activeWaveMobs.remove(standUuid);
+                    cancel();
+                }
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 10, 20);
+    }
+
+    private void endRitual(UUID uuid, BossBar bar) {
+        bar.removeAll();
+        activeBars.remove(uuid);
+        activeWaveMobs.remove(uuid);
+        activatingStands.remove(uuid);
+    }
+
+    private void startWave(ArmorStand stand, BossBar bar, int waveNum) {
+        String[] titles = { "", "§c§lWave 1: Soul Stalkers", "§6§lWave 2: Infernal Phalanx",
+                "§4§lWave 3: Pit Guardians" };
+        Component[] msgs = { null, Component.text("The air grows cold...", NamedTextColor.RED),
+                Component.text("The nether erupts!", NamedTextColor.GOLD),
+                Component.text("The elite have come!", NamedTextColor.DARK_RED) };
+
+        bar.setTitle(titles[waveNum]);
+        playerBroadcast(stand.getWorld(), msgs[waveNum]);
+        spawnWave(stand, waveNum);
     }
 
     private void spawnWave(ArmorStand stand, int waveNum) {
         Location loc = stand.getLocation();
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
-        if (mobs == null)
-            return;
         if (waveNum == 1) {
-            for (int i = 0; i < 10; i++) {
-                Location spawn = loc.clone().add(Math.random() * 8 - 4, 0, Math.random() * 8 - 4);
-                WitherSkeleton s = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
-                s.setCustomName("§7Soul Stalker");
-                s.getEquipment().setItemInMainHand(new ItemStack(Material.BOW));
-                s.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
-                        stand.getUniqueId().toString());
-                mobs.add(s.getUniqueId());
-            }
+            for (int i = 0; i < 10; i++)
+                spawnMob(loc, EntityType.WITHER_SKELETON, "§7Soul Stalker", Material.BOW, stand.getUniqueId(), mobs);
         } else if (waveNum == 2) {
-            for (int i = 0; i < 8; i++) {
-                Location spawn = loc.clone().add(Math.random() * 10 - 5, 0, Math.random() * 10 - 5);
-                PiglinBrute b = (PiglinBrute) loc.getWorld().spawnEntity(spawn, EntityType.PIGLIN_BRUTE);
-                b.setCustomName("§6Infernal Brute");
-                b.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
-                        stand.getUniqueId().toString());
-                mobs.add(b.getUniqueId());
-                Blaze f = (Blaze) loc.getWorld().spawnEntity(spawn.clone().add(0, 3, 0), EntityType.BLAZE);
-                f.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
-                        stand.getUniqueId().toString());
-                mobs.add(f.getUniqueId());
+            for (int i = 0; i < 6; i++) {
+                spawnMob(loc, EntityType.PIGLIN_BRUTE, "§6Infernal Brute", Material.GOLDEN_AXE, stand.getUniqueId(),
+                        mobs);
+                spawnMob(loc.clone().add(0, 3, 0), EntityType.BLAZE, "§6Avernus Ember", null, stand.getUniqueId(),
+                        mobs);
             }
         } else if (waveNum == 3) {
             for (int i = 0; i < 4; i++) {
-                Location spawn = loc.clone().add(Math.random() * 6 - 3, 0, Math.random() * 6 - 3);
-                MagmaCube m = (MagmaCube) loc.getWorld().spawnEntity(spawn, EntityType.MAGMA_CUBE);
+                MagmaCube m = (MagmaCube) spawnMob(loc, EntityType.MAGMA_CUBE, "§4Pit Lord", null, stand.getUniqueId(),
+                        mobs);
                 m.setSize(6);
-                m.setCustomName("§4Pit Lord");
-                m.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
-                        stand.getUniqueId().toString());
-                mobs.add(m.getUniqueId());
             }
         }
+    }
+
+    private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
+            Set<UUID> mobs) {
+        Location spawn = loc.clone().add(Math.random() * 10 - 5, 0, Math.random() * 10 - 5);
+        LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(spawn, type);
+        e.setCustomName(name);
+        e.setCustomNameVisible(true);
+        if (hand != null)
+            e.getEquipment().setItemInMainHand(new ItemStack(hand));
+        e.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING, standUuid.toString());
+        ritualTeam.addEntry(e.getUniqueId().toString());
+        mobs.add(e.getUniqueId());
+        return e;
     }
 
     private void spawnBosses(Location loc) {
@@ -347,17 +333,20 @@ public class BossListener implements Listener {
             boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
             boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
             boss.getEquipment().setItemInMainHand(new ItemStack(Material.NETHERITE_SWORD));
+
             if (i == 0)
                 boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.4);
             if (i == 3)
                 boss.getAttribute(Attribute.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
-            bossTeam.addEntry(boss.getUniqueId().toString());
+
+            ritualTeam.addEntry(boss.getUniqueId().toString());
             bossGroup.add(boss.getUniqueId());
             BossBar bar = Bukkit.createBossBar(titles[i], colors[i], BarStyle.SOLID);
             for (Player p : boss.getWorld().getPlayers()) {
                 bar.addPlayer(p);
             }
             activeBars.put(boss.getUniqueId(), bar);
+
             final int type = i;
             new BukkitRunnable() {
                 @Override
@@ -494,8 +483,10 @@ public class BossListener implements Listener {
     }
 
     private void playerBroadcast(World world, Component msg) {
-        for (Player p : world.getPlayers()) {
-            p.sendMessage(msg);
+        if (msg != null) {
+            for (Player p : world.getPlayers()) {
+                p.sendMessage(msg);
+            }
         }
     }
 }
