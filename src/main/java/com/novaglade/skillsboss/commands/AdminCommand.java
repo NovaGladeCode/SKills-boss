@@ -127,57 +127,60 @@ public class AdminCommand implements CommandExecutor {
                     }
                 }
 
-                // Every tick: Area Animation
+                // Every tick: Ground Ritual Animation (Low profile, high detail)
                 double progress = 1.0 - (ticks / 100.0);
-                double radius = 6.0 * (1.0 - progress);
 
-                // Swirling energy beams
-                for (int i = 0; i < 4; i++) {
-                    double angle = (ticks * 0.4 + i * (Math.PI / 2));
+                // 1. Swirling Inner Core (Ground level)
+                for (int i = 0; i < 3; i++) {
+                    double angle = (ticks * 0.3 + i * (2 * Math.PI / 3));
+                    double radius = 3.0 * (1.0 - progress);
                     double x = Math.cos(angle) * radius;
                     double z = Math.sin(angle) * radius;
-
-                    // Main swirling ring
-                    world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z), 3, 0.1,
-                            0.1, 0.1, 0.02);
-                    world.spawnParticle(Particle.DRAGON_BREATH,
-                            center.clone().add(x, 0.5 + progress * 4, z), 3, 0.1, 0.1, 0.1, 0.02);
-
-                    // Rising pillars that close in
-                    world.spawnParticle(Particle.END_ROD, center.clone().add(x, progress * 15, z), 2, 0, 0,
-                            0, 0.01);
+                    world.spawnParticle(Particle.WITCH, center.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
+                    world.spawnParticle(Particle.SOUL, center.clone().add(x, 0.1, z), 1, 0, 0, 0, 0.02);
                 }
 
-                // Static Sky Beams (Outer perimeter)
-                for (int i = 0; i < 8; i++) {
-                    double angle = i * (Math.PI / 4);
-                    double bx = Math.cos(angle) * 7.0;
-                    double bz = Math.sin(angle) * 7.0;
-                    Location beamLoc = center.clone().add(bx, 0, bz);
-
-                    // Particle Beams shooting up
-                    for (int h = 0; h < 20; h++) {
-                        if (ticks % 5 == 0) {
-                            world.spawnParticle(Particle.SOUL, beamLoc.clone().add(0, h, 0), 1, 0, 0, 0, 0.02);
-                        }
+                // 2. Expanding Outer Ritual Ring (Thin & Clean)
+                double outerRadius = 8.0 * progress;
+                for (int i = 0; i < 32; i++) {
+                    double angle = i * (Math.PI / 16);
+                    double x = Math.cos(angle) * outerRadius;
+                    double z = Math.sin(angle) * outerRadius;
+                    if (ticks % 5 == 0) {
+                        world.spawnParticle(Particle.END_ROD, center.clone().add(x, 0.05, z), 1, 0, 0, 0, 0);
                     }
                 }
 
-                // Ground Tremors
-                if (ticks % 2 == 0) {
-                    world.spawnParticle(Particle.BLOCK, center, 15, radius + 1, 0.1, radius + 1, 0.05,
-                            Material.GRASS_BLOCK.createBlockData());
+                // 3. Energy Extraction Beams (Ground to 2 blocks)
+                if (ticks % 4 == 0) {
+                    for (int i = 0; i < 6; i++) {
+                        double angle = (ticks * 0.1 + i * (Math.PI / 3));
+                        double bx = Math.cos(angle) * 6.0;
+                        double bz = Math.sin(angle) * 6.0;
+                        Location start = center.clone().add(bx, 0.1, bz);
+
+                        // Particle line moving to center
+                        double dx = (center.getX() - start.getX()) * progress;
+                        double dz = (center.getZ() - start.getZ()) * progress;
+                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, start.add(dx, 0.1, dz), 1, 0, 0, 0, 0);
+                    }
                 }
 
-                // Localized Focus: Shake players
+                // Localized Focus (Reduced clutter)
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     if (!online.getWorld().equals(world))
                         continue;
                     double distance = online.getLocation().distance(center);
                     if (distance <= 30.0) {
-                        online.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false, false));
-                        online.spawnParticle(Particle.CRIT, online.getEyeLocation(), 12, 0.3, 0.3, 0.3, 0.1);
-                        online.playSound(online.getLocation(), Sound.ENTITY_WARDEN_HEARTBEAT, 0.8f,
+                        // Very subtle shake (shorter nausea)
+                        online.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 20, 0, false, false, false));
+                        // Clean energy vibration
+                        if (ticks % 2 == 0) {
+                            online.spawnParticle(Particle.END_ROD,
+                                    online.getEyeLocation().add(online.getLocation().getDirection().multiply(0.5)), 1,
+                                    0.1, 0.1, 0.1, 0.01);
+                        }
+                        online.playSound(online.getLocation(), Sound.ENTITY_WARDEN_HEARTBEAT, 0.6f,
                                 0.5f + (float) progress);
                     }
                 }
@@ -195,18 +198,19 @@ public class AdminCommand implements CommandExecutor {
                             Duration.ofSeconds(2));
                     Title finalTitle = Title.title(mainTitle, subTitle, times);
 
-                    // Impact Explosion Beams
-                    for (int i = 0; i < 16; i++) {
-                        double angle = i * (Math.PI / 8);
-                        double x = Math.cos(angle) * 2;
-                        double z = Math.sin(angle) * 2;
-                        for (int h = 0; h < 50; h++) {
-                            world.spawnParticle(Particle.FLASH, center.clone().add(x, h, z), 1, 0, 0, 0, 0);
+                    // Final Shockwave (Clean blast)
+                    for (int r = 0; r < 10; r++) {
+                        double sr = r * 1.5;
+                        for (int i = 0; i < 64; i++) {
+                            double angle = i * (Math.PI / 32);
+                            double x = Math.cos(angle) * sr;
+                            double z = Math.sin(angle) * sr;
+                            world.spawnParticle(Particle.FLASH, center.clone().add(x, 0.2, z), 1, 0, 0, 0, 0);
                         }
                     }
+                    world.spawnParticle(Particle.END_ROD, center, 100, 0.5, 0.5, 0.5, 0.2);
 
-                    world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0.1);
-                    world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
+                    world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 1.5f, 1.2f);
                     world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2f, 1f);
 
                     // Set world border center to spawn and size to 750
