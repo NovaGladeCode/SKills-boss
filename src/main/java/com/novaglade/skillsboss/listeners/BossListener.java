@@ -23,13 +23,17 @@ import org.bukkit.util.Vector;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class BossListener implements Listener {
 
     private static final NamespacedKey ALTAR_KEY = new NamespacedKey(SkillsBoss.getInstance(), "boss_altar");
+    private static final NamespacedKey WAVE_MOB_KEY = new NamespacedKey(SkillsBoss.getInstance(), "wave_mob");
     private static boolean transitionActive = false;
     private static Location transitionPortal = null;
-    private final Map<UUID, BukkitRunnable> activePulls = new HashMap<>();
+
+    // Tracks active wave mobs for each ritual armor stand
+    private final Map<UUID, Set<UUID>> activeWaveMobs = new ConcurrentHashMap<>();
 
     public static boolean isTransitionActive() {
         return transitionActive;
@@ -52,9 +56,9 @@ public class BossListener implements Listener {
         item.setAmount(item.getAmount() - 1);
 
         playerBroadcast(center.getWorld(),
-                Component.text("The earth trembles as the Altar of Avernus manifests...", NamedTextColor.DARK_PURPLE));
-        generateGazebo(center);
-        spawnAltarArmorStand(center.clone().add(0, 1.5, 0));
+                Component.text("The earth cracks as the Pit of Avernus opens...", NamedTextColor.DARK_PURPLE));
+        generateRitualPit(center);
+        spawnAltarArmorStand(center.clone().add(0, 0.5, 0));
     }
 
     @EventHandler
@@ -72,7 +76,6 @@ public class BossListener implements Listener {
         if (hand.getType() == Material.AIR)
             return;
 
-        // Check if item is legendary diamond gear
         if (ItemManager.isCustomItem(hand)) {
             Material type = hand.getType();
             boolean accepted = false;
@@ -85,12 +88,10 @@ public class BossListener implements Listener {
             if (type == Material.DIAMOND_HELMET && (helmet == null || helmet.getType() == Material.AIR)) {
                 stand.getEquipment().setHelmet(hand.clone());
                 accepted = true;
-            } else if (type == Material.DIAMOND_CHESTPLATE
-                    && (chest == null || chest.getType() == Material.AIR)) {
+            } else if (type == Material.DIAMOND_CHESTPLATE && (chest == null || chest.getType() == Material.AIR)) {
                 stand.getEquipment().setChestplate(hand.clone());
                 accepted = true;
-            } else if (type == Material.DIAMOND_LEGGINGS
-                    && (legs == null || legs.getType() == Material.AIR)) {
+            } else if (type == Material.DIAMOND_LEGGINGS && (legs == null || legs.getType() == Material.AIR)) {
                 stand.getEquipment().setLeggings(hand.clone());
                 accepted = true;
             } else if (type == Material.DIAMOND_BOOTS && (boots == null || boots.getType() == Material.AIR)) {
@@ -107,8 +108,22 @@ public class BossListener implements Listener {
     }
 
     @EventHandler
-    public void onBossDeath(EntityDeathEvent event) {
-        Entity entity = event.getEntity();
+    public void onEntityDeath(EntityDeathEvent event) {
+        LivingEntity entity = event.getEntity();
+
+        // Handle Wave Mob tracking
+        if (entity.getPersistentDataContainer().has(WAVE_MOB_KEY, PersistentDataType.STRING)) {
+            String standUuidStr = entity.getPersistentDataContainer().get(WAVE_MOB_KEY, PersistentDataType.STRING);
+            if (standUuidStr != null) {
+                UUID standUuid = UUID.fromString(standUuidStr);
+                Set<UUID> mobs = activeWaveMobs.get(standUuid);
+                if (mobs != null) {
+                    mobs.remove(entity.getUniqueId());
+                }
+            }
+        }
+
+        // Handle Overlord Death
         if (entity.getCustomName() != null && entity.getCustomName().contains("THE AVERNUS OVERLORD")) {
             Location deathLoc = entity.getLocation();
             playerBroadcast(deathLoc.getWorld(),
@@ -119,7 +134,7 @@ public class BossListener implements Listener {
                 public void run() {
                     startProgressionTwoTransition(deathLoc);
                 }
-            }.runTaskLater(SkillsBoss.getInstance(), 200); // 10 seconds later
+            }.runTaskLater(SkillsBoss.getInstance(), 200);
         }
     }
 
@@ -135,44 +150,122 @@ public class BossListener implements Listener {
                 boots != null && boots.getType() != Material.AIR;
 
         if (full) {
+            UUID standUuid = stand.getUniqueId();
+            activeWaveMobs.put(standUuid, Collections.synchronizedSet(new HashSet<>()));
+
             new BukkitRunnable() {
                 int stage = 0;
+                boolean waveActive = false;
 
                 @Override
                 public void run() {
-                    Location loc = stand.getLocation();
-                    if (stage == 0) {
-                        playerBroadcast(loc.getWorld(),
-                                Component.text("THE RITUAL BEGINS!", NamedTextColor.RED, TextDecoration.BOLD));
-                        loc.getWorld().strikeLightningEffect(loc);
-                    } else if (stage == 1) {
-                        spawnWave(loc, 1);
-                    } else if (stage == 2) {
-                        // Wait for wave 1 to clear? Or just timed?
-                        // User said waves then boss. I'll use timed for simplicity/safety against stuck
-                        // mobs
-                        spawnWave(loc, 2);
-                    } else if (stage == 3) {
-                        spawnBoss(loc);
-                        stand.remove();
+                    if (!stand.isValid()) {
+                        activeWaveMobs.remove(standUuid);
                         cancel();
                         return;
                     }
-                    stage++;
+
+                    Set<UUID> mobs = activeWaveMobs.get(standUuid);
+                    if (waveActive) {
+                        if (mobs == null || mobs.isEmpty()) {
+                            waveActive = false;
+                            stage++;
+                            stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f,
+                                    0.5f);
+                        } else {
+                            // Check if mobs are actually still alive/valid (safety check)
+                            mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
+                            return; // Wait for wave to be cleared
+                        }
+                    }
+
+                    Location loc = stand.getLocation();
+                    if (stage == 0) {
+                        playerBroadcast(loc.getWorld(),
+                                Component.text("THE PIT HUNGER FOR SOULS...", NamedTextColor.RED, TextDecoration.BOLD));
+                        loc.getWorld().strikeLightningEffect(loc);
+                        waveActive = true;
+                        // Small delay before spawning
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                spawnWave(stand, 1);
+                            }
+                        }.runTaskLater(SkillsBoss.getInstance(), 40);
+                    } else if (stage == 1) {
+                        playerBroadcast(loc.getWorld(), Component.text("THE AVERNUS SENDS ITS GUARDIANS!",
+                                NamedTextColor.DARK_RED, TextDecoration.BOLD));
+                        waveActive = true;
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                spawnWave(stand, 2);
+                            }
+                        }.runTaskLater(SkillsBoss.getInstance(), 40);
+                    } else if (stage == 2) {
+                        spawnBoss(loc);
+                        stand.remove();
+                        activeWaveMobs.remove(standUuid);
+                        cancel();
+                    }
                 }
-            }.runTaskTimer(SkillsBoss.getInstance(), 40, 200); // Every 10 seconds
+            }.runTaskTimer(SkillsBoss.getInstance(), 40, 20);
         }
     }
 
-    private void spawnWave(Location loc, int waveNum) {
-        playerBroadcast(loc.getWorld(), Component.text("WAVE " + waveNum + " IS COMING!", NamedTextColor.RED));
-        for (int i = 0; i < 10; i++) {
-            Location spawn = loc.clone().add(Math.random() * 10 - 5, 0, Math.random() * 10 - 5);
-            Zombie z = (Zombie) loc.getWorld().spawnEntity(spawn, EntityType.ZOMBIE);
-            z.getAttribute(Attribute.MAX_HEALTH).setBaseValue(40);
-            z.setHealth(40);
-            z.getEquipment().setHelmet(new ItemStack(Material.IRON_HELMET));
-            z.getEquipment().setChestplate(new ItemStack(Material.IRON_CHESTPLATE));
+    private void spawnWave(ArmorStand stand, int waveNum) {
+        Location loc = stand.getLocation();
+        Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
+        if (mobs == null)
+            return;
+
+        if (waveNum == 1) {
+            // Shadow Stalkers: Fast but semi-transparent zombies
+            for (int i = 0; i < 8; i++) {
+                Location spawn = loc.clone().add(Math.random() * 12 - 6, 0, Math.random() * 12 - 6);
+                Zombie z = (Zombie) loc.getWorld().spawnEntity(spawn, EntityType.ZOMBIE);
+                z.setCustomName("§8Shadow Stalker");
+                z.getAttribute(Attribute.MAX_HEALTH).setBaseValue(40);
+                z.setHealth(40);
+                z.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.4);
+                z.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
+                        stand.getUniqueId().toString());
+                mobs.add(z.getUniqueId());
+
+                // Ability: Leap every 5 seconds
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (!z.isValid()) {
+                            cancel();
+                            return;
+                        }
+                        if (z.getTarget() != null) {
+                            Vector v = z.getTarget().getLocation().subtract(z.getLocation()).toVector().normalize()
+                                    .multiply(0.8).setY(0.4);
+                            z.setVelocity(v);
+                            z.getWorld().playSound(z.getLocation(), Sound.ENTITY_ZOMBIE_ATTACK_WOODEN_DOOR, 0.5f, 1.5f);
+                        }
+                    }
+                }.runTaskTimer(SkillsBoss.getInstance(), 40, 100);
+            }
+        } else if (waveNum == 2) {
+            // Avernus Scorchargers: Blazes that drop fire and skeletons with fire arrows
+            for (int i = 0; i < 6; i++) {
+                Location spawn = loc.clone().add(Math.random() * 14 - 7, 0, Math.random() * 14 - 7);
+                Skeleton s = (Skeleton) loc.getWorld().spawnEntity(spawn, EntityType.SKELETON);
+                s.setCustomName("§cScorched Guardian");
+                s.getEquipment().setHelmet(new ItemStack(Material.GOLDEN_HELMET));
+                s.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
+                        stand.getUniqueId().toString());
+                mobs.add(s.getUniqueId());
+
+                Blaze b = (Blaze) loc.getWorld().spawnEntity(spawn.clone().add(0, 3, 0), EntityType.BLAZE);
+                b.setCustomName("§6Avernus Ember");
+                b.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING,
+                        stand.getUniqueId().toString());
+                mobs.add(b.getUniqueId());
+            }
         }
     }
 
@@ -182,15 +275,33 @@ public class BossListener implements Listener {
         WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(loc, EntityType.WITHER_SKELETON);
         boss.setCustomName("§4§lTHE AVERNUS OVERLORD");
         boss.setCustomNameVisible(true);
-        boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(500);
-        boss.setHealth(500);
-        boss.getAttribute(Attribute.SCALE).setBaseValue(3.0);
+        boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(600);
+        boss.setHealth(600);
+        boss.getAttribute(Attribute.SCALE).setBaseValue(3.5);
 
         boss.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
         boss.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
         boss.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
         boss.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
         boss.getEquipment().setItemInMainHand(new ItemStack(Material.DIAMOND_SWORD));
+
+        // Boss Ability: Pull players every 8 seconds
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!boss.isValid()) {
+                    cancel();
+                    return;
+                }
+                boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_ROAR, 1f, 0.5f);
+                for (Entity e : boss.getNearbyEntities(15, 15, 15)) {
+                    if (e instanceof Player p && !p.isOp()) {
+                        Vector v = boss.getLocation().subtract(p.getLocation()).toVector().normalize().multiply(1.5);
+                        p.setVelocity(v);
+                    }
+                }
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 100, 160);
     }
 
     private void startProgressionTwoTransition(Location loc) {
@@ -198,7 +309,6 @@ public class BossListener implements Listener {
         transitionActive = true;
         transitionPortal = loc.clone();
 
-        // Build a custom portal structure (Nether Portal blocks)
         for (int x = -1; x <= 1; x++) {
             for (int y = 0; y <= 2; y++) {
                 loc.clone().add(x, y, 0).getBlock().setType(Material.NETHER_PORTAL);
@@ -215,15 +325,11 @@ public class BossListener implements Listener {
             p.sendMessage(Component.text("You are being pulled into the Avernus...", NamedTextColor.DARK_RED));
             startPullingPlayer(p);
         }
-
-        // Disable transition active after some time?
-        // User said missed players also get pulled, so I'll keep it active.
     }
 
     public static void startPullingPlayer(Player p) {
         if (transitionPortal == null)
             return;
-
         new BukkitRunnable() {
             int ticks = 0;
 
@@ -233,55 +339,47 @@ public class BossListener implements Listener {
                     cancel();
                     return;
                 }
-
                 Location pLoc = p.getLocation();
                 Vector dir = transitionPortal.clone().subtract(pLoc).toVector();
-                double dist = dir.length();
-
-                if (dist < 2) {
-                    p.teleport(transitionPortal); // Enter portal
+                if (dir.length() < 2) {
+                    p.teleport(transitionPortal);
                     cancel();
                     return;
                 }
-
-                dir.normalize().multiply(1.5); // Faster pull speed
-                Location next = pLoc.clone().add(dir);
-                p.teleport(next); // Teleport ensures phasing through blocks
-
-                // Visual effect: Soul fire and smoke trails
+                dir.normalize().multiply(1.5);
+                p.teleport(pLoc.clone().add(dir));
                 p.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, pLoc, 10, 0.4, 0.4, 0.4, 0.05);
-                p.getWorld().spawnParticle(Particle.SMOKE, pLoc, 5, 0.1, 0.1, 0.1, 0.02);
-
                 ticks++;
             }
         }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
-    private void generateGazebo(Location center) {
+    private void generateRitualPit(Location center) {
         World world = center.getWorld();
-        int size = 10; // 20x20 area centered
+        int size = 8;
 
-        // Floor
+        // Detailed Floor (Gothic Cross Pattern)
         for (int x = -size; x <= size; x++) {
             for (int z = -size; z <= size; z++) {
-                world.getBlockAt(center.clone().add(x, -1, z)).setType(Material.POLISHED_BLACKSTONE_BRICKS);
-            }
-        }
-
-        // Pillars
-        int[] corners = { -size, size };
-        for (int cx : corners) {
-            for (int cz : corners) {
-                for (int y = 0; y < 4; y++) {
-                    world.getBlockAt(center.clone().add(cx, y, cz)).setType(Material.CHISELED_POLISHED_BLACKSTONE);
+                Location l = center.clone().add(x, -1, z);
+                if (Math.abs(x) == size || Math.abs(z) == size) {
+                    l.getBlock().setType(Material.CHISELED_POLISHED_BLACKSTONE);
+                } else if (x == 0 || z == 0) {
+                    l.getBlock().setType(Material.CRYING_OBSIDIAN);
+                } else {
+                    l.getBlock().setType(Material.POLISHED_BLACKSTONE_BRICKS);
                 }
             }
         }
 
-        // Roof (Simple flat top with stairs)
-        for (int x = -size; x <= size; x++) {
-            for (int z = -size; z <= size; z++) {
-                world.getBlockAt(center.clone().add(x, 4, z)).setType(Material.POLISHED_BLACKSTONE_BRICK_SLAB);
+        // Corner Spikes (Replacing Gazebo Pillars)
+        int[] corners = { -size, size };
+        for (int cx : corners) {
+            for (int cz : corners) {
+                for (int y = 0; y < 4; y++) {
+                    Material mat = (y == 3) ? Material.SOUL_LANTERN : Material.OBSIDIAN;
+                    world.getBlockAt(center.clone().add(cx, y, cz)).setType(mat);
+                }
             }
         }
     }
