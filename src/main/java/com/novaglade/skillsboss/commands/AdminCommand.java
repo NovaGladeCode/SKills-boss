@@ -116,10 +116,13 @@ public class AdminCommand implements CommandExecutor {
                     SkillsBoss.setProgressionLevel(1);
                     Component startMsg = Component.text("PROGRESSION 1 STARTED!", NamedTextColor.GREEN,
                             TextDecoration.BOLD);
+
+                    // Set world border to 500
+                    Bukkit.getWorlds().get(0).getWorldBorder().setSize(500);
+
                     for (Player online : Bukkit.getOnlinePlayers()) {
                         online.sendMessage(startMsg);
-                        online.showTitle(Title.title(startMsg,
-                                Component.text("Diamond armor is now restricted!", NamedTextColor.RED)));
+                        online.showTitle(Title.title(startMsg, Component.empty()));
                     }
                     cancel();
                 }
