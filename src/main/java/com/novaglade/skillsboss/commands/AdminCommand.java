@@ -108,9 +108,8 @@ public class AdminCommand implements CommandExecutor {
             public void run() {
                 try {
                     int seconds = (int) Math.ceil(ticks / 20.0);
-                    double progress = 1.0 - ((double) ticks / maxTicks);
 
-                    if (ticks % 20 == 0) {
+                    if (ticks % 20 == 0 && seconds > 0) {
                         Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.RED,
                                 TextDecoration.BOLD);
                         Component subTitle = Component.text("Starting Progression I: A New Beginning...",
@@ -120,92 +119,21 @@ public class AdminCommand implements CommandExecutor {
                                         Duration.ofMillis(100)));
 
                         for (Player online : Bukkit.getOnlinePlayers()) {
-                            if (online.getWorld().equals(world) && online.getLocation().distance(center) <= 60.0) {
+                            if (online.getWorld().equals(world)) {
                                 online.showTitle(title);
                                 online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f,
-                                        0.4f + (float) progress * 1.6f);
+                                        0.5f + (seconds * 0.1f));
                             }
                         }
                     }
 
-                    // Ritual effects logic stays same
-                    int layersToShow = Math.min(8, (int) (progress * 10) + 1);
-                    for (int layer = 1; layer <= layersToShow; layer++) {
-                        double rSize = (2.2 * layer);
-                        double speed = (layer % 2 == 0 ? 0.35 : -0.35);
-                        int density = 20 + (layer * 10);
-
-                        for (int i = 0; i < density; i++) {
-                            double angle = (ticks * speed + i * (2 * Math.PI / density));
-                            double x = Math.cos(angle) * rSize;
-                            double z = Math.sin(angle) * rSize;
-                            Particle p = (layer % 3 == 0 ? Particle.SOUL_FIRE_FLAME
-                                    : (layer % 3 == 1 ? Particle.SOUL_FIRE_FLAME : Particle.END_ROD));
-                            world.spawnParticle(p, center.clone().add(x, 0.1, z), 2, 0.05, 0, 0.05, 0);
-                            if (ticks % 3 == 0) {
-                                world.spawnParticle(Particle.ENCHANT, center.clone().add(x, progress * 15, z), 1, 0, 0,
-                                        0,
-                                        0.05);
-                            }
-                        }
-                    }
-
-                    if (progress > 0.2) {
-                        for (int i = 0; i < 8; i++) {
-                            double angle = i * (Math.PI / 4);
-                            double r = 18.0;
-                            Location chainBase = center.clone().add(Math.cos(angle) * r, 0, Math.sin(angle) * r);
-                            for (int h = 0; h < 20; h++) {
-                                if ((ticks + h) % 10 == 0) {
-                                    world.spawnParticle(Particle.SOUL, chainBase.clone().add(0, h * progress, 0), 1, 0,
-                                            0,
-                                            0, 0);
-                                }
-                            }
-                        }
-                    }
-
-                    if (progress > 0.4 && ticks % 3 == 0) {
-                        for (int i = 0; i < 6; i++) {
-                            double angle = Math.random() * 2 * Math.PI;
-                            double startR = 4.0;
-                            double endR = 15.0 * progress;
-                            Location p1 = center.clone().add(Math.cos(angle) * startR, 0.1, Math.sin(angle) * startR);
-                            Location p2 = center.clone().add(Math.cos(angle + 0.2) * endR, 0.1,
-                                    Math.sin(angle + 0.2) * endR);
-                            for (double d = 0; d < 1.0; d += 0.1) {
-                                Location arc = p1.clone().add(p2.clone().subtract(p1).toVector().multiply(d));
-                                world.spawnParticle(Particle.FIREWORK, arc.add(0, Math.random() * 0.2, 0), 1, 0,
-                                        0, 0,
-                                        0);
-                            }
-                        }
-                    }
-
-                    if (progress > 0.6) {
-                        for (int i = 0; i < 16; i++) {
-                            double angle = (ticks * 0.5 + i * (Math.PI / 8));
-                            double vRadius = 10.0 + (progress * 15.0);
-                            double vx = Math.cos(angle) * vRadius;
-                            double vz = Math.sin(angle) * vRadius;
-                            world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(vx, (i * 0.15), vz), 2, 0.1,
-                                    0,
-                                    0.1, 0.02);
-                        }
-                    }
-
-                    if (ticks % 15 == 0) {
-                        world.spawnParticle(Particle.ENCHANT, center, 100, 10, 0.1, 10, 0.02);
-                    }
-
-                    for (Player online : Bukkit.getOnlinePlayers()) {
-                        if (!online.getWorld().equals(world))
-                            continue;
-                        if (online.getLocation().distance(center) <= 60.0) {
-                            online.playSound(online.getLocation(), Sound.ENTITY_WARDEN_HEARTBEAT, 1.2f,
-                                    0.3f + (float) progress * 0.9f);
-                            online.playSound(online.getLocation(), Sound.BLOCK_BEACON_AMBIENT, 0.6f,
-                                    0.4f + (float) progress);
+                    // Simple particle ring
+                    if (ticks % 5 == 0) {
+                        for (int i = 0; i < 20; i++) {
+                            double angle = (i * 2 * Math.PI / 20);
+                            double x = Math.cos(angle) * 3;
+                            double z = Math.sin(angle) * 3;
+                            world.spawnParticle(Particle.FLAME, center.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
                         }
                     }
 
@@ -218,28 +146,9 @@ public class AdminCommand implements CommandExecutor {
                         Title finalTitle = Title.title(mainTitle, subTitle,
                                 Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(6), Duration.ofSeconds(3)));
 
-                        for (int r = 0; r < 20; r++) {
-                            world.spawnParticle(Particle.FLASH, center, 100, r * 2, 0.5, r * 2, 0);
-                            world.spawnParticle(Particle.SONIC_BOOM, center, 10, r, r, r, 0);
+                        for (int r = 0; r < 10; r++) {
+                            world.spawnParticle(Particle.FLAME, center, 50, r, 0.5, r, 0.1);
                         }
-                        for (int i = 0; i < 400; i++) {
-                            double phi = Math.acos(-1.0 + (2.0 * i) / 400.0);
-                            double theta = Math.sqrt(400.0 * Math.PI) * phi;
-                            double x = Math.cos(theta) * Math.sin(phi) * 15;
-                            double y = Math.sin(theta) * Math.sin(phi) * 15;
-                            double z = Math.cos(phi) * 15;
-                            world.spawnParticle(Particle.END_ROD, center.clone().add(x, y + 1, z), 2, 0, 0, 0, 0.05);
-                        }
-                        new BukkitRunnable() {
-                            int residueTicks = 100;
-
-                            @Override
-                            public void run() {
-                                world.spawnParticle(Particle.END_ROD, center, 10, 15, 10, 15, 0.01);
-                                if (residueTicks-- <= 0)
-                                    cancel();
-                            }
-                        }.runTaskTimer(SkillsBoss.getInstance(), 10, 2);
 
                         world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 3.5f, 0.4f);
                         world.playSound(center, Sound.ENTITY_WITHER_DEATH, 3.5f, 0.4f);
@@ -248,7 +157,7 @@ public class AdminCommand implements CommandExecutor {
                         world.getWorldBorder().setCenter(center);
                         world.getWorldBorder().setSize(750);
                         for (Player online : Bukkit.getOnlinePlayers()) {
-                            if (online.getWorld().equals(world) && online.getLocation().distance(center) <= 80.0) {
+                            if (online.getWorld().equals(world)) {
                                 online.sendMessage(Component
                                         .text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD)
                                         .append(Component
