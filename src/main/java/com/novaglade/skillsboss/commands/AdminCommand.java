@@ -89,45 +89,82 @@ public class AdminCommand implements CommandExecutor {
             sender.sendMessage(Component.text("Progression 0 set: Spawn updated, All players TPed, Border set to 10.",
                     NamedTextColor.GREEN));
         } else if (level == 1) {
-            startProgressionOneCountdown();
+            startProgressionOneCountdown(player);
         } else {
             sender.sendMessage(Component.text("Unknown progression level.", NamedTextColor.RED));
         }
     }
 
-    private void startProgressionOneCountdown() {
+    private void startProgressionOneCountdown(Player starter) {
+        Location center = starter.getLocation();
+
         new BukkitRunnable() {
-            int count = 5;
+            int ticks = 5 * 20; // 5 seconds in ticks
 
             @Override
             public void run() {
-                if (count > 0) {
-                    Component mainTitle = Component.text(String.valueOf(count), NamedTextColor.RED,
+                int seconds = (int) Math.ceil(ticks / 20.0);
+
+                // Once per second: Show Title & Play Sound
+                if (ticks % 20 == 0) {
+                    Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.RED,
                             TextDecoration.BOLD);
                     Component subTitle = Component.text("Starting Progression 1...", NamedTextColor.YELLOW);
                     Title title = Title.title(mainTitle, subTitle,
-                            Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(600), Duration.ofMillis(200)));
+                            Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800), Duration.ofMillis(100)));
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
                         online.showTitle(title);
+                        online.playSound(online.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_PLING, 1f,
+                                0.5f + (5 - seconds) * 0.2f);
                     }
-                    count--;
-                } else {
+                }
+
+                // Every tick: Animation & Shake
+                double radius = 5.0 - (ticks / 100.0 * 5.0); // Ring closes in
+                for (int i = 0; i < 3; i++) {
+                    double angle = (ticks * 0.5 + i * (2 * Math.PI / 3));
+                    double x = Math.cos(angle) * radius;
+                    double z = Math.sin(angle) * radius;
+                    center.getWorld().spawnParticle(org.bukkit.Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z),
+                            1, 0, 0, 0, 0);
+                    center.getWorld().spawnParticle(org.bukkit.Particle.DRAGON_BREATH, center.clone().add(x, 1.5, z), 1,
+                            0, 0, 0, 0);
+                }
+
+                // Shake effect for players near or online
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    // Apply brief nausea to simulate shake
+                    online.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.NAUSEA,
+                            40, 0, false, false, false));
+
+                    // Spawn vibration particles around player head
+                    online.spawnParticle(org.bukkit.Particle.CRIT, online.getEyeLocation(), 5, 0.5, 0.5, 0.5, 0.1);
+                }
+
+                if (ticks <= 0) {
                     SkillsBoss.setProgressionLevel(1);
                     Component startMsg = Component.text("PROGRESSION 1 STARTED!", NamedTextColor.GREEN,
                             TextDecoration.BOLD);
 
+                    // Final impact effects
+                    center.getWorld().spawnParticle(org.bukkit.Particle.EXPLOSION_EMITTER, center, 10, 2, 2, 2, 0.1);
+                    center.getWorld().playSound(center, org.bukkit.Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
+                    center.getWorld().playSound(center, org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 2f, 1f);
+
                     // Set world border to 500
-                    Bukkit.getWorlds().get(0).getWorldBorder().setSize(500);
+                    center.getWorld().getWorldBorder().setSize(500);
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
                         online.sendMessage(startMsg);
                         online.showTitle(Title.title(startMsg, Component.empty()));
+                        online.removePotionEffect(org.bukkit.potion.PotionEffectType.NAUSEA);
                     }
                     cancel();
                 }
+                ticks--;
             }
-        }.runTaskTimer(SkillsBoss.getInstance(), 0, 20);
+        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
     private void handleGive(CommandSender sender, String[] args) {
