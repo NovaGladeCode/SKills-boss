@@ -126,25 +126,46 @@ public class AdminCommand implements CommandExecutor {
                     }
                 }
 
-                // Every tick: Animation & Shake
-                double radius = 5.0 - (ticks / 100.0 * 5.0); // Ring closes in
-                for (int i = 0; i < 3; i++) {
-                    double angle = (ticks * 0.5 + i * (2 * Math.PI / 3));
+                // Every tick: Area Animation
+                double progress = 1.0 - (ticks / 100.0);
+                double radius = 6.0 * (1.0 - progress); // Ring closing from 6 to 0
+
+                // Swirling energy beams
+                for (int i = 0; i < 4; i++) {
+                    double angle = (ticks * 0.4 + i * (Math.PI / 2));
                     double x = Math.cos(angle) * radius;
                     double z = Math.sin(angle) * radius;
-                    center.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z), 1, 0, 0, 0,
-                            0);
-                    center.getWorld().spawnParticle(Particle.DRAGON_BREATH, center.clone().add(x, 1.5, z), 1, 0, 0, 0,
-                            0);
+
+                    // Main swirling ring
+                    center.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z), 2, 0.1,
+                            0.1, 0.1, 0.02);
+                    center.getWorld().spawnParticle(Particle.DRAGON_BREATH,
+                            center.clone().add(x, 0.5 + progress * 3, z), 2, 0.1, 0.1, 0.1, 0.02);
+
+                    // Rising pillars of light
+                    center.getWorld().spawnParticle(Particle.END_ROD, center.clone().add(x, progress * 10, z), 1, 0, 0,
+                            0, 0.01);
                 }
 
-                // Shake effect for players near or online
-                for (Player online : Bukkit.getOnlinePlayers()) {
-                    // Apply brief nausea to simulate shake
-                    online.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false, false));
+                // Ground Tremors (Area focus)
+                if (ticks % 2 == 0) {
+                    center.getWorld().spawnParticle(Particle.BLOCK, center, 10, radius + 1, 0.1, radius + 1, 0.05,
+                            Material.GRASS_BLOCK.createBlockData());
+                }
 
-                    // Spawn vibration particles around player head
-                    online.spawnParticle(Particle.CRIT, online.getEyeLocation(), 5, 0.5, 0.5, 0.5, 0.1);
+                // Localized Focus: Shake players within 30 blocks
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    double distance = online.getLocation().distance(center);
+
+                    if (distance <= 30.0) {
+                        // Near the ritual: Shake vision and show crit particles
+                        online.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false, false));
+                        online.spawnParticle(Particle.CRIT, online.getEyeLocation(), 8, 0.3, 0.3, 0.3, 0.1);
+
+                        // Play intense vibration sounds for locals
+                        online.playSound(online.getLocation(), Sound.ENTITY_WARDEN_HEARTBEAT, 0.8f,
+                                0.5f + (float) progress);
+                    }
                 }
 
                 if (ticks <= 0) {
