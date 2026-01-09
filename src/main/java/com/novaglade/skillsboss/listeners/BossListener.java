@@ -71,7 +71,9 @@ public class BossListener implements Listener {
         if (event.getHand() != EquipmentSlot.HAND)
             return;
         ItemStack item = event.getItem();
-        if (item == null || !ItemManager.isBossSpawnItem(item))
+        if (item == null || item.getType() == Material.AIR)
+            return;
+        if (!ItemManager.isBossSpawnItem(item))
             return;
 
         event.setCancelled(true);
@@ -145,12 +147,14 @@ public class BossListener implements Listener {
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
         if (entity.getPersistentDataContainer().has(WAVE_MOB_KEY, PersistentDataType.STRING)) {
-            UUID standUuid = UUID
-                    .fromString(entity.getPersistentDataContainer().get(WAVE_MOB_KEY, PersistentDataType.STRING));
-            Set<UUID> mobs = activeWaveMobs.get(standUuid);
-            if (mobs != null) {
-                mobs.remove(entity.getUniqueId());
-                updateBossBar(standUuid, mobs.size());
+            String uuidStr = entity.getPersistentDataContainer().get(WAVE_MOB_KEY, PersistentDataType.STRING);
+            if (uuidStr != null) {
+                UUID standUuid = UUID.fromString(uuidStr);
+                Set<UUID> mobs = activeWaveMobs.get(standUuid);
+                if (mobs != null) {
+                    mobs.remove(entity.getUniqueId());
+                    updateBossBar(standUuid, mobs.size());
+                }
             }
         }
         if (bossGroup.contains(entity.getUniqueId())) {
@@ -185,8 +189,9 @@ public class BossListener implements Listener {
     private void updateBossBar(UUID standUuid, int currentMobs) {
         BossBar bar = activeBars.get(standUuid);
         if (bar != null) {
-            bar.setProgress(Math.clamp(currentMobs / 6.0, 0.0, 1.0));
-        } // Adjusted denominator
+            double progress = currentMobs / 6.0;
+            bar.setProgress(Math.max(0.0, Math.min(1.0, progress)));
+        }
     }
 
     private void checkActivation(ArmorStand stand) {
@@ -213,7 +218,7 @@ public class BossListener implements Listener {
         activeBars.put(standUuid, ritualBar);
 
         new BukkitRunnable() {
-            int wave = 0;
+            int waveNum = 0;
             boolean waiting = false;
 
             @Override
@@ -229,26 +234,26 @@ public class BossListener implements Listener {
                     mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
                     if (mobs.isEmpty()) {
                         waiting = false;
-                        wave++;
+                        waveNum++;
                         stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
                     } else {
                         return;
                     }
                 }
 
-                if (wave == 0) {
+                if (waveNum == 0) {
                     startWave(stand, ritualBar, 1);
-                    wave = 1;
+                    waveNum = 1;
                     waiting = true;
-                } else if (wave == 1) {
+                } else if (waveNum == 1) {
                     startWave(stand, ritualBar, 2);
-                    wave = 2;
+                    waveNum = 2;
                     waiting = true;
-                } else if (wave == 2) {
+                } else if (waveNum == 2) {
                     startWave(stand, ritualBar, 3);
-                    wave = 3;
+                    waveNum = 3;
                     waiting = true;
-                } else if (wave == 3) {
+                } else if (waveNum == 3) {
                     ritualBar.removeAll();
                     activeBars.remove(standUuid);
                     spawnBosses(stand.getLocation());
@@ -268,35 +273,35 @@ public class BossListener implements Listener {
         activatingStands.remove(uuid);
     }
 
-    private void startWave(ArmorStand stand, BossBar bar, int waveNum) {
+    private void startWave(ArmorStand stand, BossBar bar, int waveId) {
         String[] titles = { "", "§e§lTrial I: The Fallen Sentries", "§6§lTrial II: The Ember Mages",
                 "§c§lTrial III: The Avernus Commanders" };
         Component[] msgs = { null, Component.text("The fallen rise to guard the core...", NamedTextColor.YELLOW),
                 Component.text("The heat intensifies deeply...", NamedTextColor.GOLD),
                 Component.text("The elite have arrived to end you.", NamedTextColor.RED) };
 
-        bar.setTitle(titles[waveNum]);
-        playerBroadcast(stand.getWorld(), msgs[waveNum]);
-        spawnWave(stand, waveNum);
+        bar.setTitle(titles[waveId]);
+        playerBroadcast(stand.getWorld(), msgs[waveId]);
+        spawnWave(stand, waveId);
     }
 
-    private void spawnWave(ArmorStand stand, int waveNum) {
+    private void spawnWave(ArmorStand stand, int waveId) {
         Location loc = stand.getLocation();
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
-        if (waveNum == 1) {
-            // Fewer but stronger custom skeletons
+        if (waveId == 1) {
             for (int i = 0; i < 4; i++) {
                 Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", null, stand.getUniqueId(),
-                        mobs);
-                e.getEquipment().setHelmet(new ItemStack(Material.GOLDEN_HELMET));
+                        mobs, "MHF_Skeleton");
+                e.getEquipment().setHelmet(createSkull("MHF_Skeleton"));
                 e.getEquipment().setItemInMainHand(new ItemStack(Material.BOW));
                 e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(60);
                 e.setHealth(60);
             }
-        } else if (waveNum == 2) {
-            // Mages (Evokers with fire theme)
+        } else if (waveId == 2) {
             for (int i = 0; i < 2; i++) {
-                Evoker e = (Evoker) spawnMob(loc, EntityType.EVOKER, "§6Ember Mage", null, stand.getUniqueId(), mobs);
+                Evoker e = (Evoker) spawnMob(loc, EntityType.EVOKER, "§6Ember Mage", null, stand.getUniqueId(), mobs,
+                        "MHF_Blaze");
+                e.getEquipment().setHelmet(createSkull("MHF_Blaze"));
                 e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(80);
                 e.setHealth(80);
                 new BukkitRunnable() {
@@ -311,21 +316,21 @@ public class BossListener implements Listener {
                     }
                 }.runTaskTimer(SkillsBoss.getInstance(), 10, 10);
             }
-        } else if (waveNum == 3) {
-            // Two very strong commanders
+        } else if (waveId == 3) {
             for (int i = 0; i < 2; i++) {
                 WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Commander",
-                        Material.NETHERITE_AXE, stand.getUniqueId(), mobs);
+                        Material.NETHERITE_AXE, stand.getUniqueId(), mobs, "MHF_WitherSkeleton");
+                e.getEquipment().setHelmet(createSkull("MHF_WitherSkeleton"));
+                e.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
                 e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(200);
                 e.setHealth(200);
                 e.getAttribute(Attribute.SCALE).setBaseValue(1.2);
-                e.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
             }
         }
     }
 
     private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
-            Set<UUID> mobs) {
+            Set<UUID> mobs, String skin) {
         Location spawn = loc.clone().add(Math.random() * 10 - 5, 0, Math.random() * 10 - 5);
         LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(spawn, type);
         e.setCustomName(name);
@@ -338,13 +343,21 @@ public class BossListener implements Listener {
         return e;
     }
 
+    private ItemStack createSkull(String owner) {
+        ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta meta = (SkullMeta) skull.getItemMeta();
+        if (meta != null) {
+            meta.setOwningPlayer(Bukkit.getOfflinePlayer(owner));
+            skull.setItemMeta(meta);
+        }
+        return skull;
+    }
+
     private void spawnBosses(Location loc) {
         playerBroadcast(loc.getWorld(), Component.text("THE OVERLORDS OF THE AVERNUS MATERIALIZE!",
                 NamedTextColor.DARK_RED, TextDecoration.BOLD));
         String[] titles = { "§4§lIgnis", "§5§lAnima", "§1§lAbyss", "§c§lAres" };
         BarColor[] colors = { BarColor.RED, BarColor.PURPLE, BarColor.BLUE, BarColor.RED };
-
-        // Use custom Player Skins for a "Texture Pack" look without a pack
         String[] skinOwners = { "MHF_LavaSlime", "MHF_Enderman", "MHF_WitherSkeleton", "MHF_CaveSpider" };
 
         for (int i = 0; i < 4; i++) {
@@ -354,16 +367,9 @@ public class BossListener implements Listener {
             boss.setCustomNameVisible(true);
             boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(600);
             boss.setHealth(600);
-
-            // SHRUNK: 1.2 scale for elite humanoid feel
             boss.getAttribute(Attribute.SCALE).setBaseValue(1.3);
 
-            ItemStack skull = new ItemStack(Material.PLAYER_HEAD);
-            SkullMeta meta = (SkullMeta) skull.getItemMeta();
-            meta.setOwningPlayer(Bukkit.getOfflinePlayer(skinOwners[i]));
-            skull.setItemMeta(meta);
-
-            boss.getEquipment().setHelmet(skull);
+            boss.getEquipment().setHelmet(createSkull(skinOwners[i]));
             boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
             boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
             boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
@@ -394,10 +400,10 @@ public class BossListener implements Listener {
                         cancel();
                         return;
                     }
-                    bar.setProgress(Math.clamp(boss.getHealth() / 600.0, 0, 1));
+                    double progress = boss.getHealth() / 600.0;
+                    bar.setProgress(Math.max(0.0, Math.min(1.0, progress)));
 
                     Location bLoc = boss.getLocation();
-                    // Creative Visuals: Aura
                     if (type == 0)
                         bLoc.getWorld().spawnParticle(Particle.FLAME, bLoc.add(0, 1, 0), 3, 0.2, 0.5, 0.2, 0.02);
                     else if (type == 1)
@@ -409,7 +415,7 @@ public class BossListener implements Listener {
 
                     double rand = Math.random();
                     if (rand < 0.15) {
-                        if (type == 0) { // Ignis: Nova
+                        if (type == 0) { // Ignis
                             boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 1, 0, 0, 0,
                                     0);
                             boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 1.2f);
@@ -417,7 +423,7 @@ public class BossListener implements Listener {
                                 if (e instanceof Player p && !p.isOp())
                                     p.setFireTicks(100);
                             }
-                        } else if (type == 1) { // Anima: Life Drain
+                        } else if (type == 1) { // Anima
                             for (Entity e : boss.getNearbyEntities(8, 8, 8)) {
                                 if (e instanceof Player p && !p.isOp()) {
                                     p.damage(4, boss);
@@ -425,7 +431,7 @@ public class BossListener implements Listener {
                                     p.getWorld().spawnParticle(Particle.HEART, p.getLocation().add(0, 1.5, 0), 1);
                                 }
                             }
-                        } else if (type == 2) { // Abyss: Blindness vortex
+                        } else if (type == 2) { // Abyss
                             boss.getWorld().playSound(boss.getLocation(), Sound.BLOCK_REGENERATION_STATION_CHARGE, 1f,
                                     0.5f);
                             for (Entity e : boss.getNearbyEntities(10, 10, 10)) {
@@ -435,7 +441,7 @@ public class BossListener implements Listener {
                                             .multiply(1.2));
                                 }
                             }
-                        } else if (type == 3) { // Ares: Berserker leap
+                        } else if (type == 3) { // Ares
                             LivingEntity target = boss.getTarget();
                             if (target != null) {
                                 Vector leap = target.getLocation().subtract(boss.getLocation()).toVector().normalize()
