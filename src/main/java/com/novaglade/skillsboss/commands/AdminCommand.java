@@ -170,8 +170,12 @@ public class AdminCommand implements CommandExecutor {
 
                 if (ticks <= 0) {
                     SkillsBoss.setProgressionLevel(1);
-                    Component startMsg = Component.text("PROGRESSION I: A NEW BEGINNING", NamedTextColor.GREEN,
+
+                    Component mainTitle = Component.text("PROGRESSION I", NamedTextColor.GREEN, TextDecoration.BOLD);
+                    Component subTitle = Component.text("A NEW BEGINNING", NamedTextColor.DARK_AQUA,
                             TextDecoration.BOLD);
+                    Component chatMsg = Component.text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD)
+                            .append(Component.text("A New Beginning", NamedTextColor.DARK_AQUA, TextDecoration.BOLD));
 
                     // Final impact effects
                     center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 10, 2, 2, 2, 0.1);
@@ -182,8 +186,8 @@ public class AdminCommand implements CommandExecutor {
                     center.getWorld().getWorldBorder().setSize(500);
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
-                        online.sendMessage(startMsg);
-                        online.showTitle(Title.title(startMsg, Component.empty()));
+                        online.sendMessage(chatMsg);
+                        online.showTitle(Title.title(mainTitle, subTitle));
                         online.removePotionEffect(PotionEffectType.NAUSEA);
                     }
                     cancel();
