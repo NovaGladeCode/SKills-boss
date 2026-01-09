@@ -186,15 +186,15 @@ public class AdminCommand implements CommandExecutor {
                     }
                 }
 
-                // 4. The Sky Funnel (Massive Escalation)
+                // 4. The Ground Vortex (Sweeping Energy)
                 if (progress > 0.6) {
                     for (int i = 0; i < 16; i++) {
-                        double angle = (ticks * 0.7 + i * (Math.PI / 8));
-                        double vRadius = 20.0 - (progress * 15.0);
-                        double vy = (i * 1.8);
+                        double angle = (ticks * 0.5 + i * (Math.PI / 8));
+                        double vRadius = 10.0 + (progress * 15.0);
+                        double vy = (i * 0.15); // Stays extremely low
                         double vx = Math.cos(angle) * vRadius;
                         double vz = Math.sin(angle) * vRadius;
-                        world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(vx, vy, vz), 2, 0.1, 0.1, 0.1,
+                        world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(vx, vy, vz), 2, 0.1, 0, 0.1,
                                 0.02);
                     }
                 }
@@ -243,7 +243,7 @@ public class AdminCommand implements CommandExecutor {
                         double x = Math.cos(theta) * Math.sin(phi) * 15;
                         double y = Math.sin(theta) * Math.sin(phi) * 15;
                         double z = Math.cos(phi) * 15;
-                        world.spawnParticle(Particle.END_ROD, center.clone().add(x, y + 5, z), 2, 0, 0, 0, 0.05);
+                        world.spawnParticle(Particle.END_ROD, center.clone().add(x, y + 1, z), 2, 0, 0, 0, 0.05);
                     }
 
                     // Lingering Residue (Falling stars)

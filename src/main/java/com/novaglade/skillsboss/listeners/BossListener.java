@@ -272,7 +272,7 @@ public class BossListener implements Listener {
         int[] corners = { -size, size };
         for (int cx : corners) {
             for (int cz : corners) {
-                for (int y = 0; y < 6; y++) {
+                for (int y = 0; y < 4; y++) {
                     world.getBlockAt(center.clone().add(cx, y, cz)).setType(Material.CHISELED_POLISHED_BLACKSTONE);
                 }
             }
@@ -281,7 +281,7 @@ public class BossListener implements Listener {
         // Roof (Simple flat top with stairs)
         for (int x = -size; x <= size; x++) {
             for (int z = -size; z <= size; z++) {
-                world.getBlockAt(center.clone().add(x, 6, z)).setType(Material.POLISHED_BLACKSTONE_BRICK_SLAB);
+                world.getBlockAt(center.clone().add(x, 4, z)).setType(Material.POLISHED_BLACKSTONE_BRICK_SLAB);
             }
         }
     }
