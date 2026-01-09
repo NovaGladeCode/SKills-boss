@@ -1,0 +1,30 @@
+name: MayhemCore
+version: 1.0-SNAPSHOT
+main: com.novaglade.mayhem.MayhemCore
+api-version: '1.21'
+description: A comprehensive Skills SMB plugin for Minecraft 1.21.11
+authors: [NovaGlade]
+commands:
+  admin:
+    description: MayhemCore Admin controls
+    usage: /admin <spawn|stop|give|setskill>
+    permission: mayhem.admin
+  skills:
+    description: View your skill levels and progress
+    usage: /skills
+permissions:
+  mayhem.admin:
+    description: Access to all admin commands
+    default: op
+  mayhem.admin.spawn:
+    description: Spawn the boss
+    default: op
+  mayhem.admin.stop:
+    description: Stop all bosses
+    default: op
+  mayhem.admin.give:
+    description: Give custom items
+    default: op
+  mayhem.admin.setskill:
+    description: Set player skills
+    default: op
