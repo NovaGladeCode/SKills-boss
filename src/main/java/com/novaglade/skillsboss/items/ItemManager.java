@@ -19,6 +19,8 @@ public class ItemManager {
             "custom_legendary_item");
     private static final NamespacedKey BOSS_SPAWN_KEY = new NamespacedKey(SkillsBoss.getInstance(),
             "boss_spawn_item");
+    private static final NamespacedKey PORTAL_OBSIDIAN_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "portal_obsidian");
 
     public static ItemStack createBossSpawnItem() {
         ItemStack item = new ItemStack(Material.GHAST_SPAWN_EGG);
@@ -75,5 +77,29 @@ public class ItemManager {
         if (item == null || !item.hasItemMeta())
             return false;
         return item.getItemMeta().getPersistentDataContainer().has(BOSS_SPAWN_KEY, PersistentDataType.BYTE);
+    }
+
+    public static ItemStack createPortalObsidian() {
+        ItemStack item = new ItemStack(Material.CRYING_OBSIDIAN, 16);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(
+                    Component.text("Portal Obsidian", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Ancient obsidian imbued with dimensional energy.", NamedTextColor.LIGHT_PURPLE));
+            lore.add(Component.empty());
+            lore.add(Component.text("Build a 5-high, 3-wide frame to create a portal.", NamedTextColor.GRAY,
+                    TextDecoration.ITALIC));
+            meta.lore(lore);
+            meta.getPersistentDataContainer().set(PORTAL_OBSIDIAN_KEY, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isPortalObsidian(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+        return item.getItemMeta().getPersistentDataContainer().has(PORTAL_OBSIDIAN_KEY, PersistentDataType.BYTE);
     }
 }

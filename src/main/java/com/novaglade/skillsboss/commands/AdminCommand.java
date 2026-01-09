@@ -185,7 +185,7 @@ public class AdminCommand implements CommandExecutor {
         Player player = (Player) sender;
 
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Usage: /admin give <diamondarmor|waveboss>", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Usage: /admin give <diamondarmor|waveboss|portal>", NamedTextColor.RED));
             return;
         }
 
@@ -199,6 +199,9 @@ public class AdminCommand implements CommandExecutor {
         } else if (args[1].equalsIgnoreCase("bossspawn1") || args[1].equalsIgnoreCase("waveboss")) {
             player.getInventory().addItem(ItemManager.createBossSpawnItem());
             sender.sendMessage(Component.text("Received Boss Spawn Altar!", NamedTextColor.LIGHT_PURPLE));
+        } else if (args[1].equalsIgnoreCase("portal")) {
+            player.getInventory().addItem(ItemManager.createPortalObsidian());
+            sender.sendMessage(Component.text("Received 16x Portal Obsidian!", NamedTextColor.DARK_PURPLE));
         } else {
             sender.sendMessage(Component.text("Unknown item.", NamedTextColor.RED));
         }
@@ -209,8 +212,8 @@ public class AdminCommand implements CommandExecutor {
                 Component.text("--- SkillsBoss Admin ---", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
         sender.sendMessage(Component.text("/admin progression <0|1> ", NamedTextColor.YELLOW)
                 .append(Component.text("- Start progression stages", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin give <diamondarmor|waveboss> ", NamedTextColor.YELLOW)
-                .append(Component.text("- Give legendary gear or boss altar", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/admin give <diamondarmor|waveboss|portal> ", NamedTextColor.YELLOW)
+                .append(Component.text("- Give legendary gear, boss altar, or portal obsidian", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin reload ", NamedTextColor.YELLOW)
                 .append(Component.text("- Reload plugin config", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin version ", NamedTextColor.YELLOW)

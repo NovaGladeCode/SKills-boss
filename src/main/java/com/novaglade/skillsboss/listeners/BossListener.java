@@ -306,7 +306,7 @@ public class BossListener implements Listener {
             for (int i = 0; i < 4; i++) {
                 Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
-                applyDiamondGear(e, 80);
+                applyDiamondGear(e, 40);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -320,15 +320,15 @@ public class BossListener implements Listener {
             }
         } else if (waveId == 2) {
             for (int i = 0; i < 4; i++) {
-                Zombie e = (Zombie) spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
+                Zombie e = (Zombie) spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
                         stand.getUniqueId(), mobs);
-                applyDiamondGear(e, 100);
+                applyDiamondGear(e, 50);
             }
         } else if (waveId == 3) {
             for (int i = 0; i < 4; i++) {
                 WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
-                        Material.NETHERITE_AXE, stand.getUniqueId(), mobs);
-                applyDiamondGear(e, 150);
+                        Material.DIAMOND_AXE, stand.getUniqueId(), mobs);
+                applyDiamondGear(e, 75);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -344,17 +344,17 @@ public class BossListener implements Listener {
             for (int i = 0; i < 2; i++) {
                 Skeleton s = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
-                applyDiamondGear(s, 80);
-                Zombie z = (Zombie) spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
+                applyDiamondGear(s, 40);
+                Zombie z = (Zombie) spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
                         stand.getUniqueId(), mobs);
-                applyDiamondGear(z, 100);
+                applyDiamondGear(z, 50);
                 WitherSkeleton w = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
-                        Material.NETHERITE_AXE, stand.getUniqueId(), mobs);
-                applyDiamondGear(w, 150);
+                        Material.DIAMOND_AXE, stand.getUniqueId(), mobs);
+                applyDiamondGear(w, 75);
             }
-            WitherSkeleton mini = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON,
-                    "§0§lThe Avernus Gatekeeper", Material.NETHERITE_SWORD, stand.getUniqueId(), mobs);
-            applyDiamondGear(mini, 500);
+            WitherSkeleton mini = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§0§lThe Gatekeeper",
+                    Material.DIAMOND_SWORD, stand.getUniqueId(), mobs);
+            applyDiamondGear(mini, 250);
             if (mini.getAttribute(Attribute.SCALE) != null)
                 mini.getAttribute(Attribute.SCALE).setBaseValue(2.5);
 
@@ -380,10 +380,10 @@ public class BossListener implements Listener {
             e.getAttribute(hpAttr).setBaseValue(health);
             e.setHealth(health);
         }
-        e.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
-        e.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
-        e.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
-        e.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+        e.getEquipment().setHelmet(new ItemStack(Material.IRON_HELMET));
+        e.getEquipment().setChestplate(new ItemStack(Material.IRON_CHESTPLATE));
+        e.getEquipment().setLeggings(new ItemStack(Material.IRON_LEGGINGS));
+        e.getEquipment().setBoots(new ItemStack(Material.IRON_BOOTS));
         e.getEquipment().setHelmetDropChance(0);
         e.getEquipment().setChestplateDropChance(0);
         e.getEquipment().setLeggingsDropChance(0);
@@ -432,9 +432,9 @@ public class BossListener implements Listener {
     }
 
     private void spawnBosses(Location loc) {
-        playerBroadcast(loc.getWorld(), Component.text("THE OVERLORDS OF THE AVERNUS MATERIALIZE!",
+        playerBroadcast(loc.getWorld(), Component.text("THE FOUR SENTINELS AWAKEN!",
                 NamedTextColor.DARK_RED, TextDecoration.BOLD));
-        String[] titles = { "§4§lIgnis", "§5§lAnima", "§1§lAbyss", "§c§lAres" };
+        String[] titles = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel", "§c§lWar Sentinel" };
         BarColor[] colors = { BarColor.RED, BarColor.PURPLE, BarColor.BLUE, BarColor.RED };
 
         for (int i = 0; i < 4; i++) {
@@ -445,19 +445,19 @@ public class BossListener implements Listener {
 
             Attribute hpAttr = Attribute.MAX_HEALTH;
             if (boss.getAttribute(hpAttr) != null) {
-                boss.getAttribute(hpAttr).setBaseValue(600);
-                boss.setHealth(600);
+                boss.getAttribute(hpAttr).setBaseValue(300);
+                boss.setHealth(300);
             }
             Attribute scaleAttr = Attribute.SCALE;
             if (boss.getAttribute(scaleAttr) != null) {
                 boss.getAttribute(scaleAttr).setBaseValue(2.0);
             }
 
-            boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
-            boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
-            boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
+            boss.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
+            boss.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
+            boss.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
 
-            Material weapon = i == 3 ? Material.NETHERITE_AXE : Material.NETHERITE_SWORD;
+            Material weapon = i == 3 ? Material.DIAMOND_AXE : Material.DIAMOND_SWORD;
             boss.getEquipment().setItemInMainHand(new ItemStack(weapon));
 
             Attribute speedAttr = Attribute.MOVEMENT_SPEED;
@@ -488,7 +488,7 @@ public class BossListener implements Listener {
                         cancel();
                         return;
                     }
-                    double progress = boss.getHealth() / 600.0;
+                    double progress = boss.getHealth() / 300.0;
                     if (progress < 0)
                         progress = 0;
                     if (progress > 1)
@@ -525,7 +525,7 @@ public class BossListener implements Listener {
                                 if (bEnt instanceof LivingEntity) {
                                     LivingEntity b = (LivingEntity) bEnt;
                                     if (b.isValid())
-                                        b.setHealth(Math.min(600, b.getHealth() + 40));
+                                        b.setHealth(Math.min(300, b.getHealth() + 20));
                                 }
                             }
                             for (Entity e : boss.getNearbyEntities(10, 10, 10)) {
@@ -612,55 +612,46 @@ public class BossListener implements Listener {
         SkillsBoss.setProgressionLevel(2);
         transitionActive = true;
         transitionPortal = loc.clone().add(0, 1, 0);
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
-                loc.clone().add(x, y + 1.5, 0).getBlock().setType(Material.NETHER_PORTAL);
-            }
+
+        // Just light the portal, don't create blocks
+        Location portalBase = findNearbyPortalFrame(loc, 20);
+        if (portalBase != null) {
+            lightPortalFrame(portalBase);
         }
+
         Title title = Title.title(Component.text("PROGRESSION II", NamedTextColor.RED, TextDecoration.BOLD),
-                Component.text("ENTER THE AVERNUS", NamedTextColor.DARK_RED, TextDecoration.BOLD),
+                Component.text("THE PORTAL AWAKENS", NamedTextColor.DARK_RED, TextDecoration.BOLD),
                 Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(5), Duration.ofSeconds(3)));
         for (Player p : Bukkit.getOnlinePlayers()) {
             p.showTitle(title);
-            startPullingPlayer(p);
         }
     }
 
-    public static void startPullingPlayer(Player p) {
-        if (transitionPortal == null)
-            return;
-        new BukkitRunnable() {
-            int ticks = 0;
-
-            @Override
-            public void run() {
-                if (!p.isOnline() || p.getWorld().getEnvironment() == World.Environment.NETHER || ticks > 1200) {
-                    cancel();
-                    return;
-                }
-                Location pLoc = p.getLocation();
-                Vector dir = transitionPortal.clone().subtract(pLoc).toVector();
-                if (dir.length() < 1.5) {
-                    p.teleport(transitionPortal);
-                    cancel();
-                    return;
-                }
-                dir.normalize().multiply(0.4);
-                Location next = pLoc.clone().add(dir);
-                for (int x = -1; x <= 1; x++) {
-                    for (int y = 0; y <= 2; y++) {
-                        for (int z = -1; z <= 1; z++) {
-                            Block b = next.clone().add(x, y, z).getBlock();
-                            if (b.getType() != Material.AIR && b.getType() != Material.NETHER_PORTAL)
-                                b.breakNaturally();
-                        }
+    private Location findNearbyPortalFrame(Location center, int radius) {
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    Location check = center.clone().add(x, y, z);
+                    if (check.getBlock().getType() == Material.CRYING_OBSIDIAN) {
+                        return check;
                     }
                 }
-                p.teleport(next);
-                p.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, pLoc, 10, 0.4, 0.4, 0.4, 0.05);
-                ticks++;
             }
-        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
+        }
+        return null;
+    }
+
+    private void lightPortalFrame(Location frameBlock) {
+        // Find the portal frame and light it
+        Location base = frameBlock.clone();
+        for (int y = 0; y < 5; y++) {
+            for (int x = -1; x <= 1; x++) {
+                Location check = base.clone().add(x, y, 0);
+                if (check.getBlock().getType() == Material.AIR) {
+                    check.getBlock().setType(Material.NETHER_PORTAL);
+                }
+            }
+        }
     }
 
     private void spawnAltarArmorStand(Location loc) {
