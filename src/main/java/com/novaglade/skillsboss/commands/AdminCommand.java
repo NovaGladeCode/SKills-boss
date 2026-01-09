@@ -297,6 +297,9 @@ public class AdminCommand implements CommandExecutor {
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_BOOTS));
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_SWORD));
             sender.sendMessage(Component.text("Received custom diamond armor and sword!", NamedTextColor.GREEN));
+        } else if (args[1].equalsIgnoreCase("bossspawn1")) {
+            player.getInventory().addItem(ItemManager.createBossSpawnItem());
+            sender.sendMessage(Component.text("Received Boss Spawn Altar!", NamedTextColor.LIGHT_PURPLE));
         } else {
             sender.sendMessage(Component.text("Unknown item.", NamedTextColor.RED));
         }

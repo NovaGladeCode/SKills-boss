@@ -17,6 +17,26 @@ public class ItemManager {
 
     private static final NamespacedKey CUSTOM_ITEM_KEY = new NamespacedKey(SkillsBoss.getInstance(),
             "custom_legendary_item");
+    private static final NamespacedKey BOSS_SPAWN_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "boss_spawn_item");
+
+    public static ItemStack createBossSpawnItem() {
+        ItemStack item = new ItemStack(Material.NETHER_STAR);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(
+                    Component.text("Boss Spawn I: The Altar", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Place this to manifest the Altar of Avernus.", NamedTextColor.LIGHT_PURPLE));
+            lore.add(Component.empty());
+            lore.add(Component.text("Requires Legendary Diamond Gear to activate.", NamedTextColor.GRAY,
+                    TextDecoration.ITALIC));
+            meta.lore(lore);
+            meta.getPersistentDataContainer().set(BOSS_SPAWN_KEY, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
 
     public static ItemStack createCustomItem(Material material) {
         ItemStack item = new ItemStack(material);
@@ -49,5 +69,11 @@ public class ItemManager {
         if (item == null || !item.hasItemMeta())
             return false;
         return item.getItemMeta().getPersistentDataContainer().has(CUSTOM_ITEM_KEY, PersistentDataType.BYTE);
+    }
+
+    public static boolean isBossSpawnItem(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+        return item.getItemMeta().getPersistentDataContainer().has(BOSS_SPAWN_KEY, PersistentDataType.BYTE);
     }
 }

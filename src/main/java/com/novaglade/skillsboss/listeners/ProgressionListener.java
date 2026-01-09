@@ -99,10 +99,25 @@ public class ProgressionListener implements Listener {
     public void onPortal(org.bukkit.event.player.PlayerPortalEvent event) {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
-        if (event.getTo() != null && event.getTo().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) {
+
+        // Phase 1: Block Nether Entry
+        if (SkillsBoss.getProgressionLevel() == 1 && event.getTo() != null
+                && event.getTo().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) {
             event.setCancelled(true);
             event.getPlayer().sendMessage(net.kyori.adventure.text.Component.text("The Nether is sealed in Phase One!",
                     net.kyori.adventure.text.format.NamedTextColor.RED));
+        }
+
+        // Phase 2: Block Nether EXIT
+        if (SkillsBoss.getProgressionLevel() == 2
+                && event.getFrom().getWorld().getEnvironment() == org.bukkit.World.Environment.NETHER) {
+            if (event.getTo() != null
+                    && event.getTo().getWorld().getEnvironment() != org.bukkit.World.Environment.NETHER) {
+                event.setCancelled(true);
+                event.getPlayer()
+                        .sendMessage(net.kyori.adventure.text.Component.text("There is no escape from the Avernus!",
+                                net.kyori.adventure.text.format.NamedTextColor.RED));
+            }
         }
     }
 
@@ -135,6 +150,13 @@ public class ProgressionListener implements Listener {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
         checkAndRemove(event.getPlayer());
+
+        // Handle pulling missed players (Logic triggered via BossListener shared state
+        // or similar)
+        if (SkillsBoss.getProgressionLevel() == 2 && BossListener.isTransitionActive() &&
+                event.getPlayer().getWorld().getEnvironment() != org.bukkit.World.Environment.NETHER) {
+            BossListener.startPullingPlayer(event.getPlayer());
+        }
     }
 
     private void checkAndRemove(Player player) {
