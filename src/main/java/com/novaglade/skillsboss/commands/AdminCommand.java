@@ -182,8 +182,8 @@ public class AdminCommand implements CommandExecutor {
                     center.getWorld().playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
                     center.getWorld().playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2f, 1f);
 
-                    // Set world border to 500
-                    center.getWorld().getWorldBorder().setSize(500);
+                    // Set world border to 750
+                    center.getWorld().getWorldBorder().setSize(750);
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
                         online.sendMessage(chatMsg);
