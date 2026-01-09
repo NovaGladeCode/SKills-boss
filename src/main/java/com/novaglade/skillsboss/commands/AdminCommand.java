@@ -127,78 +127,90 @@ public class AdminCommand implements CommandExecutor {
                     }
                 }
 
-                // Every tick: HYPER-INTENSE Ground Ritual (Dense but structured)
+                // Every tick: GOD-TIER Ground Ritual (Maximum Density)
                 double progress = 1.0 - (ticks / 100.0);
 
-                // 1. Triple-Layered Counter-Rotating Rings
-                for (int layer = 1; layer <= 3; layer++) {
-                    double rSize = (3.0 * layer) * (layer == 1 ? 1.0 - progress : 1.0);
-                    double speed = (layer % 2 == 0 ? 0.3 : -0.3);
-                    int density = 24 * layer;
+                // 1. Five Counter-Rotating Rings (Geometric Core)
+                for (int layer = 1; layer <= 5; layer++) {
+                    double rSize = (2.5 * layer) * (layer == 1 ? 1.0 : 1.0);
+                    double speed = (layer % 2 == 0 ? 0.4 : -0.4);
+                    int density = 30 * layer;
 
                     for (int i = 0; i < density; i++) {
                         double angle = (ticks * speed + i * (2 * Math.PI / density));
                         double x = Math.cos(angle) * rSize;
                         double z = Math.sin(angle) * rSize;
 
-                        Particle p = (layer == 1 ? Particle.WITCH : (layer == 2 ? Particle.SOUL : Particle.END_ROD));
-                        world.spawnParticle(p, center.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
+                        Particle p = (layer % 2 == 0 ? Particle.WITCH : Particle.SOUL_FIRE_FLAME);
+                        world.spawnParticle(p, center.clone().add(x, 0.1, z), 2, 0.05, 0.05, 0.05, 0);
 
-                        // Vertical "Energy Walls" for the rings
-                        if (ticks % 10 == 0) {
-                            world.spawnParticle(Particle.ENCHANT, center.clone().add(x, progress * 2.5, z), 1, 0, 0, 0,
-                                    0.05);
+                        // Vertical Beams for every layer
+                        if (ticks % 4 == 0) {
+                            world.spawnParticle(Particle.END_ROD, center.clone().add(x, progress * 10, z), 1, 0, 0, 0,
+                                    0.02);
                         }
                     }
                 }
 
-                // 2. Electrical Arcs between Ritual Points
-                if (ticks % 3 == 0) {
-                    for (int i = 0; i < 4; i++) {
-                        double angle = (ticks * 0.05 + i * (Math.PI / 2));
-                        double r = 6.0;
+                // 2. Chaotic Electrical Network
+                if (ticks % 2 == 0) {
+                    for (int i = 0; i < 8; i++) {
+                        double angle = (ticks * 0.08 + i * (Math.PI / 4));
+                        double r = 12.0 * progress;
                         Location p1 = center.clone().add(Math.cos(angle) * r, 0.1, Math.sin(angle) * r);
-                        Location p2 = center.clone().add(Math.cos(angle + 0.5) * r, 0.1, Math.sin(angle + 0.5) * r);
+                        Location p2 = center.clone().add(Math.cos(angle + 1.2) * (r + 2), 0.5,
+                                Math.sin(angle + 1.2) * (r + 2));
 
-                        for (double d = 0; d < 1.0; d += 0.15) {
+                        for (double d = 0; d < 1.0; d += 0.1) {
                             Location arc = p1.clone().add(p2.clone().subtract(p1).toVector().multiply(d));
-                            world.spawnParticle(Particle.ELECTRIC_SPARK, arc.add(0, Math.sin(d * Math.PI) * 0.5, 0), 1,
-                                    0, 0.1, 0, 0.01);
+                            world.spawnParticle(Particle.ELECTRIC_SPARK, arc.add(0, Math.random() * 0.5, 0), 2, 0.05,
+                                    0.05, 0.05, 0.01);
                         }
                     }
                 }
 
-                // 3. Vertical Soul Vortex (Inward pull & Rising energy)
-                for (int i = 0; i < 6; i++) {
-                    double angle = (ticks * 0.8 + i * (Math.PI * (2.0 / 6.0)));
-                    double vRadius = 10.0 * (1.0 - progress);
+                // 3. The Sky-to-Ground Funnel (Massive Vortex)
+                for (int i = 0; i < 12; i++) {
+                    double angle = (ticks * 0.5 + i * (Math.PI / 6));
+                    double vRadius = 15.0 - (progress * 12.0);
+                    double vy = (i * 1.5) + (Math.sin(ticks * 0.2) * 2);
                     double vx = Math.cos(angle) * vRadius;
                     double vz = Math.sin(angle) * vRadius;
-                    double vy = Math.sin(ticks * 0.1 + i) + 1.2;
 
-                    world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(vx, vy, vz), 1, 0.1, 0.1, 0.1,
-                            0.02);
-                    world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(vx * 0.7, vy * 0.8, vz * 0.7), 1, 0,
-                            0, 0, 0.01);
+                    world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(vx, vy, vz), 3, 0.1, 0.1, 0.1, 0.02);
+                    world.spawnParticle(Particle.SOUL, center.clone().add(vx, vy, vz), 2, 0, 0, 0, 0.01);
                 }
 
-                // 4. Ground Rune Pulse
-                if (ticks % 10 == 0) {
-                    world.spawnParticle(Particle.GLOW, center, 60, 6, 0.1, 6, 0.05);
+                // 4. Violent Ground Tremors (Block Dust)
+                double shakeRadius = 12.0 * (1.0 - progress);
+                world.spawnParticle(Particle.BLOCK, center, 40, shakeRadius + 2, 0.2, shakeRadius + 2, 0.1,
+                        Material.DIRT.createBlockData());
+                if (ticks % 5 == 0) {
+                    world.spawnParticle(Particle.LARGE_SMOKE, center, 20, 10, 0.1, 10, 0.02);
                 }
 
-                // Localized Focus
+                // Localized Focus (Maximum Intensity Shake)
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     if (!online.getWorld().equals(world))
                         continue;
                     double distance = online.getLocation().distance(center);
-                    if (distance <= 40.0) {
-                        online.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 30, 0, false, false, false));
-                        online.spawnParticle(Particle.END_ROD,
-                                online.getEyeLocation().add(online.getLocation().getDirection().multiply(0.4)), 3, 0.2,
-                                0.2, 0.2, 0.01);
-                        online.playSound(online.getLocation(), Sound.ENTITY_WARDEN_HEARTBEAT, 1.0f,
-                                0.6f + (float) progress * 0.4f);
+                    if (distance <= 50.0) {
+                        // Strong Nausea and Blindness pulse
+                        online.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 60, 1, false, false, false));
+                        if (ticks % 30 == 0)
+                            online.addPotionEffect(
+                                    new PotionEffect(PotionEffectType.BLINDNESS, 20, 0, false, false, false));
+
+                        // violent vibration particles
+                        online.spawnParticle(Particle.CRIT, online.getEyeLocation(), 20, 0.5, 0.5, 0.5, 0.2);
+                        online.spawnParticle(Particle.FLASH,
+                                online.getEyeLocation().add(online.getLocation().getDirection().multiply(0.2)), 1, 0, 0,
+                                0, 0);
+
+                        online.playSound(online.getLocation(), Sound.ENTITY_WARDEN_HEARTBEAT, 1.2f,
+                                0.4f + (float) progress * 0.6f);
+                        online.playSound(online.getLocation(), Sound.BLOCK_BEACON_AMBIENT, 0.5f,
+                                0.5f + (float) progress);
                     }
                 }
 
@@ -211,37 +223,42 @@ public class AdminCommand implements CommandExecutor {
                     Component chatMsg = Component.text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD)
                             .append(Component.text("A New Beginning", NamedTextColor.DARK_AQUA, TextDecoration.BOLD));
 
-                    Title.Times times = Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(4),
+                    Title.Times times = Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(5),
                             Duration.ofSeconds(2));
                     Title finalTitle = Title.title(mainTitle, subTitle, times);
 
-                    // Final Hyper-Shockwave (Clean spheres and rays)
-                    for (int r = 0; r < 8; r++) {
-                        world.spawnParticle(Particle.FLASH, center, 70, r * 2.5, 0.1, r * 2.5, 0);
-                        world.spawnParticle(Particle.SONIC_BOOM, center, 8, r * 1.5, 0.1, r * 1.5, 0);
+                    // Final OMNI-BLAST (Environmental Erasure Look)
+                    for (int r = 0; r < 12; r++) {
+                        world.spawnParticle(Particle.FLASH, center, 100, r * 3, 0.5, r * 3, 0);
+                        world.spawnParticle(Particle.SONIC_BOOM, center, 15, r * 2, 0.5, r * 2, 0);
+                        world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 10, r, r, r, 0.1);
                     }
 
-                    // Shimmering Sphere of Light
-                    for (int i = 0; i < 150; i++) {
-                        double phi = Math.acos(-1.0 + (2.0 * i) / 150.0);
-                        double theta = Math.sqrt(150.0 * Math.PI) * phi;
-                        double x = Math.cos(theta) * Math.sin(phi) * 6;
-                        double y = Math.sin(theta) * Math.sin(phi) * 6;
-                        double z = Math.cos(phi) * 6;
-                        world.spawnParticle(Particle.END_ROD, center.clone().add(x, y + 2, z), 2, 0, 0, 0, 0.05);
+                    // Golden/Blue Shimmering Super-Sphere
+                    for (int i = 0; i < 300; i++) {
+                        double phi = Math.acos(-1.0 + (2.0 * i) / 300.0);
+                        double theta = Math.sqrt(300.0 * Math.PI) * phi;
+                        double x = Math.cos(theta) * Math.sin(phi) * 12;
+                        double y = Math.sin(theta) * Math.sin(phi) * 12;
+                        double z = Math.cos(phi) * 12;
+                        world.spawnParticle(Particle.END_ROD, center.clone().add(x, y + 4, z), 2, 0, 0, 0, 0.05);
+                        if (i % 2 == 0)
+                            world.spawnParticle(Particle.SOUL_FIRE_FLAME,
+                                    center.clone().add(x * 0.8, y * 0.8 + 4, z * 0.8), 1, 0, 0, 0, 0.02);
                     }
 
-                    world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2.0f, 0.7f);
-                    world.playSound(center, Sound.ENTITY_WARDEN_DEATH, 2.0f, 0.9f);
-                    world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2.2f, 1.0f);
-                    world.spawnParticle(Particle.END_ROD, center, 100, 0.5, 0.5, 0.5, 0.2);
+                    world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 3.0f, 0.5f);
+                    world.playSound(center, Sound.ENTITY_WARDEN_DEATH, 3.0f, 0.8f);
+                    world.playSound(center, Sound.ENTITY_WITHER_DEATH, 2.0f, 0.5f);
+                    world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2.5f, 1.0f);
+                    world.spawnParticle(Particle.END_ROD, center, 500, 2, 2, 2, 0.5);
 
                     // Set world border center to spawn and size to 750
                     world.getWorldBorder().setCenter(center);
                     world.getWorldBorder().setSize(750);
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
-                        if (online.getWorld().equals(world) && online.getLocation().distance(center) <= 50.0) {
+                        if (online.getWorld().equals(world) && online.getLocation().distance(center) <= 60.0) {
                             online.sendMessage(chatMsg);
                             online.showTitle(finalTitle);
                             online.removePotionEffect(PotionEffectType.NAUSEA);
