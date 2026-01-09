@@ -18,15 +18,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 
 public class AdminCommand implements CommandExecutor {
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-            @NotNull String[] args) {
+    public boolean onCommand(CommandSender sender, Command command, String label,
+            String[] args) {
 
         if (!sender.isOp()) {
             sender.sendMessage(Component.text("You do not have permission to use this command.", NamedTextColor.RED));
