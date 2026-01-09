@@ -35,6 +35,14 @@ public class DeathListener implements Listener {
         if (!customItems.isEmpty()) {
             Location deathLoc = player.getLocation();
 
+            // Search upwards for first non-liquid, non-solid block to spawn safely (e.g. if
+            // in lava)
+            while (deathLoc.getBlock().getType().isLiquid() || deathLoc.getBlock().getType().isSolid()) {
+                deathLoc.add(0, 1, 0);
+                if (deathLoc.getY() > 319)
+                    break; // Ceiling check
+            }
+
             // Place glass block at feet
             deathLoc.getBlock().setType(Material.GLASS);
 
@@ -44,9 +52,7 @@ public class DeathListener implements Listener {
 
             stand.setBasePlate(false);
             stand.setArms(true);
-            stand.setCustomNameVisible(true);
-            stand.customName(net.kyori.adventure.text.Component.text(player.getName() + "'s Grave",
-                    net.kyori.adventure.text.format.NamedTextColor.GOLD));
+            stand.setCustomNameVisible(false); // Removed name tag
 
             for (ItemStack item : customItems) {
                 Material type = item.getType();
