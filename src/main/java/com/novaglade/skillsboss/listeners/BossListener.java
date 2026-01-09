@@ -153,7 +153,6 @@ public class BossListener implements Listener {
             if (currentMobs <= 0) {
                 bar.setProgress(0);
             } else {
-                // Approximate max mobs per wave is 12
                 bar.setProgress(Math.clamp(currentMobs / 12.0, 0.0, 1.0));
             }
         }
@@ -182,7 +181,8 @@ public class BossListener implements Listener {
 
             new BukkitRunnable() {
                 int stage = 0;
-                boolean waveActive = false;
+                boolean waveInTransition = false;
+                int transitionTicks = 0;
 
                 @Override
                 public void run() {
@@ -195,51 +195,52 @@ public class BossListener implements Listener {
                     }
 
                     Set<UUID> mobs = activeWaveMobs.get(standUuid);
-                    if (waveActive) {
-                        if (mobs == null || mobs.isEmpty()) {
-                            waveActive = false;
+
+                    // Handle transition between waves
+                    if (waveInTransition) {
+                        transitionTicks--;
+                        if (transitionTicks <= 0) {
+                            waveInTransition = false;
+                            spawnWave(stand, stage + 1);
+                        }
+                        return;
+                    }
+
+                    // Check if current wave is cleared
+                    if (mobs != null && !mobs.isEmpty()) {
+                        mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
+                        if (mobs.isEmpty()) {
                             stage++;
                             stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_ENDER_EYE_DEATH, 1.5f, 0.5f);
+                            if (stage < 3) {
+                                waveInTransition = true;
+                                transitionTicks = 40; // 2 second delay before next wave
+                            }
                         } else {
-                            mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
-                            return;
+                            return; // Still fighting
                         }
                     }
 
                     Location loc = stand.getLocation();
-                    if (stage == 0) {
+                    if (stage == 0 && !waveInTransition && (mobs == null || mobs.isEmpty())) {
+                        // Start Wave 1
                         bar.setTitle("§c§lWave 1: The Soulbound");
                         playerBroadcast(loc.getWorld(),
                                 Component.text("THE VOID WHISPERS...", NamedTextColor.RED, TextDecoration.BOLD));
-                        waveActive = true;
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                spawnWave(stand, 1);
-                            }
-                        }.runTaskLater(SkillsBoss.getInstance(), 40);
-                    } else if (stage == 1) {
+                        waveInTransition = true;
+                        transitionTicks = 40;
+                    } else if (stage == 1 && !waveInTransition) {
                         bar.setTitle("§6§lWave 2: The Infernal Legion");
                         playerBroadcast(loc.getWorld(),
                                 Component.text("THE HEAT RISES FROM BELOW!", NamedTextColor.GOLD, TextDecoration.BOLD));
-                        waveActive = true;
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                spawnWave(stand, 2);
-                            }
-                        }.runTaskLater(SkillsBoss.getInstance(), 40);
-                    } else if (stage == 2) {
+                        waveInTransition = true;
+                        transitionTicks = 40;
+                    } else if (stage == 2 && !waveInTransition) {
                         bar.setTitle("§b§lWave 3: The Void Guard");
                         playerBroadcast(loc.getWorld(), Component.text("THE FINAL SENTINELS ARRIVE!",
                                 NamedTextColor.AQUA, TextDecoration.BOLD));
-                        waveActive = true;
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                spawnWave(stand, 3);
-                            }
-                        }.runTaskLater(SkillsBoss.getInstance(), 40);
+                        waveInTransition = true;
+                        transitionTicks = 40;
                     } else if (stage == 3) {
                         bar.removeAll();
                         activeBars.remove(standUuid);
@@ -260,7 +261,6 @@ public class BossListener implements Listener {
             return;
 
         if (waveNum == 1) {
-            // Wave 1: Echo Wraiths (Teleporting/Explosive trails)
             for (int i = 0; i < 10; i++) {
                 Location spawn = loc.clone().add(Math.random() * 10 - 5, 0, Math.random() * 10 - 5);
                 Vindicator v = (Vindicator) loc.getWorld().spawnEntity(spawn, EntityType.VINDICATOR);
@@ -271,7 +271,6 @@ public class BossListener implements Listener {
                         stand.getUniqueId().toString());
                 mobs.add(v.getUniqueId());
 
-                // Ability: Leave explosive particles
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -295,7 +294,6 @@ public class BossListener implements Listener {
                 }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
             }
         } else if (waveNum == 2) {
-            // Wave 2: Magma Cultists (Fire Rings)
             for (int i = 0; i < 8; i++) {
                 Location spawn = loc.clone().add(Math.random() * 12 - 6, 0, Math.random() * 12 - 6);
                 Pillager p = (Pillager) loc.getWorld().spawnEntity(spawn, EntityType.PILLAGER);
@@ -305,7 +303,6 @@ public class BossListener implements Listener {
                         stand.getUniqueId().toString());
                 mobs.add(p.getUniqueId());
 
-                // Ability: Fire Ring Nova
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -326,7 +323,6 @@ public class BossListener implements Listener {
                 }.runTaskTimer(SkillsBoss.getInstance(), 60, 100);
             }
         } else if (waveNum == 3) {
-            // Wave 3: Void Sentinels (Heavy hitters, Gravity wells)
             for (int i = 0; i < 3; i++) {
                 Location spawn = loc.clone().add(Math.random() * 8 - 4, 0, Math.random() * 8 - 4);
                 IronGolem g = (IronGolem) loc.getWorld().spawnEntity(spawn, EntityType.IRON_GOLEM);
@@ -337,7 +333,6 @@ public class BossListener implements Listener {
                         stand.getUniqueId().toString());
                 mobs.add(g.getUniqueId());
 
-                // Ability: Gravity Well (Sucking in)
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -365,9 +360,9 @@ public class BossListener implements Listener {
         WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(loc, EntityType.WITHER_SKELETON);
         boss.setCustomName("§4§lTHE AVERNUS OVERLORD");
         boss.setCustomNameVisible(true);
-        boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(800);
-        boss.setHealth(800);
-        boss.getAttribute(Attribute.SCALE).setBaseValue(4.0);
+        boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1000);
+        boss.setHealth(1000);
+        boss.getAttribute(Attribute.SCALE).setBaseValue(2.0); // Smaller as requested
 
         boss.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
         boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
@@ -393,14 +388,41 @@ public class BossListener implements Listener {
                 bossBar.setProgress(
                         Math.clamp(boss.getHealth() / boss.getAttribute(Attribute.MAX_HEALTH).getValue(), 0, 1));
 
-                // Ability: Earth Shatter
-                if (Math.random() < 0.2) {
+                double rand = Math.random();
+                // Ability 1: Earth Shatter (Launch)
+                if (rand < 0.10) {
                     boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_ROAR, 1.5f, 0.5f);
-                    for (Entity e : boss.getNearbyEntities(10, 5, 10)) {
+                    for (Entity e : boss.getNearbyEntities(12, 5, 12)) {
                         if (e instanceof Player p && !p.isOp()) {
-                            p.setVelocity(new Vector(0, 1.2, 0));
+                            p.setVelocity(new Vector(0, 1.4, 0));
                             p.sendMessage(Component.text("The Overlord shatters the earth!", NamedTextColor.RED));
                         }
+                    }
+                }
+                // Ability 2: Wither Volley
+                else if (rand < 0.20) {
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1f);
+                    for (Entity e : boss.getNearbyEntities(20, 10, 20)) {
+                        if (e instanceof Player p && !p.isOp()) {
+                            WitherSkull skull = boss.launchProjectile(WitherSkull.class);
+                            skull.setDirection(p.getLocation().add(0, 1, 0).subtract(boss.getEyeLocation()).toVector());
+                        }
+                    }
+                }
+                // Ability 3: Soul Siphon (Heal + Damage)
+                else if (rand < 0.25) {
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 2f);
+                    boss.getWorld().spawnParticle(Particle.SOUL, boss.getLocation().add(0, 1, 0), 100, 5, 2, 5, 0);
+                    int count = 0;
+                    for (Entity e : boss.getNearbyEntities(6, 6, 6)) {
+                        if (e instanceof Player p && !p.isOp()) {
+                            p.damage(6, boss);
+                            count++;
+                        }
+                    }
+                    if (count > 0) {
+                        boss.setHealth(Math.min(boss.getAttribute(Attribute.MAX_HEALTH).getValue(),
+                                boss.getHealth() + (count * 20)));
                     }
                 }
             }
@@ -410,9 +432,8 @@ public class BossListener implements Listener {
     private void startProgressionTwoTransition(Location loc) {
         SkillsBoss.setProgressionLevel(2);
         transitionActive = true;
-        transitionPortal = loc.clone().add(0, 1, 0); // Center of Altar
+        transitionPortal = loc.clone().add(0, 1, 0);
 
-        // Spawn Portal INSIDE the Altar
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
                 loc.clone().add(x, y + 1.5, 0).getBlock().setType(Material.NETHER_PORTAL);
@@ -452,11 +473,9 @@ public class BossListener implements Listener {
                     return;
                 }
 
-                // Slower pull speed (0.3 instead of 1.5 per tick)
                 dir.normalize().multiply(0.4);
                 Location next = pLoc.clone().add(dir);
 
-                // Delete blocks in path
                 for (int x = -1; x <= 1; x++) {
                     for (int y = 0; y <= 2; y++) {
                         for (int z = -1; z <= 1; z++) {
@@ -479,7 +498,6 @@ public class BossListener implements Listener {
         World world = center.getWorld();
         int size = 9;
 
-        // Gothic Altar Platform
         for (int x = -size; x <= size; x++) {
             for (int z = -size; z <= size; z++) {
                 Location l = center.clone().add(x, -1, z);
@@ -498,7 +516,6 @@ public class BossListener implements Listener {
             }
         }
 
-        // Floating Void Pillars
         for (int i = 0; i < 4; i++) {
             double angle = i * (Math.PI / 2);
             int rx = (int) (Math.cos(angle) * 7);
