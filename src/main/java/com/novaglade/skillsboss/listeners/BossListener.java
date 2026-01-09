@@ -85,9 +85,14 @@ public class BossListener implements Listener {
 
         playerBroadcast(center.getWorld(),
                 Component.text("The Avernus Core has been anchored.", NamedTextColor.DARK_RED, TextDecoration.BOLD));
-        generateSmallAltar(center);
+
+        // Directional Altar
+        Vector direction = event.getPlayer().getLocation().getDirection().setY(0).normalize();
+        generateDirectionalAltar(center, direction);
+
         spawnAltarArmorStand(center.clone().add(0, 0.1, 0));
 
+        center.getWorld().setBlockData(center.clone().add(0, -1, 0), Material.NETHERITE_BLOCK.createBlockData());
         center.getWorld().strikeLightningEffect(center);
         center.getWorld().playSound(center, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 0.5f);
     }
@@ -258,6 +263,10 @@ public class BossListener implements Listener {
                     waveNum = 3;
                     waiting = true;
                 } else if (waveNum == 3) {
+                    startWave(stand, ritualBar, 4); // Combined + Mini Boss
+                    waveNum = 4;
+                    waiting = true;
+                } else if (waveNum == 4) {
                     ritualBar.removeAll();
                     activeBars.remove(standUuid);
                     spawnBosses(stand.getLocation());
@@ -278,11 +287,12 @@ public class BossListener implements Listener {
     }
 
     private void startWave(ArmorStand stand, BossBar bar, int waveId) {
-        String[] titles = { "", "§e§lTrial I: The Fallen Sentries", "§6§lTrial II: The Ember Mages",
-                "§c§lTrial III: The Avernus Commanders" };
-        Component[] msgs = { null, Component.text("The fallen rise to guard the core...", NamedTextColor.YELLOW),
-                Component.text("The heat intensifies deeply...", NamedTextColor.GOLD),
-                Component.text("The elite have arrived to end you.", NamedTextColor.RED) };
+        String[] titles = { "", "§e§lTrial I: The Fallen Sentries", "§9§lTrial II: The Undead Sentinels",
+                "§c§lTrial III: The Avernus Guards", "§4§lTrial IV: The Final Gate" };
+        Component[] msgs = { null, Component.text("The fallen rise in diamond plate...", NamedTextColor.YELLOW),
+                Component.text("The undead manifest from the depths...", NamedTextColor.BLUE),
+                Component.text("The Avernus Guards have arrived.", NamedTextColor.RED),
+                Component.text("THE GATEKEEPER HAS AWAKENED!", NamedTextColor.DARK_RED, TextDecoration.BOLD) };
 
         bar.setTitle(titles[waveId]);
         playerBroadcast(stand.getWorld(), msgs[waveId]);
@@ -296,12 +306,7 @@ public class BossListener implements Listener {
             for (int i = 0; i < 4; i++) {
                 Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
-                e.getEquipment().setHelmet(new ItemStack(Material.GOLDEN_HELMET));
-                if (e.getAttribute(Attribute.MAX_HEALTH) != null) {
-                    e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(40);
-                    e.setHealth(40);
-                }
-                // Custom Ability: Spectral Beam
+                applyDiamondGear(e, 80);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -309,51 +314,21 @@ public class BossListener implements Listener {
                             cancel();
                             return;
                         }
-                        shootCustomBeam(e, Particle.SOUL_FIRE_FLAME, 2.0, false);
+                        shootCustomBeam(e, Particle.SOUL_FIRE_FLAME, 3.0, false);
                     }
                 }.runTaskTimer(SkillsBoss.getInstance(), 60, 80);
             }
         } else if (waveId == 2) {
-            for (int i = 0; i < 2; i++) {
-                Evoker e = (Evoker) spawnMob(loc, EntityType.EVOKER, "§6Ember Mage", null, stand.getUniqueId(), mobs);
-                if (e.getAttribute(Attribute.MAX_HEALTH) != null) {
-                    e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(80);
-                    e.setHealth(80);
-                }
-                // Passive Aura
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (!e.isValid()) {
-                            cancel();
-                            return;
-                        }
-                        e.getWorld().spawnParticle(Particle.FLAME, e.getLocation().add(0, 1, 0), 10, 0.3, 0.5, 0.3,
-                                0.02);
-                    }
-                }.runTaskTimer(SkillsBoss.getInstance(), 10, 10);
-                // Custom Ability: Searing Beam
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (!e.isValid()) {
-                            cancel();
-                            return;
-                        }
-                        shootCustomBeam(e, Particle.FLAME, 4.0, true);
-                    }
-                }.runTaskTimer(SkillsBoss.getInstance(), 40, 60);
+            for (int i = 0; i < 4; i++) {
+                Zombie e = (Zombie) spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
+                        stand.getUniqueId(), mobs);
+                applyDiamondGear(e, 100);
             }
         } else if (waveId == 3) {
-            for (int i = 0; i < 2; i++) {
-                WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Commander",
+            for (int i = 0; i < 4; i++) {
+                WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
                         Material.NETHERITE_AXE, stand.getUniqueId(), mobs);
-                e.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
-                if (e.getAttribute(Attribute.MAX_HEALTH) != null) {
-                    e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(150);
-                    e.setHealth(150);
-                }
-                // Custom Ability: Void Beam
+                applyDiamondGear(e, 150);
                 new BukkitRunnable() {
                     @Override
                     public void run() {
@@ -365,7 +340,58 @@ public class BossListener implements Listener {
                     }
                 }.runTaskTimer(SkillsBoss.getInstance(), 50, 70);
             }
+        } else if (waveId == 4) {
+            for (int i = 0; i < 2; i++) {
+                Skeleton s = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
+                        stand.getUniqueId(), mobs);
+                applyDiamondGear(s, 80);
+                Zombie z = (Zombie) spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
+                        stand.getUniqueId(), mobs);
+                applyDiamondGear(z, 100);
+                WitherSkeleton w = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
+                        Material.NETHERITE_AXE, stand.getUniqueId(), mobs);
+                applyDiamondGear(w, 150);
+            }
+            WitherSkeleton mini = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON,
+                    "§0§lThe Avernus Gatekeeper", Material.NETHERITE_SWORD, stand.getUniqueId(), mobs);
+            applyDiamondGear(mini, 500);
+            if (mini.getAttribute(Attribute.GENERIC_SCALE) != null)
+                mini.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(2.5);
+            else if (mini.getAttribute(Attribute.SCALE) != null)
+                mini.getAttribute(Attribute.SCALE).setBaseValue(2.5);
+
+            if (mini.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED) != null)
+                mini.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(0.35);
+            else if (mini.getAttribute(Attribute.MOVEMENT_SPEED) != null)
+                mini.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
+
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (!mini.isValid()) {
+                        cancel();
+                        return;
+                    }
+                    shootCustomBeam(mini, Particle.DRAGON_BREATH, 10.0, true);
+                }
+            }.runTaskTimer(SkillsBoss.getInstance(), 40, 40);
         }
+    }
+
+    private void applyDiamondGear(LivingEntity e, double health) {
+        Attribute hpAttr = Attribute.GENERIC_MAX_HEALTH;
+        if (e.getAttribute(hpAttr) != null) {
+            e.getAttribute(hpAttr).setBaseValue(health);
+            e.setHealth(health);
+        }
+        e.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
+        e.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
+        e.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
+        e.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+        e.getEquipment().setHelmetDropChance(0);
+        e.getEquipment().setChestplateDropChance(0);
+        e.getEquipment().setLeggingsDropChance(0);
+        e.getEquipment().setBootsDropChance(0);
     }
 
     private void shootCustomBeam(Mob shooter, Particle particle, double damage, boolean fire) {
@@ -421,12 +447,16 @@ public class BossListener implements Listener {
             boss.setCustomName(titles[i]);
             boss.setCustomNameVisible(true);
 
-            if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
-                boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(600);
+            Attribute hpAttr = Attribute.GENERIC_MAX_HEALTH;
+            if (boss.getAttribute(hpAttr) != null) {
+                boss.getAttribute(hpAttr).setBaseValue(600);
                 boss.setHealth(600);
             }
-            if (boss.getAttribute(Attribute.SCALE) != null) {
-                boss.getAttribute(Attribute.SCALE).setBaseValue(2.0); // Reverted to 34's 2.0 scale as requested
+            Attribute scaleAttr = Attribute.GENERIC_SCALE;
+            if (boss.getAttribute(scaleAttr) != null) {
+                boss.getAttribute(scaleAttr).setBaseValue(2.0); // Reverted to 34's 2.0 scale as requested
+            } else if (boss.getAttribute(Attribute.valueOf("SCALE")) != null) {
+                boss.getAttribute(Attribute.valueOf("SCALE")).setBaseValue(2.0);
             }
 
             boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
@@ -436,10 +466,13 @@ public class BossListener implements Listener {
             Material weapon = i == 3 ? Material.NETHERITE_AXE : Material.NETHERITE_SWORD;
             boss.getEquipment().setItemInMainHand(new ItemStack(weapon));
 
-            if (i == 0 && boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
-                boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40);
-            if (i == 3 && boss.getAttribute(Attribute.KNOCKBACK_RESISTANCE) != null)
-                boss.getAttribute(Attribute.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
+            Attribute speedAttr = Attribute.GENERIC_MOVEMENT_SPEED;
+            if (i == 0 && boss.getAttribute(speedAttr) != null)
+                boss.getAttribute(speedAttr).setBaseValue(0.40);
+
+            Attribute kbAttr = Attribute.GENERIC_KNOCKBACK_RESISTANCE;
+            if (i == 3 && boss.getAttribute(kbAttr) != null)
+                boss.getAttribute(kbAttr).setBaseValue(1.0);
 
             ritualTeam.addEntry(boss.getUniqueId().toString());
             bossGroup.add(boss.getUniqueId());
@@ -451,6 +484,8 @@ public class BossListener implements Listener {
 
             final int type = i;
             new BukkitRunnable() {
+                int ticks = 0;
+
                 @Override
                 public void run() {
                     if (!boss.isValid()) {
@@ -532,8 +567,36 @@ public class BossListener implements Listener {
                             }
                         }
                     }
+
+                    // NEW: Boss Reinforcements
+                    if (ticks % 200 == 0) {
+                        Zombie minion = (Zombie) boss.getWorld().spawnEntity(boss.getLocation(), EntityType.ZOMBIE);
+                        minion.setCustomName("§4Ritual Slave");
+                        minion.getEquipment().setHelmet(new ItemStack(Material.IRON_HELMET));
+                        minion.getEquipment().setItemInMainHand(new ItemStack(Material.IRON_SWORD));
+                        ritualTeam.addEntry(minion.getUniqueId().toString());
+                    }
+                    ticks++;
                 }
             }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
+        }
+    }
+
+    private void generateDirectionalAltar(Location center, Vector dir) {
+        Vector cross = new Vector(0, 1, 0).crossProduct(dir).normalize();
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                Location l = center.clone().add(dir.clone().multiply(i)).add(cross.clone().multiply(j)).add(0, -1, 0);
+                if (i == 0 && j == 0)
+                    l.getBlock().setType(Material.NETHERITE_BLOCK);
+                else
+                    l.getBlock().setType(Material.CRYING_OBSIDIAN);
+
+                if (Math.abs(i) == 1 && Math.abs(j) == 1) {
+                    center.clone().add(dir.clone().multiply(i)).add(cross.clone().multiply(j)).getBlock()
+                            .setType(Material.SOUL_LANTERN);
+                }
+            }
         }
     }
 

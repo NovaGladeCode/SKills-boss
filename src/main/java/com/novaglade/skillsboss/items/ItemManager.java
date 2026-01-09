@@ -21,15 +21,15 @@ public class ItemManager {
             "boss_spawn_item");
 
     public static ItemStack createBossSpawnItem() {
-        ItemStack item = new ItemStack(Material.NETHER_STAR);
+        ItemStack item = new ItemStack(Material.GHAST_SPAWN_EGG);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(
-                    Component.text("Boss Spawn I: The Altar", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
+                    Component.text("Avernus Ritual Egg", NamedTextColor.DARK_RED, TextDecoration.BOLD));
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Place this to manifest the Altar of Avernus.", NamedTextColor.LIGHT_PURPLE));
+            lore.add(Component.text("Use this to anchor the ritual site.", NamedTextColor.RED));
             lore.add(Component.empty());
-            lore.add(Component.text("Requires Legendary Diamond Gear to activate.", NamedTextColor.GRAY,
+            lore.add(Component.text("Requires Legendary Diamond Gear to begin the ritual.", NamedTextColor.GRAY,
                     TextDecoration.ITALIC));
             meta.lore(lore);
             meta.getPersistentDataContainer().set(BOSS_SPAWN_KEY, PersistentDataType.BYTE, (byte) 1);
