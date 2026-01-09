@@ -142,11 +142,12 @@ public class AdminCommand implements CommandExecutor {
         }
 
         if (args[1].equalsIgnoreCase("diamondarmor")) {
-            player.getInventory().addItem(ItemManager.createCustomDiamondArmor(Material.DIAMOND_HELMET));
-            player.getInventory().addItem(ItemManager.createCustomDiamondArmor(Material.DIAMOND_CHESTPLATE));
-            player.getInventory().addItem(ItemManager.createCustomDiamondArmor(Material.DIAMOND_LEGGINGS));
-            player.getInventory().addItem(ItemManager.createCustomDiamondArmor(Material.DIAMOND_BOOTS));
-            sender.sendMessage(Component.text("Received custom diamond armor!", NamedTextColor.GREEN));
+            player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_HELMET));
+            player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_CHESTPLATE));
+            player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_LEGGINGS));
+            player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_BOOTS));
+            player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_SWORD));
+            sender.sendMessage(Component.text("Received custom diamond armor and sword!", NamedTextColor.GREEN));
         } else {
             sender.sendMessage(Component.text("Unknown item.", NamedTextColor.RED));
         }

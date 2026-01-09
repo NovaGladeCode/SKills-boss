@@ -35,6 +35,7 @@ public class SkillsBoss extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new com.novaglade.skillsboss.listeners.BossListener(), this);
         getServer().getPluginManager().registerEvents(new com.novaglade.skillsboss.listeners.ProgressionListener(),
                 this);
+        getServer().getPluginManager().registerEvents(new com.novaglade.skillsboss.listeners.DeathListener(), this);
     }
 
     public static SkillsBoss getInstance() {

@@ -14,11 +14,12 @@ import java.util.Set;
 
 public class ProgressionListener implements Listener {
 
-    private static final Set<Material> DIAMOND_ARMOR = EnumSet.of(
+    private static final Set<Material> RESTRICTED_ITEMS = EnumSet.of(
             Material.DIAMOND_HELMET,
             Material.DIAMOND_CHESTPLATE,
             Material.DIAMOND_LEGGINGS,
-            Material.DIAMOND_BOOTS);
+            Material.DIAMOND_BOOTS,
+            Material.DIAMOND_SWORD);
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -30,19 +31,19 @@ public class ProgressionListener implements Listener {
             return;
 
         ItemStack item = event.getCurrentItem();
-        if (item != null && DIAMOND_ARMOR.contains(item.getType())) {
-            if (!ItemManager.isCustomDiamondArmor(item)) {
+        if (item != null && RESTRICTED_ITEMS.contains(item.getType())) {
+            if (!ItemManager.isCustomItem(item)) {
                 event.setCurrentItem(null);
-                player.sendMessage(net.kyori.adventure.text.Component.text("Regular diamond armor is forbidden!",
+                player.sendMessage(net.kyori.adventure.text.Component.text("Regular diamond gear is forbidden!",
                         net.kyori.adventure.text.format.NamedTextColor.RED));
             }
         }
 
         ItemStack cursor = event.getCursor();
-        if (cursor != null && DIAMOND_ARMOR.contains(cursor.getType())) {
-            if (!ItemManager.isCustomDiamondArmor(cursor)) {
+        if (cursor != null && RESTRICTED_ITEMS.contains(cursor.getType())) {
+            if (!ItemManager.isCustomItem(cursor)) {
                 event.setCursor(null);
-                player.sendMessage(net.kyori.adventure.text.Component.text("Regular diamond armor is forbidden!",
+                player.sendMessage(net.kyori.adventure.text.Component.text("Regular diamond gear is forbidden!",
                         net.kyori.adventure.text.format.NamedTextColor.RED));
             }
         }
@@ -58,11 +59,11 @@ public class ProgressionListener implements Listener {
             return;
 
         ItemStack item = event.getItem().getItemStack();
-        if (DIAMOND_ARMOR.contains(item.getType())) {
-            if (!ItemManager.isCustomDiamondArmor(item)) {
+        if (RESTRICTED_ITEMS.contains(item.getType())) {
+            if (!ItemManager.isCustomItem(item)) {
                 event.setCancelled(true);
                 event.getItem().remove();
-                player.sendMessage(net.kyori.adventure.text.Component.text("You cannot pick up regular diamond armor!",
+                player.sendMessage(net.kyori.adventure.text.Component.text("You cannot pick up regular diamond gear!",
                         net.kyori.adventure.text.format.NamedTextColor.RED));
             }
         }

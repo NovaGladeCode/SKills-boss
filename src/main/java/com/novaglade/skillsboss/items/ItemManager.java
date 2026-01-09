@@ -15,10 +15,10 @@ import java.util.List;
 
 public class ItemManager {
 
-    private static final NamespacedKey CUSTOM_ARMOR_KEY = new NamespacedKey(SkillsBoss.getInstance(),
-            "custom_diamond_armor");
+    private static final NamespacedKey CUSTOM_ITEM_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "custom_legendary_item");
 
-    public static ItemStack createCustomDiamondArmor(Material material) {
+    public static ItemStack createCustomItem(Material material) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
 
@@ -30,25 +30,24 @@ public class ItemManager {
                     .decorate(TextDecoration.BOLD));
 
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("A specialized suit of armor", NamedTextColor.GRAY));
-            lore.add(Component.text("given by the admins.", NamedTextColor.GRAY));
+            lore.add(Component.text("A powerful relic of unknown origin.", NamedTextColor.GRAY));
             lore.add(Component.empty());
             lore.add(Component.text("UNBREAKABLE", NamedTextColor.RED).decorate(TextDecoration.BOLD));
 
             meta.lore(lore);
             meta.setUnbreakable(true);
 
-            // Mark as custom armor using PersistentDataContainer
-            meta.getPersistentDataContainer().set(CUSTOM_ARMOR_KEY, PersistentDataType.BYTE, (byte) 1);
+            // Mark as custom item using PersistentDataContainer
+            meta.getPersistentDataContainer().set(CUSTOM_ITEM_KEY, PersistentDataType.BYTE, (byte) 1);
 
             item.setItemMeta(meta);
         }
         return item;
     }
 
-    public static boolean isCustomDiamondArmor(ItemStack item) {
+    public static boolean isCustomItem(ItemStack item) {
         if (item == null || !item.hasItemMeta())
             return false;
-        return item.getItemMeta().getPersistentDataContainer().has(CUSTOM_ARMOR_KEY, PersistentDataType.BYTE);
+        return item.getItemMeta().getPersistentDataContainer().has(CUSTOM_ITEM_KEY, PersistentDataType.BYTE);
     }
 }
