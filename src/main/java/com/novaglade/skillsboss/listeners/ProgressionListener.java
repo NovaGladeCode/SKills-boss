@@ -68,4 +68,23 @@ public class ProgressionListener implements Listener {
             }
         }
     }
+
+    @EventHandler
+    public void onPrepareCraft(org.bukkit.event.inventory.PrepareItemCraftEvent event) {
+        if (SkillsBoss.getProgressionLevel() < 1)
+            return;
+
+        // PrepareItemCraftEvent doesn't easily give the player until they click,
+        // but we can check the viewers.
+        boolean anyNonOp = event.getViewers().stream().anyMatch(v -> v instanceof Player p && !p.isOp());
+        if (!anyNonOp)
+            return;
+
+        ItemStack result = event.getInventory().getResult();
+        if (result != null && RESTRICTED_ITEMS.contains(result.getType())) {
+            if (!ItemManager.isCustomItem(result)) {
+                event.getInventory().setResult(null);
+            }
+        }
+    }
 }
