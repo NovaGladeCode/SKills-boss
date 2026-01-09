@@ -62,8 +62,9 @@ public class ProgressionListener implements Listener {
     public void onPickup(org.bukkit.event.entity.EntityPickupItemEvent event) {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
-        if (!(event.getEntity() instanceof Player player))
+        if (!(event.getEntity() instanceof Player))
             return;
+        Player player = (Player) event.getEntity();
         if (player.isOp())
             return;
 
@@ -83,7 +84,12 @@ public class ProgressionListener implements Listener {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
 
-        boolean anyNonOp = event.getViewers().stream().anyMatch(v -> v instanceof Player p && !p.isOp());
+        boolean anyNonOp = event.getViewers().stream().anyMatch(v -> {
+            if (!(v instanceof Player))
+                return false;
+            Player p = (Player) v;
+            return !p.isOp();
+        });
         if (!anyNonOp)
             return;
 
@@ -136,11 +142,15 @@ public class ProgressionListener implements Listener {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
         if (event.getInventory().getType() == org.bukkit.event.inventory.InventoryType.MERCHANT) {
-            if (event.getPlayer() instanceof Player p && !p.isOp()) {
-                event.setCancelled(true);
-                p.sendMessage(
-                        net.kyori.adventure.text.Component.text("Villagers are too terrified to trade in Phase One!",
-                                net.kyori.adventure.text.format.NamedTextColor.RED));
+            if (event.getPlayer() instanceof Player) {
+                Player p = (Player) event.getPlayer();
+                if (!p.isOp()) {
+                    event.setCancelled(true);
+                    p.sendMessage(
+                            net.kyori.adventure.text.Component.text(
+                                    "Villagers are too terrified to trade in Phase One!",
+                                    net.kyori.adventure.text.format.NamedTextColor.RED));
+                }
             }
         }
     }

@@ -62,10 +62,11 @@ public class AdminCommand implements CommandExecutor {
     }
 
     private void handleProgression(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
             return;
         }
+        Player player = (Player) sender;
 
         if (args.length < 2) {
             sender.sendMessage(Component.text("Usage: /admin progression <0|1>", NamedTextColor.RED));
@@ -280,10 +281,11 @@ public class AdminCommand implements CommandExecutor {
     }
 
     private void handleGive(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
             return;
         }
+        Player player = (Player) sender;
 
         if (args.length < 2) {
             sender.sendMessage(Component.text("Usage: /admin give <diamondarmor|waveboss>", NamedTextColor.RED));

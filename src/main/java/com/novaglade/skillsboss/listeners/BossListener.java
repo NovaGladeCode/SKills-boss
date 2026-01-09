@@ -95,8 +95,9 @@ public class BossListener implements Listener {
     @EventHandler
     public void onAltarInteract(PlayerInteractAtEntityEvent event) {
         Entity entity = event.getRightClicked();
-        if (!(entity instanceof ArmorStand stand))
+        if (!(entity instanceof ArmorStand))
             return;
+        ArmorStand stand = (ArmorStand) entity;
         if (!stand.getPersistentDataContainer().has(ALTAR_KEY, PersistentDataType.BYTE))
             return;
 
