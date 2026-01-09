@@ -84,23 +84,23 @@ public class AdminCommand implements CommandExecutor {
             SkillsBoss.setProgressionLevel(0);
             player.getWorld().setSpawnLocation(player.getLocation());
             player.getWorld().getWorldBorder().setCenter(player.getLocation());
-            player.getWorld().getWorldBorder().setSize(20);
+            player.getWorld().getWorldBorder().setSize(19);
 
             for (Player online : Bukkit.getOnlinePlayers()) {
                 online.teleport(player.getLocation());
             }
 
-            sender.sendMessage(Component.text("Progression 0 set: Spawn updated, All players TPed, Border set to 20.",
+            sender.sendMessage(Component.text("Progression 0 set: Spawn updated, All players TPed, Border set to 19.",
                     NamedTextColor.GREEN));
         } else if (level == 1) {
-            startProgressionOneCountdown(player);
+            startProgressionOneCountdown(player.getWorld());
         } else {
             sender.sendMessage(Component.text("Unknown progression level.", NamedTextColor.RED));
         }
     }
 
-    private void startProgressionOneCountdown(Player starter) {
-        Location center = starter.getLocation();
+    private void startProgressionOneCountdown(org.bukkit.World world) {
+        Location center = world.getSpawnLocation();
 
         new BukkitRunnable() {
             int ticks = 5 * 20; // 5 seconds in ticks
@@ -119,7 +119,7 @@ public class AdminCommand implements CommandExecutor {
                             Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800), Duration.ofMillis(100)));
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
-                        if (online.getLocation().distance(center) <= 50.0) {
+                        if (online.getWorld().equals(world) && online.getLocation().distance(center) <= 50.0) {
                             online.showTitle(title);
                             online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f,
                                     0.5f + (5 - seconds) * 0.2f);
@@ -138,13 +138,13 @@ public class AdminCommand implements CommandExecutor {
                     double z = Math.sin(angle) * radius;
 
                     // Main swirling ring
-                    center.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z), 3, 0.1,
+                    world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, 0.5, z), 3, 0.1,
                             0.1, 0.1, 0.02);
-                    center.getWorld().spawnParticle(Particle.DRAGON_BREATH,
+                    world.spawnParticle(Particle.DRAGON_BREATH,
                             center.clone().add(x, 0.5 + progress * 4, z), 3, 0.1, 0.1, 0.1, 0.02);
 
                     // Rising pillars that close in
-                    center.getWorld().spawnParticle(Particle.END_ROD, center.clone().add(x, progress * 15, z), 2, 0, 0,
+                    world.spawnParticle(Particle.END_ROD, center.clone().add(x, progress * 15, z), 2, 0, 0,
                             0, 0.01);
                 }
 
@@ -158,20 +158,21 @@ public class AdminCommand implements CommandExecutor {
                     // Particle Beams shooting up
                     for (int h = 0; h < 20; h++) {
                         if (ticks % 5 == 0) {
-                            center.getWorld().spawnParticle(Particle.SOUL, beamLoc.clone().add(0, h, 0), 1, 0, 0, 0,
-                                    0.02);
+                            world.spawnParticle(Particle.SOUL, beamLoc.clone().add(0, h, 0), 1, 0, 0, 0, 0.02);
                         }
                     }
                 }
 
                 // Ground Tremors
                 if (ticks % 2 == 0) {
-                    center.getWorld().spawnParticle(Particle.BLOCK, center, 15, radius + 1, 0.1, radius + 1, 0.05,
+                    world.spawnParticle(Particle.BLOCK, center, 15, radius + 1, 0.1, radius + 1, 0.05,
                             Material.GRASS_BLOCK.createBlockData());
                 }
 
                 // Localized Focus: Shake players
                 for (Player online : Bukkit.getOnlinePlayers()) {
+                    if (!online.getWorld().equals(world))
+                        continue;
                     double distance = online.getLocation().distance(center);
                     if (distance <= 30.0) {
                         online.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 40, 0, false, false, false));
@@ -200,19 +201,20 @@ public class AdminCommand implements CommandExecutor {
                         double x = Math.cos(angle) * 2;
                         double z = Math.sin(angle) * 2;
                         for (int h = 0; h < 50; h++) {
-                            center.getWorld().spawnParticle(Particle.FLASH, center.clone().add(x, h, z), 1, 0, 0, 0, 0);
+                            world.spawnParticle(Particle.FLASH, center.clone().add(x, h, z), 1, 0, 0, 0, 0);
                         }
                     }
 
-                    center.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0.1);
-                    center.getWorld().playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
-                    center.getWorld().playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2f, 1f);
+                    world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0.1);
+                    world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 1f);
+                    world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2f, 1f);
 
-                    // Set world border to 750
-                    center.getWorld().getWorldBorder().setSize(750);
+                    // Set world border center to spawn and size to 750
+                    world.getWorldBorder().setCenter(center);
+                    world.getWorldBorder().setSize(750);
 
                     for (Player online : Bukkit.getOnlinePlayers()) {
-                        if (online.getLocation().distance(center) <= 50.0) {
+                        if (online.getWorld().equals(world) && online.getLocation().distance(center) <= 50.0) {
                             online.sendMessage(chatMsg);
                             online.showTitle(finalTitle);
                             online.removePotionEffect(PotionEffectType.NAUSEA);
