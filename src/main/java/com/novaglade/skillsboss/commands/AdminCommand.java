@@ -117,6 +117,13 @@ public class AdminCommand implements CommandExecutor {
             @Override
             public void run() {
                 if (countdown > 0) {
+                    // DEBUG: Send message to all players showing countdown value
+                    for (Player p : Bukkit.getOnlinePlayers()) {
+                        if (p.getWorld().equals(world)) {
+                            p.sendMessage("DEBUG: Countdown = " + countdown);
+                        }
+                    }
+
                     // Display countdown title
                     Component mainTitle = Component.text(String.valueOf(countdown), NamedTextColor.RED,
                             TextDecoration.BOLD);
@@ -163,7 +170,11 @@ public class AdminCommand implements CommandExecutor {
                     world.playSound(center, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1.0f,
                             1.0f + (0.05f * (10 - countdown)));
 
+                    // DECREMENT THE COUNTDOWN
                     countdown--;
+
+                    // DEBUG: Confirm decrement
+                    Bukkit.getLogger().info("[SkillsBoss] Countdown decremented to: " + countdown);
                 } else {
                     // FINALE - Progression starts!
                     SkillsBoss.setProgressionLevel(1);
