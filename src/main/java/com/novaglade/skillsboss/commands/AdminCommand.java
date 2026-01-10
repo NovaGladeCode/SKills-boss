@@ -104,60 +104,81 @@ public class AdminCommand implements CommandExecutor {
         Location center = world.getSpawnLocation();
 
         new BukkitRunnable() {
-            int maxTicks = 10 * 20; // 10 seconds
-            int ticks = maxTicks;
+            int seconds = 10;
+            int subticks = 0;
 
             @Override
             public void run() {
                 try {
-                    int seconds = (int) Math.ceil(ticks / 20.0);
+                    if (seconds > 0) {
+                        // Show title at the start of each second
+                        if (subticks == 0) {
+                            Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.RED,
+                                    TextDecoration.BOLD);
+                            Component subTitle = Component.text("A New Beginning Approaches...",
+                                    NamedTextColor.YELLOW);
+                            Title title = Title.title(mainTitle, subTitle,
+                                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(700),
+                                            Duration.ofMillis(100)));
 
-                    if (ticks % 20 == 0 && seconds > 0) {
-                        Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.RED,
-                                TextDecoration.BOLD);
-                        Component subTitle = Component.text("Starting Progression I: A New Beginning...",
-                                NamedTextColor.YELLOW);
-                        Title title = Title.title(mainTitle, subTitle,
-                                Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800),
-                                        Duration.ofMillis(100)));
-
-                        for (Player online : Bukkit.getOnlinePlayers()) {
-                            if (online.getWorld().equals(world)) {
-                                online.showTitle(title);
-                                online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f,
-                                        0.5f + (seconds * 0.1f));
+                            for (Player online : Bukkit.getOnlinePlayers()) {
+                                if (online.getWorld().equals(world)) {
+                                    online.showTitle(title);
+                                    online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.5f,
+                                            0.5f + (seconds * 0.1f));
+                                }
                             }
                         }
-                    }
 
-                    // Cooler particle effects - Spiral and expanding rings
-                    if (ticks % 2 == 0) {
-                        double radius = 3 * (1 - (ticks / (double) maxTicks));
-                        double height = (1 - (ticks / (double) maxTicks)) * 5;
+                        // Epic particle effects every few ticks
+                        if (subticks % 3 == 0) {
+                            double progress = (10 - seconds + (subticks / 20.0)) / 10.0;
 
-                        // Spiral effect
-                        for (int i = 0; i < 5; i++) {
-                            double angle = (ticks * 0.2) + (i * Math.PI * 2 / 5);
-                            double x = Math.cos(angle) * radius;
-                            double z = Math.sin(angle) * radius;
-                            world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, height, z), 1, 0, 0, 0,
-                                    0);
-                            world.spawnParticle(Particle.FLAME, center.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
+                            // Double helix spiral
+                            for (int h = 0; h < 2; h++) {
+                                double helixAngle = (subticks * 0.3) + (h * Math.PI);
+                                double radius = 3 - (progress * 2);
+                                double height = progress * 6;
+                                double x = Math.cos(helixAngle) * radius;
+                                double z = Math.sin(helixAngle) * radius;
+
+                                world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, height, z), 2, 0.1,
+                                        0.1, 0.1, 0);
+                                world.spawnParticle(Particle.FLAME, center.clone().add(-x, height, -z), 2, 0.1, 0.1,
+                                        0.1, 0);
+                            }
+
+                            // Ground ring pulses
+                            double ringRadius = 2 + Math.sin(subticks * 0.2) * 0.5;
+                            for (int i = 0; i < 16; i++) {
+                                double angle = (i * 2 * Math.PI / 16);
+                                double x = Math.cos(angle) * ringRadius;
+                                double z = Math.sin(angle) * ringRadius;
+                                world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(x, 0.1, z), 1, 0, 0, 0,
+                                        0);
+                            }
                         }
-                    }
 
-                    // Expanding ring at milestones
-                    if (ticks % 20 == 0 && ticks > 0) {
-                        for (int i = 0; i < 30; i++) {
-                            double angle = (i * 2 * Math.PI / 30);
-                            double x = Math.cos(angle) * 4;
-                            double z = Math.sin(angle) * 4;
-                            world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(x, 0.1, z), 3, 0.1, 0.1, 0.1,
-                                    0);
+                        // Major pulse every second
+                        if (subticks == 0) {
+                            for (int i = 0; i < 40; i++) {
+                                double angle = (i * 2 * Math.PI / 40);
+                                double x = Math.cos(angle) * 5;
+                                double z = Math.sin(angle) * 5;
+                                world.spawnParticle(Particle.ENCHANT, center.clone().add(x, 0.5, z), 5, 0.2, 0.5, 0.2,
+                                        0);
+                            }
+                            world.playSound(center, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 0.8f,
+                                    1.0f + (0.1f * (10 - seconds)));
                         }
-                    }
 
-                    if (ticks <= 0) {
+                        subticks++;
+                        if (subticks >= 20) {
+                            subticks = 0;
+                            seconds--;
+                        }
+                    } else {
+                        // EPIC FINALE
                         SkillsBoss.setProgressionLevel(1);
                         Component mainTitle = Component.text("PROGRESSION I", NamedTextColor.GREEN,
                                 TextDecoration.BOLD);
@@ -167,28 +188,64 @@ public class AdminCommand implements CommandExecutor {
                                 Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3),
                                         Duration.ofSeconds(1)));
 
-                        // Epic explosion effect with multiple particle types
-                        for (int r = 0; r < 10; r++) {
-                            world.spawnParticle(Particle.SOUL_FIRE_FLAME, center, 50, r, 0.5, r, 0.1);
-                            world.spawnParticle(Particle.FLAME, center, 50, r, 0.5, r, 0.1);
-                        }
-                        world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 3, 1, 3, 0);
+                        // Multi-layered explosion
+                        new BukkitRunnable() {
+                            int explosionTick = 0;
 
-                        // Ground shockwave
-                        for (int i = 0; i < 50; i++) {
-                            double angle = (i * 2 * Math.PI / 50);
-                            double x = Math.cos(angle) * 6;
-                            double z = Math.sin(angle) * 6;
-                            world.spawnParticle(Particle.CRIT, center.clone().add(x, 0.1, z), 5, 0.2, 0.2, 0.2, 0);
-                        }
+                            @Override
+                            public void run() {
+                                if (explosionTick == 0) {
+                                    // Initial massive burst
+                                    for (int r = 0; r < 15; r++) {
+                                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, center, 60, r * 0.8, 1, r * 0.8,
+                                                0.2);
+                                        world.spawnParticle(Particle.FLAME, center, 60, r * 0.8, 1, r * 0.8, 0.2);
+                                    }
+                                    world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 30, 4, 2, 4, 0);
 
-                        world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 3.5f, 0.4f);
-                        world.playSound(center, Sound.ENTITY_WITHER_DEATH, 3.5f, 0.4f);
-                        world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2.5f, 1.0f);
-                        world.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 2.0f, 0.5f);
+                                    world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 4.0f, 0.4f);
+                                    world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 3.0f, 1.2f);
+                                } else if (explosionTick == 5) {
+                                    // Expanding ring shockwave
+                                    for (int ring = 0; ring < 3; ring++) {
+                                        for (int i = 0; i < 60; i++) {
+                                            double angle = (i * 2 * Math.PI / 60);
+                                            double radius = 6 + (ring * 3);
+                                            double x = Math.cos(angle) * radius;
+                                            double z = Math.sin(angle) * radius;
+                                            world.spawnParticle(Particle.CRIT, center.clone().add(x, 0.1, z), 8, 0.3,
+                                                    0.3, 0.3, 0);
+                                            world.spawnParticle(Particle.END_ROD, center.clone().add(x, 0.1, z), 3, 0,
+                                                    0.5, 0, 0.05);
+                                        }
+                                    }
+
+                                    world.playSound(center, Sound.ENTITY_WITHER_DEATH, 3.5f, 0.4f);
+                                    world.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 2.5f, 0.5f);
+                                } else if (explosionTick == 10) {
+                                    // Rising pillars
+                                    for (int pillar = 0; pillar < 8; pillar++) {
+                                        double angle = (pillar * 2 * Math.PI / 8);
+                                        double x = Math.cos(angle) * 4;
+                                        double z = Math.sin(angle) * 4;
+                                        for (int h = 0; h < 10; h++) {
+                                            world.spawnParticle(Particle.TOTEM_OF_UNDYING,
+                                                    center.clone().add(x, h * 0.5, z), 3, 0.2, 0.2, 0.2, 0);
+                                        }
+                                    }
+
+                                    world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 3.0f, 1.0f);
+                                    world.playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 2.0f, 1.5f);
+                                } else if (explosionTick >= 15) {
+                                    cancel();
+                                }
+                                explosionTick++;
+                            }
+                        }.runTaskTimer(SkillsBoss.getInstance(), 0, 2);
 
                         world.getWorldBorder().setCenter(center);
                         world.getWorldBorder().setSize(750);
+
                         for (Player online : Bukkit.getOnlinePlayers()) {
                             if (online.getWorld().equals(world)) {
                                 online.sendMessage(Component
@@ -201,7 +258,6 @@ public class AdminCommand implements CommandExecutor {
                         }
                         cancel();
                     }
-                    ticks--;
                 } catch (Exception e) {
                     Bukkit.getLogger().severe("[SkillsBoss] Error in Progression I countdown: " + e.getMessage());
                     e.printStackTrace();
