@@ -224,7 +224,6 @@ public class AdminCommand implements CommandExecutor {
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_HELMET));
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_CHESTPLATE));
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_LEGGINGS));
-            player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_LEGGINGS));
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_BOOTS));
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_SWORD));
             sender.sendMessage(Component.text("Received custom diamond armor and sword!", NamedTextColor.GREEN));
