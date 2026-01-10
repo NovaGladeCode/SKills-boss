@@ -100,10 +100,18 @@ public class AdminCommand implements CommandExecutor {
         }
     }
 
+    private static BukkitRunnable activeCountdown = null;
+
     private void startProgressionOneCountdown(org.bukkit.World world) {
+        // Cancel any existing countdown
+        if (activeCountdown != null) {
+            activeCountdown.cancel();
+            activeCountdown = null;
+        }
+
         Location center = world.getSpawnLocation();
 
-        new BukkitRunnable() {
+        activeCountdown = new BukkitRunnable() {
             int countdown = 10;
 
             @Override
@@ -237,10 +245,12 @@ public class AdminCommand implements CommandExecutor {
                             online.showTitle(finalTitle);
                         }
                     }
+                    activeCountdown = null;
                     cancel();
                 }
             }
-        }.runTaskTimer(SkillsBoss.getInstance(), 0, 20); // Run every second (20 ticks)
+        };
+        activeCountdown.runTaskTimer(SkillsBoss.getInstance(), 0, 20); // Run every second (20 ticks)
     }
 
     private void handleReset(CommandSender sender) {
