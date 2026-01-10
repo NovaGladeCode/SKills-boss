@@ -43,6 +43,9 @@ public class AdminCommand implements CommandExecutor {
             case "give":
                 handleGive(sender, args);
                 break;
+            case "reset":
+                handleReset(sender);
+                break;
             case "reload":
                 sender.sendMessage(Component.text("SkillsBoss configuration reloaded!", NamedTextColor.GREEN));
                 break;
@@ -207,6 +210,27 @@ public class AdminCommand implements CommandExecutor {
         }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
+    private void handleReset(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
+            return;
+        }
+        Player player = (Player) sender;
+
+        SkillsBoss.setProgressionLevel(0);
+        player.getWorld().setSpawnLocation(player.getLocation());
+        player.getWorld().getWorldBorder().setCenter(player.getLocation());
+        player.getWorld().getWorldBorder().setSize(19);
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            online.teleport(player.getLocation());
+        }
+
+        sender.sendMessage(
+                Component.text("World reset! Progression set to 0, all players teleported to spawn, border set to 19.",
+                        NamedTextColor.GREEN));
+    }
+
     private void handleGive(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
             sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
@@ -244,6 +268,8 @@ public class AdminCommand implements CommandExecutor {
                 .append(Component.text("- Start progression stages", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin give <diamondarmor|waveboss|portal> ", NamedTextColor.YELLOW)
                 .append(Component.text("- Give legendary gear, boss altar, or portal obsidian", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/admin reset ", NamedTextColor.YELLOW)
+                .append(Component.text("- Reset world: TP all to spawn, set progression to 0", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin reload ", NamedTextColor.YELLOW)
                 .append(Component.text("- Reload plugin config", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin version ", NamedTextColor.YELLOW)
