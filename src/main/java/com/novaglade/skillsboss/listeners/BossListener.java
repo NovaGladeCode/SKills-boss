@@ -96,7 +96,7 @@ public class BossListener implements Listener {
 
         spawnAltarArmorStand(center.clone().add(0, 0.1, 0));
 
-        center.getWorld().setBlockData(center.clone().add(0, -1, 0), Material.NETHERITE_BLOCK.createBlockData());
+        // Removed Netherite Block placement
         center.getWorld().strikeLightningEffect(center);
         center.getWorld().playSound(center, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 0.5f);
     }
@@ -692,7 +692,7 @@ public class BossListener implements Listener {
             for (int j = -1; j <= 1; j++) {
                 Location l = center.clone().add(dir.clone().multiply(i)).add(cross.clone().multiply(j)).add(0, -1, 0);
                 if (i == 0 && j == 0)
-                    l.getBlock().setType(Material.NETHERITE_BLOCK);
+                    l.getBlock().setType(Material.CRYING_OBSIDIAN);
                 else
                     l.getBlock().setType(Material.CRYING_OBSIDIAN);
 
@@ -709,7 +709,7 @@ public class BossListener implements Listener {
             for (int z = -1; z <= 1; z++) {
                 Location l = center.clone().add(x, -1, z);
                 if (x == 0 && z == 0)
-                    l.getBlock().setType(Material.NETHERITE_BLOCK);
+                    l.getBlock().setType(Material.CRYING_OBSIDIAN);
                 else
                     l.getBlock().setType(Material.CRYING_OBSIDIAN);
                 if (Math.abs(x) == 1 && Math.abs(z) == 1)
@@ -792,7 +792,7 @@ public class BossListener implements Listener {
         ArmorStand stand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
         stand.setBasePlate(false);
         stand.setArms(true);
-        stand.setCustomName("§4§lThe Avernus Anchor");
+        stand.setCustomName("§4§lThe Avernus Altar");
         stand.setCustomNameVisible(true);
         stand.getPersistentDataContainer().set(ALTAR_KEY, PersistentDataType.BYTE, (byte) 1);
     }
