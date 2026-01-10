@@ -427,10 +427,10 @@ public class BossListener implements Listener {
             e.getAttribute(hpAttr).setBaseValue(health);
             e.setHealth(health);
         }
-        e.getEquipment().setHelmet(new ItemStack(Material.IRON_HELMET));
-        e.getEquipment().setChestplate(new ItemStack(Material.IRON_CHESTPLATE));
-        e.getEquipment().setLeggings(new ItemStack(Material.IRON_LEGGINGS));
-        e.getEquipment().setBoots(new ItemStack(Material.IRON_BOOTS));
+        e.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
+        e.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
+        e.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
+        e.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
         e.getEquipment().setHelmetDropChance(0);
         e.getEquipment().setChestplateDropChance(0);
         e.getEquipment().setLeggingsDropChance(0);
@@ -496,8 +496,8 @@ public class BossListener implements Listener {
 
             Attribute hpAttr = Attribute.MAX_HEALTH;
             if (boss.getAttribute(hpAttr) != null) {
-                boss.getAttribute(hpAttr).setBaseValue(450);
-                boss.setHealth(450);
+                boss.getAttribute(hpAttr).setBaseValue(150);
+                boss.setHealth(150);
             }
 
             boss.getPersistentDataContainer().set(FINAL_BOSS_KEY, PersistentDataType.BYTE, (byte) 1);
@@ -508,6 +508,7 @@ public class BossListener implements Listener {
                 boss.getAttribute(scaleAttr).setBaseValue(2.0);
             }
 
+            boss.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
             boss.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
             boss.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
             boss.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
@@ -547,7 +548,7 @@ public class BossListener implements Listener {
                         return;
                     }
 
-                    double maxHealth = 450.0;
+                    double maxHealth = 150.0;
                     double progress = boss.getHealth() / maxHealth;
                     if (progress < 0)
                         progress = 0;
