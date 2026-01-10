@@ -107,13 +107,13 @@ public class ItemManager {
             "portal_igniter");
 
     public static ItemStack createPortalIgniter() {
-        ItemStack item = new ItemStack(Material.BLAZE_ROD);
+        ItemStack item = new ItemStack(Material.FLINT_AND_STEEL);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(
                     Component.text("Portal Igniter", NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("A mystical rod pulsing with dimensional energy.", NamedTextColor.DARK_PURPLE));
+            lore.add(Component.text("A mystical lighter pulsing with dimensional energy.", NamedTextColor.DARK_PURPLE));
             lore.add(Component.empty());
             lore.add(Component.text("Right-click on Portal Obsidian to activate the portal.", NamedTextColor.GRAY,
                     TextDecoration.ITALIC));

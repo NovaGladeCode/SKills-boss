@@ -190,19 +190,33 @@ public class BossListener implements Listener {
                 });
             }
 
-            // Drop Portal Igniter only when all bosses are dead
+            // Drop Portal Igniter only when True Final Boss is dead
             if (bossGroup.isEmpty()) {
                 Location deathLoc = entity.getLocation();
-                playerBroadcast(deathLoc.getWorld(),
-                        Component.text("THE CATACLYSM IS AVERTED!", NamedTextColor.GOLD, TextDecoration.BOLD));
 
-                // Drop Portal Igniter
-                ItemStack igniter = ItemManager.createPortalIgniter();
-                deathLoc.getWorld().dropItemNaturally(deathLoc, igniter);
+                Byte bossType = entity.getPersistentDataContainer().get(FINAL_BOSS_KEY, PersistentDataType.BYTE);
 
-                playerBroadcast(deathLoc.getWorld(),
-                        Component.text("The Portal Igniter has been dropped!", NamedTextColor.LIGHT_PURPLE,
-                                TextDecoration.BOLD));
+                // If Sentinels (Type 1) died, spawn True Boss
+                if (bossType != null && bossType == (byte) 1) {
+                    spawnTrueFinalBoss(deathLoc);
+                }
+                // If True Boss (Type 2) died, Win!
+                else if (bossType != null && bossType == (byte) 2) {
+                    playerBroadcast(deathLoc.getWorld(),
+                            Component.text("THE CATACLYSM IS AVERTED!", NamedTextColor.GOLD, TextDecoration.BOLD));
+
+                    // Drop Portal Igniter
+                    ItemStack igniter = ItemManager.createPortalIgniter();
+                    deathLoc.getWorld().dropItemNaturally(deathLoc, igniter);
+
+                    playerBroadcast(deathLoc.getWorld(),
+                            Component.text("The Portal Igniter has been dropped!", NamedTextColor.LIGHT_PURPLE,
+                                    TextDecoration.BOLD));
+
+                    // Visual effects
+                    deathLoc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, deathLoc, 50, 2, 2, 2, 0);
+                    deathLoc.getWorld().playSound(deathLoc, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+                }
             }
         }
 
@@ -505,7 +519,7 @@ public class BossListener implements Listener {
             bossMinions.put(boss.getUniqueId(), Collections.synchronizedSet(new HashSet<>()));
             Attribute scaleAttr = Attribute.SCALE;
             if (boss.getAttribute(scaleAttr) != null) {
-                boss.getAttribute(scaleAttr).setBaseValue(2.0);
+                boss.getAttribute(scaleAttr).setBaseValue(0.8);
             }
 
             boss.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
@@ -652,6 +666,87 @@ public class BossListener implements Listener {
                 }
             }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
         }
+    }
+
+    private void spawnTrueFinalBoss(Location loc) {
+        playerBroadcast(loc.getWorld(), Component.text("SUPREMUS HAS DESCENDED!",
+                NamedTextColor.DARK_RED, TextDecoration.BOLD));
+
+        Location spawn = loc.clone().add(0, 2, 0);
+        WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
+        boss.setCustomName("§4§lSUPREMUS");
+        boss.setCustomNameVisible(true);
+
+        Attribute hpAttr = Attribute.MAX_HEALTH;
+        if (boss.getAttribute(hpAttr) != null) {
+            boss.getAttribute(hpAttr).setBaseValue(1000);
+            boss.setHealth(1000);
+        }
+
+        // Massive Scale
+        Attribute scaleAttr = Attribute.SCALE;
+        if (boss.getAttribute(scaleAttr) != null) {
+            boss.getAttribute(scaleAttr).setBaseValue(3.0);
+        }
+
+        boss.getPersistentDataContainer().set(FINAL_BOSS_KEY, PersistentDataType.BYTE, (byte) 2);
+        boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 1);
+        bossMinions.put(boss.getUniqueId(), Collections.synchronizedSet(new HashSet<>()));
+
+        // Netherite Gear (Visual)
+        boss.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
+        boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
+        boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
+        boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
+        boss.getEquipment().setItemInMainHand(new ItemStack(Material.NETHERITE_AXE));
+
+        boss.getEquipment().setHelmetDropChance(0);
+        boss.getEquipment().setChestplateDropChance(0);
+        boss.getEquipment().setLeggingsDropChance(0);
+        boss.getEquipment().setBootsDropChance(0);
+        boss.getEquipment().setItemInMainHandDropChance(0);
+
+        ritualTeam.addEntry(boss.getUniqueId().toString());
+        bossGroup.add(boss.getUniqueId());
+
+        BossBar bar = Bukkit.createBossBar("§4§lSUPREMUS", BarColor.RED, BarStyle.SEGMENTED_20);
+        for (Player p : boss.getWorld().getPlayers()) {
+            bar.addPlayer(p);
+        }
+        activeBars.put(boss.getUniqueId(), bar);
+
+        // Boss Logic
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!boss.isValid()) {
+                    bar.removeAll();
+                    activeBars.remove(boss.getUniqueId());
+                    cancel();
+                    return;
+                }
+
+                double progress = boss.getHealth() / 1000.0;
+                if (progress < 0)
+                    progress = 0;
+                if (progress > 1)
+                    progress = 1;
+                bar.setProgress(progress);
+
+                // Ability: Massive Shockwave
+                if (boss.getTicksLived() % 100 == 0) {
+                    boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10, 3, 1, 3, 0);
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1.0f, 0.5f);
+                    for (Entity e : boss.getNearbyEntities(15, 10, 15)) {
+                        if (e instanceof Player && !e.isOp()) {
+                            ((LivingEntity) e).damage(10, boss);
+                            e.setVelocity(e.getLocation().subtract(boss.getLocation()).toVector().normalize()
+                                    .multiply(1.5).setY(0.5));
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
     }
 
     private void generateDirectionalAltar(Location center, Vector dir) {
