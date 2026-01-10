@@ -130,7 +130,7 @@ public class AdminCommand implements CommandExecutor {
                         SkillsBoss.setProgressionLevel(1);
                         Component mainTitle = Component.text("PROGRESSION I", NamedTextColor.GREEN,
                                 TextDecoration.BOLD);
-                        Component subTitle = Component.text("THE CATACLYSM BEGINS!", NamedTextColor.DARK_RED,
+                        Component subTitle = Component.text("A NEW BEGINNING", NamedTextColor.DARK_RED,
                                 TextDecoration.BOLD);
 
                         Title finalTitle = Title.title(mainTitle, subTitle,
@@ -171,7 +171,7 @@ public class AdminCommand implements CommandExecutor {
                                 online.sendMessage(Component
                                         .text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD)
                                         .append(Component
-                                                .text("The Cataclysm Begins!", NamedTextColor.DARK_RED,
+                                                .text("A New Beginning", NamedTextColor.DARK_RED,
                                                         TextDecoration.BOLD)));
                                 online.showTitle(finalTitle);
                             }
