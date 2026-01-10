@@ -100,168 +100,140 @@ public class AdminCommand implements CommandExecutor {
         }
     }
 
-    private static BukkitRunnable activeCountdown = null;
-
     private void startProgressionOneCountdown(org.bukkit.World world) {
-        // Cancel any existing countdown
-        if (activeCountdown != null) {
-            activeCountdown.cancel();
-            activeCountdown = null;
-        }
-
         Location center = world.getSpawnLocation();
 
-        activeCountdown = new BukkitRunnable() {
-            int countdown = 10;
+        // Schedule each countdown number as a separate task
+        scheduleCountdown(world, center, 10, 0);
+        scheduleCountdown(world, center, 9, 20);
+        scheduleCountdown(world, center, 8, 40);
+        scheduleCountdown(world, center, 7, 60);
+        scheduleCountdown(world, center, 6, 80);
+        scheduleCountdown(world, center, 5, 100);
+        scheduleCountdown(world, center, 4, 120);
+        scheduleCountdown(world, center, 3, 140);
+        scheduleCountdown(world, center, 2, 160);
+        scheduleCountdown(world, center, 1, 180);
 
+        // Schedule the finale
+        new BukkitRunnable() {
             @Override
             public void run() {
-                if (countdown > 0) {
-                    // DEBUG: Send message to all players showing countdown value
-                    for (Player p : Bukkit.getOnlinePlayers()) {
-                        if (p.getWorld().equals(world)) {
-                            p.sendMessage("DEBUG: Countdown = " + countdown);
-                        }
-                    }
+                SkillsBoss.setProgressionLevel(1);
 
-                    // Display countdown title
-                    Component mainTitle = Component.text(String.valueOf(countdown), NamedTextColor.RED,
-                            TextDecoration.BOLD);
-                    Component subTitle = Component.text("A New Beginning Approaches...", NamedTextColor.YELLOW);
-                    Title title = Title.title(mainTitle, subTitle,
-                            Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(800),
-                                    Duration.ofMillis(200)));
+                Component mainTitle = Component.text("PROGRESSION I", NamedTextColor.GREEN, TextDecoration.BOLD);
+                Component subTitle = Component.text("A NEW BEGINNING", NamedTextColor.DARK_AQUA, TextDecoration.BOLD);
+                Title finalTitle = Title.title(mainTitle, subTitle,
+                        Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofSeconds(1)));
 
-                    for (Player online : Bukkit.getOnlinePlayers()) {
-                        if (online.getWorld().equals(world)) {
-                            online.showTitle(title);
-                            online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.5f,
-                                    0.5f + (countdown * 0.1f));
-                        }
-                    }
+                // Explosion effects
+                for (int r = 0; r < 12; r++) {
+                    world.spawnParticle(Particle.SOUL_FIRE_FLAME, center, 80, r, 1.5, r, 0.3);
+                    world.spawnParticle(Particle.FLAME, center, 80, r, 1.5, r, 0.3);
+                }
+                world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 40, 5, 2, 5, 0);
 
-                    // Epic particles each second
-                    double progress = (10 - countdown) / 10.0;
+                world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 4.0f, 0.4f);
+                world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 3.5f, 1.2f);
+                world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 3.0f, 1.0f);
 
-                    // Spiral particles rising
-                    for (int i = 0; i < 20; i++) {
-                        double angle = (countdown * 36 + i * 18) * Math.PI / 180;
-                        double radius = 3 - (progress * 1.5);
-                        double height = progress * 5;
-                        double x = Math.cos(angle) * radius;
-                        double z = Math.sin(angle) * radius;
-                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, height, z), 3, 0.1, 0.1,
-                                0.1, 0);
-                        world.spawnParticle(Particle.FLAME, center.clone().add(-x, height * 0.7, -z), 3, 0.1, 0.1,
-                                0.1, 0);
-                    }
-
-                    // Pulsing ground ring
-                    for (int i = 0; i < 32; i++) {
-                        double angle = i * 2 * Math.PI / 32;
-                        double radius = 4 + Math.sin(countdown * 0.5) * 0.8;
-                        double x = Math.cos(angle) * radius;
-                        double z = Math.sin(angle) * radius;
-                        world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(x, 0.2, z), 2, 0, 0, 0, 0);
-                        world.spawnParticle(Particle.ENCHANT, center.clone().add(x, 0.5, z), 3, 0.2, 0.3, 0.2, 0);
-                    }
-
-                    // Sound effect
-                    world.playSound(center, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1.0f,
-                            1.0f + (0.05f * (10 - countdown)));
-
-                    // DECREMENT THE COUNTDOWN
-                    countdown--;
-
-                    // DEBUG: Confirm decrement
-                    Bukkit.getLogger().info("[SkillsBoss] Countdown decremented to: " + countdown);
-                } else {
-                    // FINALE - Progression starts!
-                    SkillsBoss.setProgressionLevel(1);
-
-                    Component mainTitle = Component.text("PROGRESSION I", NamedTextColor.GREEN,
-                            TextDecoration.BOLD);
-                    Component subTitle = Component.text("A NEW BEGINNING", NamedTextColor.DARK_AQUA,
-                            TextDecoration.BOLD);
-                    Title finalTitle = Title.title(mainTitle, subTitle,
-                            Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3),
-                                    Duration.ofSeconds(1)));
-
-                    // Multi-stage explosion animation
-                    new BukkitRunnable() {
-                        int stage = 0;
-
-                        @Override
-                        public void run() {
-                            if (stage == 0) {
-                                // Massive initial explosion
-                                for (int r = 0; r < 12; r++) {
-                                    world.spawnParticle(Particle.SOUL_FIRE_FLAME, center, 80, r, 1.5, r, 0.3);
-                                    world.spawnParticle(Particle.FLAME, center, 80, r, 1.5, r, 0.3);
-                                }
-                                world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 40, 5, 2, 5, 0);
-
-                                world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 4.0f, 0.4f);
-                                world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 3.5f, 1.2f);
-                            } else if (stage == 3) {
-                                // Expanding shockwave rings
-                                for (int ring = 0; ring < 4; ring++) {
-                                    for (int i = 0; i < 64; i++) {
-                                        double angle = i * 2 * Math.PI / 64;
-                                        double radius = 5 + (ring * 3);
-                                        double x = Math.cos(angle) * radius;
-                                        double z = Math.sin(angle) * radius;
-                                        world.spawnParticle(Particle.CRIT, center.clone().add(x, 0.2, z), 10, 0.3, 0.3,
-                                                0.3, 0);
-                                        world.spawnParticle(Particle.END_ROD, center.clone().add(x, 0.2, z), 4, 0, 0.6,
-                                                0, 0.05);
-                                    }
-                                }
-
-                                world.playSound(center, Sound.ENTITY_WITHER_DEATH, 3.5f, 0.4f);
-                                world.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 2.5f, 0.5f);
-                            } else if (stage == 6) {
-                                // Rising pillars of light
-                                for (int pillar = 0; pillar < 8; pillar++) {
-                                    double angle = pillar * 2 * Math.PI / 8;
-                                    double x = Math.cos(angle) * 5;
-                                    double z = Math.sin(angle) * 5;
-                                    for (int h = 0; h < 12; h++) {
-                                        world.spawnParticle(Particle.TOTEM_OF_UNDYING,
-                                                center.clone().add(x, h * 0.6, z),
-                                                4, 0.3, 0.3, 0.3, 0);
-                                    }
-                                }
-
-                                world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 3.0f, 1.0f);
-                                world.playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 2.5f, 1.5f);
-                            } else if (stage >= 10) {
-                                cancel();
+                // Expanding rings after 0.3 seconds
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        for (int ring = 0; ring < 4; ring++) {
+                            for (int i = 0; i < 64; i++) {
+                                double angle = i * 2 * Math.PI / 64;
+                                double radius = 5 + (ring * 3);
+                                double x = Math.cos(angle) * radius;
+                                double z = Math.sin(angle) * radius;
+                                world.spawnParticle(Particle.CRIT, center.clone().add(x, 0.2, z), 10, 0.3, 0.3, 0.3, 0);
+                                world.spawnParticle(Particle.END_ROD, center.clone().add(x, 0.2, z), 4, 0, 0.6, 0,
+                                        0.05);
                             }
-                            stage++;
                         }
-                    }.runTaskTimer(SkillsBoss.getInstance(), 0, 2);
-
-                    // Set world border
-                    world.getWorldBorder().setCenter(center);
-                    world.getWorldBorder().setSize(750);
-
-                    // Notify all players
-                    for (Player online : Bukkit.getOnlinePlayers()) {
-                        if (online.getWorld().equals(world)) {
-                            online.sendMessage(Component.text("PROGRESSION I: ", NamedTextColor.GREEN,
-                                    TextDecoration.BOLD)
-                                    .append(Component.text("A New Beginning", NamedTextColor.DARK_AQUA,
-                                            TextDecoration.BOLD)));
-                            online.showTitle(finalTitle);
-                        }
+                        world.playSound(center, Sound.ENTITY_WITHER_DEATH, 3.5f, 0.4f);
                     }
-                    activeCountdown = null;
-                    cancel();
+                }.runTaskLater(SkillsBoss.getInstance(), 6);
+
+                // Rising pillars after 0.6 seconds
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        for (int pillar = 0; pillar < 8; pillar++) {
+                            double angle = pillar * 2 * Math.PI / 8;
+                            double x = Math.cos(angle) * 5;
+                            double z = Math.sin(angle) * 5;
+                            for (int h = 0; h < 12; h++) {
+                                world.spawnParticle(Particle.TOTEM_OF_UNDYING, center.clone().add(x, h * 0.6, z), 4,
+                                        0.3, 0.3, 0.3, 0);
+                            }
+                        }
+                        world.playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 2.5f, 1.5f);
+                    }
+                }.runTaskLater(SkillsBoss.getInstance(), 12);
+
+                // Set world border
+                world.getWorldBorder().setCenter(center);
+                world.getWorldBorder().setSize(750);
+
+                // Notify all players
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    if (online.getWorld().equals(world)) {
+                        online.sendMessage(Component.text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD)
+                                .append(Component.text("A New Beginning", NamedTextColor.DARK_AQUA,
+                                        TextDecoration.BOLD)));
+                        online.showTitle(finalTitle);
+                    }
                 }
             }
-        };
-        activeCountdown.runTaskTimer(SkillsBoss.getInstance(), 0, 20); // Run every second (20 ticks)
+        }.runTaskLater(SkillsBoss.getInstance(), 200); // 10 seconds
+    }
+
+    private void scheduleCountdown(org.bukkit.World world, Location center, int number, long delay) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                // Display countdown
+                Component mainTitle = Component.text(String.valueOf(number), NamedTextColor.RED, TextDecoration.BOLD);
+                Component subTitle = Component.text("A New Beginning Approaches...", NamedTextColor.YELLOW);
+                Title title = Title.title(mainTitle, subTitle,
+                        Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(800), Duration.ofMillis(200)));
+
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    if (online.getWorld().equals(world)) {
+                        online.showTitle(title);
+                        online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.5f,
+                                0.5f + (number * 0.1f));
+                    }
+                }
+
+                // Particles
+                double progress = (10 - number) / 10.0;
+
+                for (int i = 0; i < 20; i++) {
+                    double angle = (number * 36 + i * 18) * Math.PI / 180;
+                    double radius = 3 - (progress * 1.5);
+                    double height = progress * 5;
+                    double x = Math.cos(angle) * radius;
+                    double z = Math.sin(angle) * radius;
+                    world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, height, z), 3, 0.1, 0.1, 0.1,
+                            0);
+                    world.spawnParticle(Particle.FLAME, center.clone().add(-x, height * 0.7, -z), 3, 0.1, 0.1, 0.1, 0);
+                }
+
+                for (int i = 0; i < 32; i++) {
+                    double angle = i * 2 * Math.PI / 32;
+                    double radius = 4 + Math.sin(number * 0.5) * 0.8;
+                    double x = Math.cos(angle) * radius;
+                    double z = Math.sin(angle) * radius;
+                    world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(x, 0.2, z), 2, 0, 0, 0, 0);
+                    world.spawnParticle(Particle.ENCHANT, center.clone().add(x, 0.5, z), 3, 0.2, 0.3, 0.2, 0);
+                }
+
+                world.playSound(center, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1.0f, 1.0f + (0.05f * (10 - number)));
+            }
+        }.runTaskLater(SkillsBoss.getInstance(), delay);
     }
 
     private void handleReset(CommandSender sender) {
