@@ -127,13 +127,30 @@ public class AdminCommand implements CommandExecutor {
                         }
                     }
 
-                    // Simple particle ring
-                    if (ticks % 5 == 0) {
-                        for (int i = 0; i < 20; i++) {
-                            double angle = (i * 2 * Math.PI / 20);
-                            double x = Math.cos(angle) * 3;
-                            double z = Math.sin(angle) * 3;
+                    // Cooler particle effects - Spiral and expanding rings
+                    if (ticks % 2 == 0) {
+                        double radius = 3 * (1 - (ticks / (double) maxTicks));
+                        double height = (1 - (ticks / (double) maxTicks)) * 5;
+
+                        // Spiral effect
+                        for (int i = 0; i < 5; i++) {
+                            double angle = (ticks * 0.2) + (i * Math.PI * 2 / 5);
+                            double x = Math.cos(angle) * radius;
+                            double z = Math.sin(angle) * radius;
+                            world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(x, height, z), 1, 0, 0, 0,
+                                    0);
                             world.spawnParticle(Particle.FLAME, center.clone().add(x, 0.1, z), 1, 0, 0, 0, 0);
+                        }
+                    }
+
+                    // Expanding ring at milestones
+                    if (ticks % 20 == 0 && ticks > 0) {
+                        for (int i = 0; i < 30; i++) {
+                            double angle = (i * 2 * Math.PI / 30);
+                            double x = Math.cos(angle) * 4;
+                            double z = Math.sin(angle) * 4;
+                            world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(x, 0.1, z), 3, 0.1, 0.1, 0.1,
+                                    0);
                         }
                     }
 
@@ -144,15 +161,28 @@ public class AdminCommand implements CommandExecutor {
                         Component subTitle = Component.text("A NEW BEGINNING", NamedTextColor.DARK_AQUA,
                                 TextDecoration.BOLD);
                         Title finalTitle = Title.title(mainTitle, subTitle,
-                                Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(6), Duration.ofSeconds(3)));
+                                Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3),
+                                        Duration.ofSeconds(1)));
 
+                        // Epic explosion effect with multiple particle types
                         for (int r = 0; r < 10; r++) {
+                            world.spawnParticle(Particle.SOUL_FIRE_FLAME, center, 50, r, 0.5, r, 0.1);
                             world.spawnParticle(Particle.FLAME, center, 50, r, 0.5, r, 0.1);
+                        }
+                        world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 3, 1, 3, 0);
+
+                        // Ground shockwave
+                        for (int i = 0; i < 50; i++) {
+                            double angle = (i * 2 * Math.PI / 50);
+                            double x = Math.cos(angle) * 6;
+                            double z = Math.sin(angle) * 6;
+                            world.spawnParticle(Particle.CRIT, center.clone().add(x, 0.1, z), 5, 0.2, 0.2, 0.2, 0);
                         }
 
                         world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 3.5f, 0.4f);
                         world.playSound(center, Sound.ENTITY_WITHER_DEATH, 3.5f, 0.4f);
                         world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2.5f, 1.0f);
+                        world.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 2.0f, 0.5f);
 
                         world.getWorldBorder().setCenter(center);
                         world.getWorldBorder().setSize(750);

@@ -102,4 +102,31 @@ public class ItemManager {
             return false;
         return item.getItemMeta().getPersistentDataContainer().has(PORTAL_OBSIDIAN_KEY, PersistentDataType.BYTE);
     }
+
+    private static final NamespacedKey PORTAL_IGNITER_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "portal_igniter");
+
+    public static ItemStack createPortalIgniter() {
+        ItemStack item = new ItemStack(Material.BLAZE_ROD);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(
+                    Component.text("Portal Igniter", NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("A mystical rod pulsing with dimensional energy.", NamedTextColor.DARK_PURPLE));
+            lore.add(Component.empty());
+            lore.add(Component.text("Right-click on Portal Obsidian to activate the portal.", NamedTextColor.GRAY,
+                    TextDecoration.ITALIC));
+            meta.lore(lore);
+            meta.getPersistentDataContainer().set(PORTAL_IGNITER_KEY, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isPortalIgniter(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+        return item.getItemMeta().getPersistentDataContainer().has(PORTAL_IGNITER_KEY, PersistentDataType.BYTE);
+    }
 }

@@ -38,6 +38,8 @@ public class BossListener implements Listener {
 
     private static final NamespacedKey ALTAR_KEY = new NamespacedKey(SkillsBoss.getInstance(), "boss_altar");
     private static final NamespacedKey WAVE_MOB_KEY = new NamespacedKey(SkillsBoss.getInstance(), "wave_mob");
+    private static final NamespacedKey FINAL_BOSS_KEY = new NamespacedKey(SkillsBoss.getInstance(), "final_boss");
+    private static final NamespacedKey BOSS_PHASE_KEY = new NamespacedKey(SkillsBoss.getInstance(), "boss_phase");
 
     private static boolean transitionActive = false;
     private static Location transitionPortal = null;
@@ -46,6 +48,8 @@ public class BossListener implements Listener {
     private final Map<UUID, BossBar> activeBars = new ConcurrentHashMap<>();
     private final Set<UUID> bossGroup = Collections.synchronizedSet(new HashSet<>());
     private final Set<UUID> activatingStands = Collections.synchronizedSet(new HashSet<>());
+    private final Map<UUID, Set<UUID>> bossMinions = new ConcurrentHashMap<>();
+    private final Set<UUID> shieldedBosses = Collections.synchronizedSet(new HashSet<>());
 
     private Team ritualTeam;
 
@@ -151,7 +155,11 @@ public class BossListener implements Listener {
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
+
+        // Clear drops for all wave mobs and minions
         if (entity.getPersistentDataContainer().has(WAVE_MOB_KEY, PersistentDataType.STRING)) {
+            event.getDrops().clear();
+            event.setDroppedExp(0);
             String uuidStr = entity.getPersistentDataContainer().get(WAVE_MOB_KEY, PersistentDataType.STRING);
             if (uuidStr != null) {
                 UUID standUuid = UUID.fromString(uuidStr);
@@ -162,6 +170,8 @@ public class BossListener implements Listener {
                 }
             }
         }
+
+        // Handle final boss deaths
         if (bossGroup.contains(entity.getUniqueId())) {
             bossGroup.remove(entity.getUniqueId());
             BossBar bar = activeBars.get(entity.getUniqueId());
@@ -169,16 +179,53 @@ public class BossListener implements Listener {
                 bar.removeAll();
                 activeBars.remove(entity.getUniqueId());
             }
+
+            // Clean up minions
+            Set<UUID> minions = bossMinions.remove(entity.getUniqueId());
+            if (minions != null) {
+                minions.forEach(mId -> {
+                    Entity m = Bukkit.getEntity(mId);
+                    if (m != null)
+                        m.remove();
+                });
+            }
+
+            // Drop Portal Igniter only when all bosses are dead
             if (bossGroup.isEmpty()) {
                 Location deathLoc = entity.getLocation();
                 playerBroadcast(deathLoc.getWorld(),
                         Component.text("THE CATACLYSM IS AVERTED!", NamedTextColor.GOLD, TextDecoration.BOLD));
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        startProgressionTwoTransition(deathLoc);
+
+                // Drop Portal Igniter
+                ItemStack igniter = ItemManager.createPortalIgniter();
+                deathLoc.getWorld().dropItemNaturally(deathLoc, igniter);
+
+                playerBroadcast(deathLoc.getWorld(),
+                        Component.text("The Portal Igniter has been dropped!", NamedTextColor.LIGHT_PURPLE,
+                                TextDecoration.BOLD));
+            }
+        }
+
+        // Handle boss minion deaths
+        for (Map.Entry<UUID, Set<UUID>> entry : bossMinions.entrySet()) {
+            if (entry.getValue().remove(entity.getUniqueId())) {
+                event.getDrops().clear();
+                event.setDroppedExp(0);
+
+                // Check if all minions are dead and boss is shielded
+                if (entry.getValue().isEmpty() && shieldedBosses.contains(entry.getKey())) {
+                    Entity bossEntity = Bukkit.getEntity(entry.getKey());
+                    if (bossEntity instanceof LivingEntity) {
+                        LivingEntity boss = (LivingEntity) bossEntity;
+                        shieldedBosses.remove(entry.getKey());
+                        boss.setInvulnerable(false);
+                        boss.getWorld().playSound(boss.getLocation(), Sound.BLOCK_GLASS_BREAK, 2f, 0.5f);
+                        playerBroadcast(boss.getWorld(),
+                                Component.text("The shield has shattered!", NamedTextColor.YELLOW,
+                                        TextDecoration.BOLD));
                     }
-                }.runTaskLater(SkillsBoss.getInstance(), 100);
+                }
+                break;
             }
         }
     }
@@ -327,7 +374,7 @@ public class BossListener implements Listener {
         } else if (waveId == 3) {
             for (int i = 0; i < 4; i++) {
                 WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
-                        Material.DIAMOND_AXE, stand.getUniqueId(), mobs);
+                        Material.IRON_SWORD, stand.getUniqueId(), mobs);
                 applyDiamondGear(e, 75);
                 new BukkitRunnable() {
                     @Override
@@ -349,17 +396,17 @@ public class BossListener implements Listener {
                         stand.getUniqueId(), mobs);
                 applyDiamondGear(z, 50);
                 WitherSkeleton w = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
-                        Material.DIAMOND_AXE, stand.getUniqueId(), mobs);
+                        Material.IRON_SWORD, stand.getUniqueId(), mobs);
                 applyDiamondGear(w, 75);
             }
-            WitherSkeleton mini = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§0§lThe Gatekeeper",
-                    Material.DIAMOND_SWORD, stand.getUniqueId(), mobs);
-            applyDiamondGear(mini, 250);
+            WitherSkeleton mini = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§6§lThe Gatekeeper",
+                    Material.IRON_SWORD, stand.getUniqueId(), mobs);
+            applyDiamondGear(mini, 120);
             if (mini.getAttribute(Attribute.SCALE) != null)
-                mini.getAttribute(Attribute.SCALE).setBaseValue(2.5);
+                mini.getAttribute(Attribute.SCALE).setBaseValue(1.5);
 
             if (mini.getAttribute(Attribute.MOVEMENT_SPEED) != null)
-                mini.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
+                mini.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.3);
 
             new BukkitRunnable() {
                 @Override
@@ -368,9 +415,9 @@ public class BossListener implements Listener {
                         cancel();
                         return;
                     }
-                    shootCustomBeam(mini, Particle.DRAGON_BREATH, 10.0, true);
+                    shootCustomBeam(mini, Particle.DRAGON_BREATH, 6.0, false);
                 }
-            }.runTaskTimer(SkillsBoss.getInstance(), 40, 40);
+            }.runTaskTimer(SkillsBoss.getInstance(), 60, 80);
         }
     }
 
@@ -437,6 +484,10 @@ public class BossListener implements Listener {
         String[] titles = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel", "§c§lWar Sentinel" };
         BarColor[] colors = { BarColor.RED, BarColor.PURPLE, BarColor.BLUE, BarColor.RED };
 
+        // Initialize all boss minion sets
+        bossMinions.clear();
+        shieldedBosses.clear();
+
         for (int i = 0; i < 4; i++) {
             Location spawn = loc.clone().add(Math.cos(i * Math.PI / 2) * 5, 0, Math.sin(i * Math.PI / 2) * 5);
             WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
@@ -445,9 +496,13 @@ public class BossListener implements Listener {
 
             Attribute hpAttr = Attribute.MAX_HEALTH;
             if (boss.getAttribute(hpAttr) != null) {
-                boss.getAttribute(hpAttr).setBaseValue(300);
-                boss.setHealth(300);
+                boss.getAttribute(hpAttr).setBaseValue(450);
+                boss.setHealth(450);
             }
+
+            boss.getPersistentDataContainer().set(FINAL_BOSS_KEY, PersistentDataType.BYTE, (byte) 1);
+            boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 1);
+            bossMinions.put(boss.getUniqueId(), Collections.synchronizedSet(new HashSet<>()));
             Attribute scaleAttr = Attribute.SCALE;
             if (boss.getAttribute(scaleAttr) != null) {
                 boss.getAttribute(scaleAttr).setBaseValue(2.0);
@@ -479,6 +534,9 @@ public class BossListener implements Listener {
             final int type = i;
             new BukkitRunnable() {
                 int ticks = 0;
+                int currentPhase = 1;
+                boolean phase2Triggered = false;
+                boolean phase3Triggered = false;
 
                 @Override
                 public void run() {
@@ -488,12 +546,30 @@ public class BossListener implements Listener {
                         cancel();
                         return;
                     }
-                    double progress = boss.getHealth() / 300.0;
+
+                    double maxHealth = 450.0;
+                    double progress = boss.getHealth() / maxHealth;
                     if (progress < 0)
                         progress = 0;
                     if (progress > 1)
                         progress = 1;
                     bar.setProgress(progress);
+
+                    // Phase 2: At 66% health
+                    if (!phase2Triggered && boss.getHealth() <= maxHealth * 0.66) {
+                        phase2Triggered = true;
+                        currentPhase = 2;
+                        boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 2);
+                        enterPhase2(boss, type);
+                    }
+
+                    // Phase 3: At 33% health
+                    if (!phase3Triggered && boss.getHealth() <= maxHealth * 0.33) {
+                        phase3Triggered = true;
+                        currentPhase = 3;
+                        boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 3);
+                        enterPhase3(boss, type);
+                    }
 
                     Location bLoc = boss.getLocation();
                     if (type == 0)
@@ -562,14 +638,15 @@ public class BossListener implements Listener {
                         }
                     }
 
-                    // NEW: Boss Reinforcements
-                    if (ticks % 200 == 0) {
-                        Zombie minion = (Zombie) boss.getWorld().spawnEntity(boss.getLocation(), EntityType.ZOMBIE);
-                        minion.setCustomName("§4Ritual Slave");
-                        minion.getEquipment().setHelmet(new ItemStack(Material.IRON_HELMET));
-                        minion.getEquipment().setItemInMainHand(new ItemStack(Material.IRON_SWORD));
-                        ritualTeam.addEntry(minion.getUniqueId().toString());
+                    // Boss abilities scale with phase
+                    if (currentPhase == 3 && ticks % 60 == 0) {
+                        // Phase 3: More frequent and powerful abilities
+                        triggerBossAbility(boss, type, true);
+                    } else if (currentPhase == 2 && ticks % 100 == 0) {
+                        // Phase 2: Medium frequency
+                        triggerBossAbility(boss, type, false);
                     }
+
                     ticks++;
                 }
             }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
@@ -609,21 +686,45 @@ public class BossListener implements Listener {
     }
 
     private void startProgressionTwoTransition(Location loc) {
-        SkillsBoss.setProgressionLevel(2);
+        // Portal will be lit when player uses Portal Igniter
         transitionActive = true;
         transitionPortal = loc.clone().add(0, 1, 0);
+    }
 
-        // Just light the portal, don't create blocks
-        Location portalBase = findNearbyPortalFrame(loc, 20);
+    @EventHandler
+    public void onPortalIgniterUse(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK)
+            return;
+        if (event.getHand() != EquipmentSlot.HAND)
+            return;
+        ItemStack item = event.getItem();
+        if (item == null || !ItemManager.isPortalIgniter(item))
+            return;
+
+        Block block = event.getClickedBlock();
+        if (block == null || block.getType() != Material.CRYING_OBSIDIAN)
+            return;
+
+        event.setCancelled(true);
+
+        Location portalBase = findNearbyPortalFrame(block.getLocation(), 5);
         if (portalBase != null) {
+            item.setAmount(item.getAmount() - 1);
             lightPortalFrame(portalBase);
-        }
 
-        Title title = Title.title(Component.text("PROGRESSION II", NamedTextColor.RED, TextDecoration.BOLD),
-                Component.text("THE PORTAL AWAKENS", NamedTextColor.DARK_RED, TextDecoration.BOLD),
-                Title.Times.times(Duration.ofSeconds(1), Duration.ofSeconds(5), Duration.ofSeconds(3)));
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            p.showTitle(title);
+            SkillsBoss.setProgressionLevel(2);
+
+            Title title = Title.title(Component.text("PROGRESSION II", NamedTextColor.RED, TextDecoration.BOLD),
+                    Component.text("THE PORTAL AWAKENS", NamedTextColor.DARK_RED, TextDecoration.BOLD),
+                    Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofSeconds(2)));
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                p.showTitle(title);
+            }
+
+            block.getWorld().playSound(block.getLocation(), Sound.BLOCK_PORTAL_TRIGGER, 2f, 0.5f);
+            block.getWorld().spawnParticle(Particle.PORTAL, block.getLocation().add(0.5, 0.5, 0.5), 200, 2, 2, 2, 0.5);
+        } else {
+            event.getPlayer().sendMessage(Component.text("This is not a valid portal frame!", NamedTextColor.RED));
         }
     }
 
@@ -667,6 +768,135 @@ public class BossListener implements Listener {
         if (msg != null) {
             for (Player p : world.getPlayers()) {
                 p.sendMessage(msg);
+            }
+        }
+    }
+
+    private void enterPhase2(LivingEntity boss, int type) {
+        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.8f);
+        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10, 2, 1, 2, 0);
+
+        playerBroadcast(boss.getWorld(),
+                Component.text(boss.getCustomName() + " enters Phase 2!", NamedTextColor.YELLOW, TextDecoration.BOLD));
+
+        // Increase speed and damage
+        if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null) {
+            double currentSpeed = boss.getAttribute(Attribute.MOVEMENT_SPEED).getBaseValue();
+            boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(currentSpeed * 1.2);
+        }
+        if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null) {
+            double currentDmg = boss.getAttribute(Attribute.ATTACK_DAMAGE).getBaseValue();
+            boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(currentDmg * 1.3);
+        }
+    }
+
+    private void enterPhase3(LivingEntity boss, int type) {
+        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2f, 0.5f);
+        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 20, 3, 2, 3, 0);
+
+        playerBroadcast(boss.getWorld(),
+                Component.text(boss.getCustomName() + " enters FINAL PHASE!", NamedTextColor.RED, TextDecoration.BOLD));
+
+        // Shield boss
+        boss.setInvulnerable(true);
+        shieldedBosses.add(boss.getUniqueId());
+
+        // Spawn 4 minions
+        Set<UUID> minions = bossMinions.get(boss.getUniqueId());
+        String[] minionNames = { "§4Crimson Guard", "§5Void Guard", "§1Frost Guard", "§cWar Guard" };
+
+        for (int i = 0; i < 4; i++) {
+            double angle = (i * Math.PI / 2);
+            Location spawnLoc = boss.getLocation().clone().add(
+                    Math.cos(angle) * 4, 0, Math.sin(angle) * 4);
+
+            WitherSkeleton minion = (WitherSkeleton) boss.getWorld().spawnEntity(spawnLoc, EntityType.WITHER_SKELETON);
+            minion.setCustomName(minionNames[i]);
+            minion.setCustomNameVisible(true);
+
+            if (minion.getAttribute(Attribute.MAX_HEALTH) != null) {
+                minion.getAttribute(Attribute.MAX_HEALTH).setBaseValue(80);
+                minion.setHealth(80);
+            }
+
+            minion.getEquipment().setChestplate(new ItemStack(Material.IRON_CHESTPLATE));
+            minion.getEquipment().setItemInMainHand(new ItemStack(Material.IRON_SWORD));
+            minion.getEquipment().setHelmetDropChance(0);
+            minion.getEquipment().setChestplateDropChance(0);
+            minion.getEquipment().setItemInMainHandDropChance(0);
+
+            ritualTeam.addEntry(minion.getUniqueId().toString());
+            minions.add(minion.getUniqueId());
+        }
+
+        playerBroadcast(boss.getWorld(),
+                Component.text("Destroy the guards to break the shield!", NamedTextColor.GOLD));
+
+        // Further stat boost
+        if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null) {
+            double currentSpeed = boss.getAttribute(Attribute.MOVEMENT_SPEED).getBaseValue();
+            boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(currentSpeed * 1.3);
+        }
+        if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null) {
+            double currentDmg = boss.getAttribute(Attribute.ATTACK_DAMAGE).getBaseValue();
+            boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(currentDmg * 1.5);
+        }
+    }
+
+    private void triggerBossAbility(LivingEntity boss, int type, boolean enhanced) {
+        double multiplier = enhanced ? 1.5 : 1.0;
+
+        if (type == 0) { // Crimson - Fire
+            boss.getWorld().spawnParticle(Particle.FLAME, boss.getLocation(), (int) (200 * multiplier), 4, 1, 4, 0.2);
+            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 1f);
+            for (Entity e : boss.getNearbyEntities(8, 6, 8)) {
+                if (e instanceof Player) {
+                    Player target = (Player) e;
+                    if (!target.isOp())
+                        target.setFireTicks((int) (160 * multiplier));
+                }
+            }
+        } else if (type == 1) { // Void - Wither
+            boss.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), (int) (100 * multiplier), 3, 2,
+                    3, 0.05);
+            for (UUID id : bossGroup) {
+                Entity bEnt = Bukkit.getEntity(id);
+                if (bEnt instanceof LivingEntity) {
+                    LivingEntity b = (LivingEntity) bEnt;
+                    if (b.isValid())
+                        b.setHealth(Math.min(450, b.getHealth() + 20 * multiplier));
+                }
+            }
+            for (Entity e : boss.getNearbyEntities(10, 10, 10)) {
+                if (e instanceof Player) {
+                    Player target = (Player) e;
+                    if (!target.isOp())
+                        target.addPotionEffect(
+                                new PotionEffect(PotionEffectType.WITHER, (int) (100 * multiplier), enhanced ? 2 : 1));
+                }
+            }
+        } else if (type == 2) { // Frost - Pull
+            boss.getWorld().spawnParticle(Particle.PORTAL, boss.getLocation(), (int) (200 * multiplier), 10, 2, 10, 0);
+            for (Entity e : boss.getNearbyEntities(12, 12, 12)) {
+                if (e instanceof Player) {
+                    Player target = (Player) e;
+                    if (!target.isOp())
+                        target.setVelocity(boss.getLocation().subtract(target.getLocation()).toVector()
+                                .normalize().multiply(1.6 * multiplier));
+                }
+            }
+        } else if (type == 3) { // War - Slam
+            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, 2f, 0.5f);
+            boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), (int) (5 * multiplier), 4,
+                    0.5, 4, 0);
+            for (Entity e : boss.getNearbyEntities(10, 5, 10)) {
+                if (e instanceof Player) {
+                    Player target = (Player) e;
+                    if (!target.isOp()) {
+                        target.setVelocity(new Vector(0, 1.8 * multiplier, 0));
+                        target.damage(8 * multiplier, boss);
+                    }
+                }
             }
         }
     }

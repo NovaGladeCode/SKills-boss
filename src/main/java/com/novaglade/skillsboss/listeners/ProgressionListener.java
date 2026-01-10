@@ -158,11 +158,6 @@ public class ProgressionListener implements Listener {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
         checkAndRemove(event.getPlayer());
-
-        if (SkillsBoss.getProgressionLevel() == 2 && BossListener.isTransitionActive() &&
-                event.getPlayer().getWorld().getEnvironment() != org.bukkit.World.Environment.NETHER) {
-            BossListener.startPullingPlayer(event.getPlayer());
-        }
     }
 
     private void checkAndRemove(Player player) {
