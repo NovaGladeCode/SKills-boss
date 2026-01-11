@@ -16,6 +16,7 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
@@ -765,6 +766,47 @@ public class BossListener implements Listener {
     }
 
     @EventHandler
+    public void onPortalPlace(BlockPlaceEvent event) {
+        if (ItemManager.isPortalObsidian(event.getItemInHand())) {
+            event.setCancelled(true);
+
+            // Consume 1 item
+            if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+                event.getItemInHand().setAmount(event.getItemInHand().getAmount() - 1);
+            }
+
+            Location loc = event.getBlock().getLocation();
+            generateNetherPortalFrame(loc);
+
+            event.getPlayer().sendMessage(
+                    Component.text("The Portal Frame manifests before you...", NamedTextColor.DARK_PURPLE));
+            loc.getWorld().playSound(loc, Sound.BLOCK_END_PORTAL_FRAME_FILL, 1f, 0.5f);
+        }
+    }
+
+    private void generateNetherPortalFrame(Location center) {
+        // Clear area (safety)
+        for (int x = -2; x <= 2; x++) {
+            for (int y = 0; y <= 5; y++) {
+                center.clone().add(x, y, 0).getBlock().setType(Material.AIR);
+            }
+        }
+
+        // Build Frame
+        // Base
+        for (int x = -2; x <= 2; x++)
+            center.clone().add(x, 0, 0).getBlock().setType(Material.CRYING_OBSIDIAN);
+        // Top
+        for (int x = -2; x <= 2; x++)
+            center.clone().add(x, 5, 0).getBlock().setType(Material.CRYING_OBSIDIAN);
+        // Sides
+        for (int y = 1; y <= 4; y++) {
+            center.clone().add(-2, y, 0).getBlock().setType(Material.CRYING_OBSIDIAN);
+            center.clone().add(2, y, 0).getBlock().setType(Material.CRYING_OBSIDIAN);
+        }
+    }
+
+    @EventHandler
     public void onPortalIgniterUse(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK)
             return;
@@ -802,23 +844,27 @@ public class BossListener implements Listener {
     }
 
     private Location findNearbyPortalFrame(Location center, int radius) {
+        Location best = null;
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
                     Location check = center.clone().add(x, y, z);
                     if (check.getBlock().getType() == Material.CRYING_OBSIDIAN) {
-                        return check;
+                        // Return the LOWEST Y block (likely base)
+                        if (best == null || check.getY() < best.getY()) {
+                            best = check;
+                        }
                     }
                 }
             }
         }
-        return null;
+        return best;
     }
 
-    private void lightPortalFrame(Location frameBlock) {
-        // Find the portal frame and light it
-        Location base = frameBlock.clone();
-        for (int y = 0; y < 5; y++) {
+    private void lightPortalFrame(Location base) {
+        // base is the lowest Crying Obsidian (y=0 in our generation)
+        // Light the area INSIDE the frame (y=1 to y=4)
+        for (int y = 1; y <= 4; y++) {
             for (int x = -1; x <= 1; x++) {
                 Location check = base.clone().add(x, y, 0);
                 if (check.getBlock().getType() == Material.AIR) {

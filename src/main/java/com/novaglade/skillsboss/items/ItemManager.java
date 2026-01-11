@@ -80,7 +80,7 @@ public class ItemManager {
     }
 
     public static ItemStack createPortalObsidian() {
-        ItemStack item = new ItemStack(Material.CRYING_OBSIDIAN, 16);
+        ItemStack item = new ItemStack(Material.CRYING_OBSIDIAN, 1);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(
@@ -88,7 +88,7 @@ public class ItemManager {
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text("Ancient obsidian imbued with dimensional energy.", NamedTextColor.LIGHT_PURPLE));
             lore.add(Component.empty());
-            lore.add(Component.text("Build a 5-high, 3-wide frame to create a portal.", NamedTextColor.GRAY,
+            lore.add(Component.text("Place this to spawn the Avernus Portal.", NamedTextColor.GRAY,
                     TextDecoration.ITALIC));
             meta.lore(lore);
             meta.getPersistentDataContainer().set(PORTAL_OBSIDIAN_KEY, PersistentDataType.BYTE, (byte) 1);
