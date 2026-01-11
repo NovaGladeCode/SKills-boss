@@ -500,6 +500,10 @@ public class BossListener implements Listener {
         if (boss.getAttribute(scaleAttr) != null) {
             boss.getAttribute(scaleAttr).setBaseValue(3.0);
         }
+        Attribute dmgAttr = Attribute.ATTACK_DAMAGE;
+        if (boss.getAttribute(dmgAttr) != null) {
+            boss.getAttribute(dmgAttr).setBaseValue(40.0); // Way more damage
+        }
 
         boss.getPersistentDataContainer().set(FINAL_BOSS_KEY, PersistentDataType.BYTE, (byte) 2);
         boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 1);
@@ -545,6 +549,9 @@ public class BossListener implements Listener {
             }
             if (sentinel.getAttribute(Attribute.SCALE) != null) {
                 sentinel.getAttribute(Attribute.SCALE).setBaseValue(0.8);
+            }
+            if (sentinel.getAttribute(Attribute.ATTACK_DAMAGE) != null) {
+                sentinel.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(20.0); // Buffed Sentinel Damage
             }
 
             sentinel.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
@@ -629,12 +636,45 @@ public class BossListener implements Listener {
                     boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1.0f, 0.5f);
                     for (Entity e : boss.getNearbyEntities(15, 10, 15)) {
                         if (e instanceof Player && !e.isOp()) {
-                            ((LivingEntity) e).damage(phase >= 2 ? 20 : 15, boss);
+                            ((LivingEntity) e).damage(phase >= 2 ? 35 : 25, boss); // Buffed Damage
                             e.setVelocity(e.getLocation().subtract(boss.getLocation()).toVector().normalize()
                                     .multiply(1.5).setY(0.5));
                             ((Player) e).sendMessage(Component.text("Supremus uses OBLITERATE!",
                                     NamedTextColor.DARK_RED, TextDecoration.BOLD));
                         }
+                    }
+                }
+
+                // New Ability: Soul Siphon (Cool Heal Spell)
+                if (ticks % 400 == 0 && boss.getHealth() < 1000) {
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_EVOKER_CAST_SPELL, 2f, 0.5f);
+                    boss.getWorld().spawnParticle(Particle.SCULK_SOUL, boss.getLocation(), 50, 1, 2, 1, 0.1);
+
+                    boolean drained = false;
+                    for (Entity e : boss.getNearbyEntities(20, 10, 20)) {
+                        if (e instanceof Player && !e.isOp()) {
+                            drained = true;
+                            LivingEntity target = (LivingEntity) e;
+                            target.damage(12, boss);
+
+                            // Visual trail: Hearts from player to boss
+                            Location pLoc = target.getLocation().add(0, 1, 0);
+                            Location bLoc = boss.getLocation().add(0, 2, 0);
+                            double dist = pLoc.distance(bLoc);
+                            Vector dir = bLoc.toVector().subtract(pLoc.toVector()).normalize();
+                            for (double d = 0; d < dist; d += 0.5) {
+                                target.getWorld().spawnParticle(Particle.HEART,
+                                        pLoc.clone().add(dir.clone().multiply(d)), 1, 0, 0, 0, 0);
+                            }
+
+                            double heal = 60.0;
+                            boss.setHealth(Math.min(1000, boss.getHealth() + heal));
+                        }
+                    }
+                    if (drained) {
+                        playerBroadcast(boss.getWorld(), Component.text("Supremus SIPHONS your soul to heal!",
+                                NamedTextColor.DARK_GREEN, TextDecoration.BOLD));
+                        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 0.5f);
                     }
                 }
 
@@ -652,7 +692,7 @@ public class BossListener implements Listener {
                                     target.getWorld().playSound(target, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
                                     for (Entity hit : target.getWorld().getNearbyEntities(target, 3, 3, 3)) {
                                         if (hit instanceof Player)
-                                            ((LivingEntity) hit).damage(12, boss);
+                                            ((LivingEntity) hit).damage(25, boss); // Buffed Damage
                                     }
                                 }
                             }.runTaskLater(SkillsBoss.getInstance(), 20);
