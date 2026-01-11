@@ -265,6 +265,15 @@ public class BossListener implements Listener {
     }
 
     @EventHandler
+    public void onAltarDamage(org.bukkit.event.entity.EntityDamageEvent event) {
+        if (event.getEntity() instanceof ArmorStand) {
+            if (event.getEntity().getPersistentDataContainer().has(ALTAR_KEY, PersistentDataType.BYTE)) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
     public void onBossHit(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof WitherSkeleton && event.getEntity() instanceof Player) {
             WitherSkeleton boss = (WitherSkeleton) event.getDamager();
@@ -950,6 +959,7 @@ public class BossListener implements Listener {
         stand.setArms(true);
         stand.setCustomName("§4§lThe Avernus Altar");
         stand.setCustomNameVisible(true);
+        stand.setInvulnerable(true); // Fix: Entities cannot destroy it
         stand.getPersistentDataContainer().set(ALTAR_KEY, PersistentDataType.BYTE, (byte) 1);
     }
 
