@@ -29,6 +29,8 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.util.EulerAngle;
+import java.util.Random;
+import java.util.stream.Collectors;
 import org.bukkit.util.Vector;
 
 import java.time.Duration;
@@ -201,9 +203,29 @@ public class BossListener implements Listener {
             ItemStack igniter = ItemManager.createPortalIgniter();
             deathLoc.getWorld().dropItemNaturally(deathLoc, igniter);
 
+            // Drop Legendary Diamond Sword
+            deathLoc.getWorld().dropItemNaturally(deathLoc, ItemManager.createCustomItem(Material.DIAMOND_SWORD));
+
             playerBroadcast(deathLoc.getWorld(),
                     Component.text("The Portal Igniter has been dropped!", NamedTextColor.LIGHT_PURPLE,
                             TextDecoration.BOLD));
+
+            // Clean up Altar
+            deathLoc.getWorld().getNearbyEntities(deathLoc, 50, 50, 50).forEach(e -> {
+                if (e.getType() == EntityType.ARMOR_STAND && e.getCustomName() != null
+                        && e.getCustomName().contains("Altar")) {
+                    e.remove();
+                    // Change nearby Crying Obsidian to Obsidian (Deactivate)
+                    for (int x = -2; x <= 2; x++) {
+                        for (int z = -2; z <= 2; z++) {
+                            Block b = e.getLocation().add(x, -1, z).getBlock();
+                            if (b.getType() == Material.CRYING_OBSIDIAN || b.getType() == Material.NETHERITE_BLOCK) {
+                                b.setType(Material.OBSIDIAN);
+                            }
+                        }
+                    }
+                }
+            });
 
             // Visual effects
             deathLoc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, deathLoc, 50, 2, 2, 2, 0);
@@ -239,6 +261,20 @@ public class BossListener implements Listener {
         if (ritualTeam.hasEntry(event.getDamager().getUniqueId().toString())
                 && ritualTeam.hasEntry(event.getEntity().getUniqueId().toString())) {
             event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onBossHit(EntityDamageByEntityEvent event) {
+        if (event.getDamager() instanceof WitherSkeleton && event.getEntity() instanceof Player) {
+            WitherSkeleton boss = (WitherSkeleton) event.getDamager();
+            if (boss.getPersistentDataContainer().has(FINAL_BOSS_KEY, PersistentDataType.BYTE)) {
+                Player p = (Player) event.getEntity();
+                p.setVelocity(
+                        p.getLocation().subtract(boss.getLocation()).toVector().normalize().multiply(1.8).setY(0.5));
+                p.getWorld().spawnParticle(Particle.SONIC_BOOM, p.getEyeLocation(), 1);
+                p.getWorld().playSound(p.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 0.5f, 2f);
+            }
         }
     }
 
@@ -354,45 +390,26 @@ public class BossListener implements Listener {
         Location loc = stand.getLocation();
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
         if (waveId == 1) {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 8; i++) { // Doubled (8)
                 Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 applyDiamondGear(e, 40);
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (!e.isValid()) {
-                            cancel();
-                            return;
-                        }
-                        shootCustomBeam(e, Particle.SOUL_FIRE_FLAME, 3.0, false);
-                    }
-                }.runTaskTimer(SkillsBoss.getInstance(), 60, 80);
             }
         } else if (waveId == 2) {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 8; i++) { // Doubled (8)
                 Zombie e = (Zombie) spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
                         stand.getUniqueId(), mobs);
                 applyDiamondGear(e, 50);
             }
         } else if (waveId == 3) {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 8; i++) { // Doubled (8)
                 WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
                         Material.IRON_SWORD, stand.getUniqueId(), mobs);
                 applyDiamondGear(e, 75);
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (!e.isValid()) {
-                            cancel();
-                            return;
-                        }
-                        shootCustomBeam(e, Particle.PORTAL, 6.0, false);
-                    }
-                }.runTaskTimer(SkillsBoss.getInstance(), 50, 70);
             }
         } else if (waveId == 4) {
-            for (int i = 0; i < 2; i++) {
+            // Doubled Mobs
+            for (int i = 0; i < 4; i++) {
                 Skeleton s = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 applyDiamondGear(s, 40);
@@ -403,25 +420,62 @@ public class BossListener implements Listener {
                         Material.IRON_SWORD, stand.getUniqueId(), mobs);
                 applyDiamondGear(w, 75);
             }
-            WitherSkeleton mini = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§6§lThe Gatekeeper",
-                    Material.IRON_SWORD, stand.getUniqueId(), mobs);
-            applyDiamondGear(mini, 120);
-            if (mini.getAttribute(Attribute.SCALE) != null)
-                mini.getAttribute(Attribute.SCALE).setBaseValue(1.5);
 
-            if (mini.getAttribute(Attribute.MOVEMENT_SPEED) != null)
-                mini.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.3);
+            // 1. Bow Gatekeeper (Archer)
+            Skeleton archer = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§6§lThe Gatekeeper (Archer)",
+                    Material.BOW, stand.getUniqueId(), mobs);
+            applyDiamondGear(archer, 150); // Buff HP
 
+            // 2. Sword Gatekeeper (Warrior)
+            WitherSkeleton warrior = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON,
+                    "§6§lThe Gatekeeper (Warrior)",
+                    Material.DIAMOND_SWORD, stand.getUniqueId(), mobs);
+            applyDiamondGear(warrior, 150);
+
+            // Warrior Stats (Fast, No Fire Argument removed)
+            if (warrior.getAttribute(Attribute.MOVEMENT_SPEED) != null)
+                warrior.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40); // Fast
+
+            // Warrior Ability: Grip of the Gatekeeper (Pull & Smash)
             new BukkitRunnable() {
                 @Override
                 public void run() {
-                    if (!mini.isValid()) {
+                    if (!warrior.isValid()) {
                         cancel();
                         return;
                     }
-                    shootCustomBeam(mini, Particle.DRAGON_BREATH, 6.0, false);
+                    List<Player> targets = warrior.getWorld().getNearbyEntities(warrior.getLocation(), 15, 15, 15)
+                            .stream()
+                            .filter(e -> e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)
+                            .map(e -> (Player) e)
+                            .collect(Collectors.toList());
+
+                    if (!targets.isEmpty()) {
+                        Player target = targets.get(new Random().nextInt(targets.size()));
+                        warrior.getWorld().playSound(warrior.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
+                        target.teleport(warrior.getLocation().add(warrior.getLocation().getDirection()));
+
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                if (!target.isOnline() || !warrior.isValid())
+                                    return;
+                                warrior.swingMainHand();
+                                warrior.getWorld().playSound(warrior.getLocation(),
+                                        Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, 1f, 0.5f);
+                                target.damage(25, warrior);
+                                target.setVelocity(warrior.getLocation().getDirection().multiply(2.5).setY(0.8));
+                                target.sendMessage(Component.text("The Gatekeeper SMASHES you away!",
+                                        NamedTextColor.GOLD, TextDecoration.BOLD));
+                            }
+                        }.runTaskLater(SkillsBoss.getInstance(), 10);
+                    }
                 }
-            }.runTaskTimer(SkillsBoss.getInstance(), 60, 80);
+            }.runTaskTimer(SkillsBoss.getInstance(), 100, 300); // Every 15s (300 ticks)
+
+            // Archer Name Tag for Listener
+            archer.getPersistentDataContainer().set(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
+                    PersistentDataType.BYTE, (byte) 1);
         }
     }
 
@@ -503,7 +557,7 @@ public class BossListener implements Listener {
         }
         Attribute dmgAttr = Attribute.ATTACK_DAMAGE;
         if (boss.getAttribute(dmgAttr) != null) {
-            boss.getAttribute(dmgAttr).setBaseValue(40.0); // Way more damage
+            boss.getAttribute(dmgAttr).setBaseValue(25.0); // Reduced from 40 to 25
         }
 
         boss.getPersistentDataContainer().set(FINAL_BOSS_KEY, PersistentDataType.BYTE, (byte) 2);
@@ -520,7 +574,7 @@ public class BossListener implements Listener {
         boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
         boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
         boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
-        boss.getEquipment().setItemInMainHand(new ItemStack(Material.NETHERITE_AXE));
+        boss.getEquipment().setItemInMainHand(new ItemStack(Material.MACE));
         boss.getEquipment().setHelmetDropChance(0);
         boss.getEquipment().setChestplateDropChance(0);
         boss.getEquipment().setLeggingsDropChance(0);
@@ -552,13 +606,29 @@ public class BossListener implements Listener {
                 sentinel.getAttribute(Attribute.SCALE).setBaseValue(0.8);
             }
             if (sentinel.getAttribute(Attribute.ATTACK_DAMAGE) != null) {
-                sentinel.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(20.0); // Buffed Sentinel Damage
+                sentinel.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(40.0); // Doubled AGAIN (Way more damage)
             }
 
-            sentinel.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
-            sentinel.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
-            sentinel.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
-            sentinel.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+            // Mixed Gear (1 Diamond piece)
+            ItemStack helm = new ItemStack(Material.IRON_HELMET);
+            ItemStack chest = new ItemStack(Material.IRON_CHESTPLATE);
+            ItemStack leg = new ItemStack(Material.IRON_LEGGINGS);
+            ItemStack boot = new ItemStack(Material.IRON_BOOTS);
+
+            if (i == 0)
+                helm = new ItemStack(Material.DIAMOND_HELMET);
+            else if (i == 1)
+                chest = new ItemStack(Material.DIAMOND_CHESTPLATE);
+            else if (i == 2)
+                leg = new ItemStack(Material.DIAMOND_LEGGINGS);
+            else if (i == 3)
+                boot = new ItemStack(Material.DIAMOND_BOOTS);
+
+            sentinel.getEquipment().setHelmet(helm);
+            sentinel.getEquipment().setChestplate(chest);
+            sentinel.getEquipment().setLeggings(leg);
+            sentinel.getEquipment().setBoots(boot);
+
             sentinel.getEquipment()
                     .setItemInMainHand(new ItemStack(i == 3 ? Material.DIAMOND_AXE : Material.DIAMOND_SWORD));
 
@@ -887,6 +957,20 @@ public class BossListener implements Listener {
         if (msg != null) {
             for (Player p : world.getPlayers()) {
                 p.sendMessage(msg);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onProjectileHit(org.bukkit.event.entity.ProjectileHitEvent event) {
+        if (event.getEntity() instanceof Arrow && event.getEntity().getShooter() instanceof Skeleton) {
+            Skeleton shooter = (Skeleton) event.getEntity().getShooter();
+            if (shooter.getPersistentDataContainer().has(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
+                    PersistentDataType.BYTE)) {
+                Location hit = event.getHitBlock() != null ? event.getHitBlock().getLocation()
+                        : event.getEntity().getLocation();
+                hit.getWorld().createExplosion(hit, 2.0f, false, false);
+                event.getEntity().remove();
             }
         }
     }
