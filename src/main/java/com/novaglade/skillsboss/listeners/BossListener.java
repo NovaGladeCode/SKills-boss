@@ -43,6 +43,7 @@ public class BossListener implements Listener {
     private static final NamespacedKey WAVE_MOB_KEY = new NamespacedKey(SkillsBoss.getInstance(), "wave_mob");
     private static final NamespacedKey FINAL_BOSS_KEY = new NamespacedKey(SkillsBoss.getInstance(), "final_boss");
     private static final NamespacedKey BOSS_PHASE_KEY = new NamespacedKey(SkillsBoss.getInstance(), "boss_phase");
+    private static final NamespacedKey DROP_ITEM_KEY = new NamespacedKey(SkillsBoss.getInstance(), "drop_item");
 
     private static boolean transitionActive = false;
     private static Location transitionPortal = null;
@@ -238,6 +239,16 @@ public class BossListener implements Listener {
                 event.getDrops().clear();
                 event.setDroppedExp(0);
 
+                // Handle Custom Drop
+                if (entity.getPersistentDataContainer().has(DROP_ITEM_KEY, PersistentDataType.STRING)) {
+                    String matName = entity.getPersistentDataContainer().get(DROP_ITEM_KEY, PersistentDataType.STRING);
+                    if (matName != null) {
+                        Material mat = Material.valueOf(matName);
+                        ItemStack drop = ItemManager.createCustomItem(mat);
+                        entity.getWorld().dropItemNaturally(entity.getLocation(), drop);
+                    }
+                }
+
                 // Check if all minions are dead and boss is shielded
                 if (entry.getValue().isEmpty() && shieldedBosses.contains(entry.getKey())) {
                     Entity bossEntity = Bukkit.getEntity(entry.getKey());
@@ -245,6 +256,7 @@ public class BossListener implements Listener {
                         LivingEntity boss = (LivingEntity) bossEntity;
                         shieldedBosses.remove(entry.getKey());
                         boss.setInvulnerable(false);
+                        boss.setAI(true); // Re-enable movement/AI
                         boss.getWorld().playSound(boss.getLocation(), Sound.BLOCK_GLASS_BREAK, 2f, 0.5f);
                         playerBroadcast(boss.getWorld(),
                                 Component.text("The shield has shattered!", NamedTextColor.YELLOW,
@@ -577,6 +589,7 @@ public class BossListener implements Listener {
         bossMinions.put(boss.getUniqueId(), minions);
         shieldedBosses.add(boss.getUniqueId());
         boss.setInvulnerable(true);
+        boss.setAI(false); // Freeze the boss
 
         // Netherite Gear
         boss.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
@@ -598,11 +611,12 @@ public class BossListener implements Listener {
             suBar.addPlayer(p);
         activeBars.put(boss.getUniqueId(), suBar);
 
-        // 2. Spawn 4 Sentinels (Bodyguards)
-        String[] titles = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel", "§c§lWar Sentinel" };
+        // 2. Spawn 5 Sentinels (Bodyguards)
+        String[] titles = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel", "§c§lWar Sentinel",
+                "§8§lShadow Sentinel" };
 
-        for (int i = 0; i < 4; i++) {
-            Location sLoc = loc.clone().add(Math.cos(i * Math.PI / 2) * 6, 0, Math.sin(i * Math.PI / 2) * 6);
+        for (int i = 0; i < 5; i++) {
+            Location sLoc = loc.clone().add(Math.cos(i * Math.PI * 2 / 5) * 6, 0, Math.sin(i * Math.PI * 2 / 5) * 6);
             WitherSkeleton sentinel = (WitherSkeleton) loc.getWorld().spawnEntity(sLoc, EntityType.WITHER_SKELETON);
             sentinel.setCustomName(titles[i]);
             sentinel.setCustomNameVisible(true);
@@ -623,15 +637,24 @@ public class BossListener implements Listener {
             ItemStack chest = new ItemStack(Material.IRON_CHESTPLATE);
             ItemStack leg = new ItemStack(Material.IRON_LEGGINGS);
             ItemStack boot = new ItemStack(Material.IRON_BOOTS);
+            Material dropMaterial = null;
 
-            if (i == 0)
+            if (i == 0) {
                 helm = new ItemStack(Material.DIAMOND_HELMET);
-            else if (i == 1)
+                dropMaterial = Material.DIAMOND_HELMET;
+            } else if (i == 1) {
                 chest = new ItemStack(Material.DIAMOND_CHESTPLATE);
-            else if (i == 2)
+                dropMaterial = Material.DIAMOND_CHESTPLATE;
+            } else if (i == 2) {
                 leg = new ItemStack(Material.DIAMOND_LEGGINGS);
-            else if (i == 3)
+                dropMaterial = Material.DIAMOND_LEGGINGS;
+            } else if (i == 3) {
                 boot = new ItemStack(Material.DIAMOND_BOOTS);
+                dropMaterial = Material.DIAMOND_BOOTS;
+            } else if (i == 4) {
+                // 5th Guard gets full iron + held sword, drops Sword
+                dropMaterial = Material.DIAMOND_SWORD;
+            }
 
             sentinel.getEquipment().setHelmet(helm);
             sentinel.getEquipment().setChestplate(chest);
@@ -639,7 +662,14 @@ public class BossListener implements Listener {
             sentinel.getEquipment().setBoots(boot);
 
             sentinel.getEquipment()
-                    .setItemInMainHand(new ItemStack(i == 3 ? Material.DIAMOND_AXE : Material.DIAMOND_SWORD));
+                    .setItemInMainHand(
+                            new ItemStack((i == 3 || i == 4) ? Material.DIAMOND_SWORD : Material.DIAMOND_SWORD));
+
+            // Save drop item
+            if (dropMaterial != null) {
+                sentinel.getPersistentDataContainer().set(DROP_ITEM_KEY, PersistentDataType.STRING,
+                        dropMaterial.name());
+            }
 
             ritualTeam.addEntry(sentinel.getUniqueId().toString());
             minions.add(sentinel.getUniqueId()); // Add to MINIONS, not bossGroup
@@ -710,6 +740,38 @@ public class BossListener implements Listener {
                 }
 
                 // Abilities
+
+                // If shielded, just play idle stasis effects and skip attacks
+                if (shieldedBosses.contains(boss.getUniqueId())) {
+                    if (ticks % 20 == 0) {
+                        boss.getWorld().spawnParticle(Particle.WITCH, boss.getLocation().add(0, 1, 0), 10, 0.5, 1, 0.5,
+                                0);
+                        // Draw lines to minions
+                        Set<UUID> myMinions = bossMinions.get(boss.getUniqueId());
+                        if (myMinions != null) {
+                            for (UUID mId : myMinions) {
+                                Entity m = Bukkit.getEntity(mId);
+                                if (m != null && m.isValid()) {
+                                    Location start = boss.getLocation().add(0, 1.5, 0);
+                                    Location end = m.getLocation().add(0, 1.5, 0);
+                                    double dist = start.distance(end);
+                                    Vector dir = end.toVector().subtract(start.toVector()).normalize();
+                                    for (double d = 0; d < dist; d += 1.0) {
+                                        boss.getWorld().spawnParticle(Particle.DUST,
+                                                start.clone().add(dir.clone().multiply(d)), 1,
+                                                new Particle.DustOptions(org.bukkit.Color.MAROON, 1.0f));
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Force orientation to center or look at players continuously?
+                    // Currently just skipping attacks.
+                    ticks++;
+                    return;
+                }
+
                 // Phase 1: Obliterate (Shockwave)
                 if (ticks % 100 == 0) {
                     boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10, 3, 1, 3, 0);

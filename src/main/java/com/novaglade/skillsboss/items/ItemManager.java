@@ -12,6 +12,10 @@ import com.novaglade.skillsboss.SkillsBoss;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.bukkit.inventory.meta.ArmorMeta;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
+import org.bukkit.inventory.meta.trim.TrimMaterial;
+import org.bukkit.inventory.meta.trim.TrimPattern;
 
 public class ItemManager {
 
@@ -54,10 +58,13 @@ public class ItemManager {
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text("A powerful relic of unknown origin.", NamedTextColor.GRAY));
             lore.add(Component.empty());
-            lore.add(Component.text("UNBREAKABLE", NamedTextColor.RED).decorate(TextDecoration.BOLD));
-
             meta.lore(lore);
-            meta.setUnbreakable(true);
+            meta.setUnbreakable(false);
+
+            if (meta instanceof ArmorMeta) {
+                ArmorMeta armorMeta = (ArmorMeta) meta;
+                armorMeta.setTrim(new ArmorTrim(TrimMaterial.NETHERITE, TrimPattern.SILENCE));
+            }
 
             // Mark as custom item using PersistentDataContainer
             meta.getPersistentDataContainer().set(CUSTOM_ITEM_KEY, PersistentDataType.BYTE, (byte) 1);
