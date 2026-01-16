@@ -589,6 +589,10 @@ public class BossListener implements Listener {
     }
 
     public static void spawnManualRitual(Location loc) {
+        if (instance != null) {
+            instance.generateDirectionalAltar(loc, loc.getDirection().setY(0).normalize());
+        }
+
         UUID ritualId = UUID.randomUUID();
         manualRituals.put(ritualId, Collections.synchronizedSet(new HashSet<>()));
         BossBar ritualBar = Bukkit.createBossBar("§4§lThe Manifestation", BarColor.PURPLE, BarStyle.SEGMENTED_10);
@@ -701,16 +705,17 @@ public class BossListener implements Listener {
 
     private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
             Set<UUID> mobs) {
-        // Overhauled Spawning Logic for Maximum Reliability
-        double rx = (new Random().nextDouble() * 12) - 6;
-        double rz = (new Random().nextDouble() * 12) - 6;
+        // Concentrated Spawning Logic: Spawn specifically on the altar platform (3x3)
+        // Offset is small (-1.5 to 1.5) to keep them on the 3x3 crying obsidian
+        double rx = (new Random().nextDouble() * 3) - 1.5;
+        double rz = (new Random().nextDouble() * 3) - 1.5;
         Location spawnLoc = loc.clone().add(rx, 0, rz);
 
-        // Scan for ground in a wide range
+        // Scan for ground in a tight range to ensure they land on the obsidian
         boolean found = false;
-        for (int dy = 5; dy >= -5; dy--) {
+        for (int dy = 2; dy >= -2; dy--) {
             Block b = spawnLoc.clone().add(0, dy, 0).getBlock();
-            if (b.getType().isSolid() && b.getRelative(0, 1, 0).getType().isAir()) {
+            if (b.getType() == Material.CRYING_OBSIDIAN || b.getType().isSolid()) {
                 spawnLoc.add(0, dy + 1, 0);
                 found = true;
                 break;
@@ -718,7 +723,7 @@ public class BossListener implements Listener {
         }
 
         if (!found)
-            spawnLoc = loc.clone().add(rx, 1, rz);
+            spawnLoc = loc.clone().add(rx, 0.1, rz);
 
         LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(spawnLoc, type);
 
@@ -885,7 +890,6 @@ public class BossListener implements Listener {
         playerBroadcast(loc.getWorld(),
                 Component.text("Supremus is shielded by his Guard! Destroy them!", NamedTextColor.GOLD));
 
-        // 3. Supremus Logic
         new BukkitRunnable() {
             int ticks = 0;
             int phase = 1;
@@ -912,24 +916,21 @@ public class BossListener implements Listener {
                 if (!phase2 && boss.getHealth() <= 666) {
                     phase2 = true;
                     phase = 2;
-                    enterPhase2(boss, 0); // Reuse visual
+                    enterPhase2(boss, 0);
                     boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 2);
                 }
                 if (!phase3 && boss.getHealth() <= 333) {
                     phase3 = true;
                     phase = 3;
-                    enterPhase3(boss, 0); // Reuse visual (adds minions? No, shield logic handled separately)
+                    enterPhase3(boss, 0);
                     boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 3);
                 }
 
-                // Abilities
-
-                // If shielded, just play idle stasis effects and skip attacks
+                // If shielded, skip attacks
                 if (shieldedBosses.contains(boss.getUniqueId())) {
                     if (ticks % 20 == 0) {
                         boss.getWorld().spawnParticle(Particle.WITCH, boss.getLocation().add(0, 1, 0), 10, 0.5, 1, 0.5,
                                 0);
-                        // Draw lines to minions
                         Set<UUID> myMinions = bossMinions.get(boss.getUniqueId());
                         if (myMinions != null) {
                             for (UUID mId : myMinions) {
@@ -948,20 +949,17 @@ public class BossListener implements Listener {
                             }
                         }
                     }
-
-                    // Force orientation to center or look at players continuously?
-                    // Currently just skipping attacks.
                     ticks++;
                     return;
                 }
 
-                // Phase 1: Obliterate (Shockwave)
+                // Phase 1: Obliterate
                 if (ticks % 100 == 0) {
                     boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10, 3, 1, 3, 0);
                     boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1.0f, 0.5f);
                     for (Entity e : boss.getNearbyEntities(15, 10, 15)) {
                         if (e instanceof Player && !e.isOp()) {
-                            ((LivingEntity) e).damage(phase >= 2 ? 35 : 25, boss); // Buffed Damage
+                            ((LivingEntity) e).damage(phase >= 2 ? 35 : 25, boss);
                             e.setVelocity(e.getLocation().subtract(boss.getLocation()).toVector().normalize()
                                     .multiply(1.5).setY(0.5));
                             ((Player) e).sendMessage(Component.text("Supremus uses OBLITERATE!",
@@ -970,46 +968,12 @@ public class BossListener implements Listener {
                     }
                 }
 
-                // New Ability: Soul Siphon (Cool Heal Spell)
-                if (ticks % 400 == 0 && boss.getHealth() < 1000) {
-                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_EVOKER_CAST_SPELL, 2f, 0.5f);
-                    boss.getWorld().spawnParticle(Particle.SCULK_SOUL, boss.getLocation(), 50, 1, 2, 1, 0.1);
-
-                    boolean drained = false;
-                    for (Entity e : boss.getNearbyEntities(20, 10, 20)) {
-                        if (e instanceof Player && !e.isOp()) {
-                            drained = true;
-                            LivingEntity target = (LivingEntity) e;
-                            target.damage(12, boss);
-
-                            // Visual trail: Hearts from player to boss
-                            Location pLoc = target.getLocation().add(0, 1, 0);
-                            Location bLoc = boss.getLocation().add(0, 2, 0);
-                            double dist = pLoc.distance(bLoc);
-                            Vector dir = bLoc.toVector().subtract(pLoc.toVector()).normalize();
-                            for (double d = 0; d < dist; d += 0.5) {
-                                target.getWorld().spawnParticle(Particle.HEART,
-                                        pLoc.clone().add(dir.clone().multiply(d)), 1, 0, 0, 0, 0);
-                            }
-
-                            double heal = 60.0;
-                            boss.setHealth(Math.min(1000, boss.getHealth() + heal));
-                        }
-                    }
-                    if (drained) {
-                        playerBroadcast(boss.getWorld(), Component.text("Supremus SIPHONS your soul to heal!",
-                                NamedTextColor.DARK_GREEN, TextDecoration.BOLD));
-                        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 0.5f);
-                    }
-                }
-
-                // Phase 2: Cataclysm (Meteor)
+                // Phase 2: Cataclysm
                 if (phase >= 2 && ticks % 160 == 0) {
                     boss.getWorld().playSound(boss.getLocation(), Sound.ITEM_TRIDENT_THUNDER, 2f, 0.5f);
                     for (Entity e : boss.getNearbyEntities(20, 10, 20)) {
                         if (e instanceof Player && !e.isOp()) {
                             Location target = e.getLocation();
-                            // Delay strike
                             new BukkitRunnable() {
                                 @Override
                                 public void run() {
@@ -1017,7 +981,7 @@ public class BossListener implements Listener {
                                     target.getWorld().playSound(target, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
                                     for (Entity hit : target.getWorld().getNearbyEntities(target, 3, 3, 3)) {
                                         if (hit instanceof Player)
-                                            ((LivingEntity) hit).damage(25, boss); // Buffed Damage
+                                            ((LivingEntity) hit).damage(25, boss);
                                     }
                                 }
                             }.runTaskLater(SkillsBoss.getInstance(), 20);
@@ -1026,7 +990,7 @@ public class BossListener implements Listener {
                     playerBroadcast(boss.getWorld(), Component.text("Supremus summons CATACLYSM!", NamedTextColor.RED));
                 }
 
-                // Phase 3: Void Rift (Pull)
+                // Phase 3: Void Rift
                 if (phase >= 3 && ticks % 200 == 0) {
                     boss.getWorld().spawnParticle(Particle.PORTAL, boss.getLocation(), 100, 5, 5, 5, 0.1);
                     boss.getWorld().playSound(boss.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, 1f, 0.5f);
@@ -1039,11 +1003,6 @@ public class BossListener implements Listener {
                     }
                     playerBroadcast(boss.getWorld(),
                             Component.text("The VOID RIFT consumes all!", NamedTextColor.DARK_PURPLE));
-                }
-
-                // Tethering
-                if (boss.getLocation().distance(spawn) > 30) {
-                    boss.teleport(spawn);
                 }
 
                 ticks++;
