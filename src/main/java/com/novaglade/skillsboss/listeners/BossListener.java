@@ -357,16 +357,24 @@ public class BossListener implements Listener {
 
                 if (waiting) {
                     waveTicks++;
+
+                    // Clean up invalid entities from the tracking set
                     mobs.removeIf(id -> {
                         Entity ent = Bukkit.getEntity(id);
                         return ent == null || !ent.isValid() || ent.isDead();
                     });
 
-                    if (mobs.isEmpty() && waveTicks >= 2) { // Minimum 2 seconds per wave (timer is 20 ticks)
-                        waiting = false;
-                        waveTicks = 0;
-                        stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
+                    if (mobs.isEmpty()) {
+                        // If everything is dead, and we've waited at least 2 ticks (safety)
+                        if (waveTicks >= 40) { // 2 seconds safety delay
+                            waiting = false;
+                            waveTicks = 0;
+                            stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
+                            playerBroadcast(stand.getWorld(), Component.text("The Trial continues...",
+                                    NamedTextColor.DARK_GRAY, TextDecoration.ITALIC));
+                        }
                     } else {
+                        // Mobs are still alive, keep waiting
                         return;
                     }
                 }
@@ -575,25 +583,32 @@ public class BossListener implements Listener {
 
     private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
             Set<UUID> mobs) {
-        Location spawnBase = loc.clone().add(Math.random() * 12 - 6, 0, Math.random() * 12 - 6);
+        // Randomize spawn location within 8 blocks
+        double rx = (Math.random() * 16) - 8;
+        double rz = (Math.random() * 16) - 8;
+        Location spawnLoc = loc.clone().add(rx, 0, rz);
 
-        // Find solid ground starting from a bit above to account for rough terrain
-        Block floor = spawnBase.clone().add(0, 2, 0).getBlock();
-        int attempts = 0;
-        while (attempts < 10 && (floor.getType().isAir() || !floor.getType().isSolid())
-                && floor.getY() > (loc.getBlockY() - 5)) {
-            floor = floor.getRelative(0, -1, 0);
-            attempts++;
+        // Find a safe Y level (scan from +3 down to -3)
+        boolean foundFloor = false;
+        for (double dy = 3; dy >= -3; dy--) {
+            Block b = spawnLoc.clone().add(0, dy, 0).getBlock();
+            if (b.getType().isSolid()) {
+                spawnLoc.add(0, dy + 1.1, 0); // Spawning slightly above floor
+                foundFloor = true;
+                break;
+            }
         }
 
-        // If we found air or something liquid, default back to the altar height or
-        // slightly above
-        Location finalSpawn = floor.getType().isSolid() ? floor.getLocation().add(0.5, 1, 0.5)
-                : spawnBase.add(0, 0.5, 0);
+        // If no solid ground found in range, just spawn at altar level + 1
+        if (!foundFloor) {
+            spawnLoc = loc.clone().add(rx, 1.1, rz);
+        }
 
-        LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(finalSpawn, type);
+        LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(spawnLoc, type);
+
         if (e == null) {
-            SkillsBoss.getInstance().getLogger().warning("Failed to spawn entity " + type + " at " + finalSpawn);
+            SkillsBoss.getInstance().getLogger().warning("[Ritual] FAILED to spawn " + type.name() + " at " + spawnLoc);
+            playerBroadcast(loc.getWorld(), Component.text("A dark energy failed to manifest...", NamedTextColor.RED));
             return null;
         }
 
@@ -601,6 +616,8 @@ public class BossListener implements Listener {
         e.setCustomNameVisible(true);
         if (hand != null)
             e.getEquipment().setItemInMainHand(new ItemStack(hand));
+
+        // Mark the mob
         e.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING, standUuid.toString());
 
         if (ritualTeam != null) {
