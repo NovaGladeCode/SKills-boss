@@ -213,8 +213,9 @@ public class BossListener implements Listener {
 
             // Clean up Altar
             deathLoc.getWorld().getNearbyEntities(deathLoc, 50, 50, 50).forEach(e -> {
-                if (e.getType() == EntityType.ARMOR_STAND && e.getCustomName() != null
-                        && e.getCustomName().contains("Altar")) {
+                if (e.getType() == EntityType.ARMOR_STAND && e.customName() != null
+                        && net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                                .serialize(e.customName()).contains("Altar")) {
                     e.remove();
                     // Change nearby Crying Obsidian to Obsidian (Deactivate)
                     for (int x = -2; x <= 2; x++) {
@@ -337,6 +338,7 @@ public class BossListener implements Listener {
         new BukkitRunnable() {
             int waveNum = 0; // Current wave we are waiting on
             boolean waiting = false;
+            int waveTicks = 0;
 
             @Override
             public void run() {
@@ -347,10 +349,22 @@ public class BossListener implements Listener {
                 }
 
                 Set<UUID> mobs = activeWaveMobs.get(standUuid);
+                if (mobs == null) {
+                    SkillsBoss.getInstance().getLogger().warning("Altar " + standUuid + " lost its mob tracking set!");
+                    cancel();
+                    return;
+                }
+
                 if (waiting) {
-                    mobs.removeIf(id -> Bukkit.getEntity(id) == null || !Bukkit.getEntity(id).isValid());
-                    if (mobs.isEmpty()) {
+                    waveTicks++;
+                    mobs.removeIf(id -> {
+                        Entity ent = Bukkit.getEntity(id);
+                        return ent == null || !ent.isValid() || ent.isDead();
+                    });
+
+                    if (mobs.isEmpty() && waveTicks > 40) { // Minimum 2 seconds per wave
                         waiting = false;
+                        waveTicks = 0;
                         stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
                     } else {
                         return;
@@ -358,6 +372,8 @@ public class BossListener implements Listener {
                 }
 
                 // If not waiting, spawn the next thing
+                SkillsBoss.getInstance().getLogger()
+                        .info("Transitioning Altar " + standUuid + " to wave " + (waveNum + 1));
                 if (waveNum == 0) {
                     startWave(stand, ritualBar, 1);
                     waveNum = 1;
@@ -414,90 +430,104 @@ public class BossListener implements Listener {
             for (int i = 0; i < 8; i++) { // Doubled (8)
                 Skeleton e = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
-                applyDiamondGear(e, 40);
+                if (e != null)
+                    applyDiamondGear(e, 40);
             }
         } else if (waveId == 2) {
             for (int i = 0; i < 8; i++) { // Doubled (8)
                 Zombie e = (Zombie) spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
                         stand.getUniqueId(), mobs);
-                applyDiamondGear(e, 50);
+                if (e != null)
+                    applyDiamondGear(e, 50);
             }
         } else if (waveId == 3) {
             for (int i = 0; i < 8; i++) { // Doubled (8)
                 WitherSkeleton e = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
                         Material.IRON_SWORD, stand.getUniqueId(), mobs);
-                applyDiamondGear(e, 75);
+                if (e != null)
+                    applyDiamondGear(e, 75);
             }
         } else if (waveId == 4) {
             // Doubled Mobs
             for (int i = 0; i < 4; i++) {
                 Skeleton s = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
-                applyDiamondGear(s, 40);
+                if (s != null)
+                    applyDiamondGear(s, 40);
                 Zombie z = (Zombie) spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
                         stand.getUniqueId(), mobs);
-                applyDiamondGear(z, 50);
+                if (z != null)
+                    applyDiamondGear(z, 50);
                 WitherSkeleton w = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
                         Material.IRON_SWORD, stand.getUniqueId(), mobs);
-                applyDiamondGear(w, 75);
+                if (w != null)
+                    applyDiamondGear(w, 75);
             }
 
             // 1. Bow Gatekeeper (Archer)
             Skeleton archer = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§6§lThe Gatekeeper (Archer)",
                     Material.BOW, stand.getUniqueId(), mobs);
-            applyDiamondGear(archer, 150); // Buff HP
+            if (archer != null)
+                applyDiamondGear(archer, 150); // Buff HP
 
             // 2. Sword Gatekeeper (Warrior)
             WitherSkeleton warrior = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON,
                     "§6§lThe Gatekeeper (Warrior)",
                     Material.DIAMOND_SWORD, stand.getUniqueId(), mobs);
-            applyDiamondGear(warrior, 150);
+            if (warrior != null) {
+                applyDiamondGear(warrior, 150);
+                // Warrior Stats (Fast, No Fire Argument removed)
+                if (warrior.getAttribute(Attribute.MOVEMENT_SPEED) != null)
+                    warrior.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40); // Fast
 
-            // Warrior Stats (Fast, No Fire Argument removed)
-            if (warrior.getAttribute(Attribute.MOVEMENT_SPEED) != null)
-                warrior.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40); // Fast
+                // Warrior Ability: Grip of the Gatekeeper (Pull & Smash)
+                setupWarriorLogic(warrior);
+            }
 
-            // Warrior Ability: Grip of the Gatekeeper (Pull & Smash)
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    if (!warrior.isValid()) {
-                        cancel();
-                        return;
-                    }
-                    List<Player> targets = warrior.getWorld().getNearbyEntities(warrior.getLocation(), 15, 15, 15)
-                            .stream()
-                            .filter(e -> e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)
-                            .map(e -> (Player) e)
-                            .collect(Collectors.toList());
-
-                    if (!targets.isEmpty()) {
-                        Player target = targets.get(new Random().nextInt(targets.size()));
-                        warrior.getWorld().playSound(warrior.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
-                        target.teleport(warrior.getLocation().add(warrior.getLocation().getDirection()));
-
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                if (!target.isOnline() || !warrior.isValid())
-                                    return;
-                                warrior.swingMainHand();
-                                warrior.getWorld().playSound(warrior.getLocation(),
-                                        Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, 1f, 0.5f);
-                                target.damage(25, warrior);
-                                target.setVelocity(warrior.getLocation().getDirection().multiply(2.5).setY(0.8));
-                                target.sendMessage(Component.text("The Gatekeeper SMASHES you away!",
-                                        NamedTextColor.GOLD, TextDecoration.BOLD));
-                            }
-                        }.runTaskLater(SkillsBoss.getInstance(), 10);
-                    }
-                }
-            }.runTaskTimer(SkillsBoss.getInstance(), 100, 300); // Every 15s (300 ticks)
-
-            // Archer Name Tag for Listener
-            archer.getPersistentDataContainer().set(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
-                    PersistentDataType.BYTE, (byte) 1);
+            if (archer != null) {
+                // Archer Name Tag for Listener
+                archer.getPersistentDataContainer().set(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
+                        PersistentDataType.BYTE, (byte) 1);
+            }
         }
+    }
+
+    private void setupWarriorLogic(WitherSkeleton warrior) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!warrior.isValid()) {
+                    cancel();
+                    return;
+                }
+                List<Player> targets = warrior.getWorld().getNearbyEntities(warrior.getLocation(), 15, 15, 15)
+                        .stream()
+                        .filter(e -> e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)
+                        .map(e -> (Player) e)
+                        .collect(Collectors.toList());
+
+                if (!targets.isEmpty()) {
+                    Player target = targets.get(new Random().nextInt(targets.size()));
+                    warrior.getWorld().playSound(warrior.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
+                    target.teleport(warrior.getLocation().add(warrior.getLocation().getDirection()));
+
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            if (!target.isOnline() || !warrior.isValid())
+                                return;
+                            warrior.swingMainHand();
+                            warrior.getWorld().playSound(warrior.getLocation(),
+                                    Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR, 1f, 0.5f);
+                            target.damage(25, warrior);
+                            target.setVelocity(warrior.getLocation().getDirection().multiply(2.5).setY(0.8));
+                            target.sendMessage(Component.text("The Gatekeeper SMASHES you away!",
+                                    NamedTextColor.GOLD, TextDecoration.BOLD));
+                        }
+                    }.runTaskLater(SkillsBoss.getInstance(), 10);
+                }
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 100, 300); // Every 15s (300 ticks)
     }
 
     private void applyDiamondGear(LivingEntity e, double health) {
@@ -546,13 +576,28 @@ public class BossListener implements Listener {
     private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
             Set<UUID> mobs) {
         Location spawn = loc.clone().add(Math.random() * 8 - 4, 0, Math.random() * 8 - 4);
-        LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(spawn, type);
-        e.setCustomName(name);
+
+        // Ensure we spawn on solid ground if possible
+        Block floor = spawn.getBlock();
+        while (floor.getType().isAir() && floor.getY() > 0) {
+            floor = floor.getRelative(0, -1, 0);
+        }
+        Location finalSpawn = floor.getLocation().add(0.5, 1, 0.5);
+
+        LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(finalSpawn, type);
+        if (e == null)
+            return null;
+
+        e.customName(Component.text(name));
         e.setCustomNameVisible(true);
         if (hand != null)
             e.getEquipment().setItemInMainHand(new ItemStack(hand));
         e.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING, standUuid.toString());
-        ritualTeam.addEntry(e.getUniqueId().toString());
+
+        if (ritualTeam != null) {
+            ritualTeam.addEntry(e.getUniqueId().toString());
+        }
+
         mobs.add(e.getUniqueId());
         return e;
     }
@@ -564,7 +609,7 @@ public class BossListener implements Listener {
         // 1. Spawn Supremus (Main Boss)
         Location spawn = loc.clone().add(0, 2, 0);
         WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
-        boss.setCustomName("§4§lSUPREMUS");
+        boss.customName(Component.text("§4§lSUPREMUS"));
         boss.setCustomNameVisible(true);
 
         Attribute hpAttr = Attribute.MAX_HEALTH;
@@ -618,7 +663,7 @@ public class BossListener implements Listener {
         for (int i = 0; i < 5; i++) {
             Location sLoc = loc.clone().add(Math.cos(i * Math.PI * 2 / 5) * 6, 0, Math.sin(i * Math.PI * 2 / 5) * 6);
             WitherSkeleton sentinel = (WitherSkeleton) loc.getWorld().spawnEntity(sLoc, EntityType.WITHER_SKELETON);
-            sentinel.setCustomName(titles[i]);
+            sentinel.customName(Component.text(titles[i]));
             sentinel.setCustomNameVisible(true);
 
             if (sentinel.getAttribute(Attribute.MAX_HEALTH) != null) {
@@ -1051,8 +1096,10 @@ public class BossListener implements Listener {
         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.8f);
         boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10, 2, 1, 2, 0);
 
+        String currentName = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                .serialize(boss.customName());
         playerBroadcast(boss.getWorld(),
-                Component.text(boss.getCustomName() + " enters Phase 2!", NamedTextColor.YELLOW, TextDecoration.BOLD));
+                Component.text(currentName + " enters Phase 2!", NamedTextColor.YELLOW, TextDecoration.BOLD));
 
         // Increase speed and damage
         if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null) {
@@ -1069,8 +1116,10 @@ public class BossListener implements Listener {
         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2f, 0.5f);
         boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 20, 3, 2, 3, 0);
 
+        String currentName = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                .serialize(boss.customName());
         playerBroadcast(boss.getWorld(),
-                Component.text(boss.getCustomName() + " enters FINAL PHASE!", NamedTextColor.RED, TextDecoration.BOLD));
+                Component.text(currentName + " enters FINAL PHASE!", NamedTextColor.RED, TextDecoration.BOLD));
 
         // Shield boss
         boss.setInvulnerable(true);
@@ -1086,7 +1135,7 @@ public class BossListener implements Listener {
                     Math.cos(angle) * 4, 0, Math.sin(angle) * 4);
 
             WitherSkeleton minion = (WitherSkeleton) boss.getWorld().spawnEntity(spawnLoc, EntityType.WITHER_SKELETON);
-            minion.setCustomName(minionNames[i]);
+            minion.customName(Component.text(minionNames[i]));
             minion.setCustomNameVisible(true);
 
             if (minion.getAttribute(Attribute.MAX_HEALTH) != null) {
