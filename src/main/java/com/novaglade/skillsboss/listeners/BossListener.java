@@ -362,7 +362,7 @@ public class BossListener implements Listener {
                         return ent == null || !ent.isValid() || ent.isDead();
                     });
 
-                    if (mobs.isEmpty() && waveTicks > 40) { // Minimum 2 seconds per wave
+                    if (mobs.isEmpty() && waveTicks >= 2) { // Minimum 2 seconds per wave (timer is 20 ticks)
                         waiting = false;
                         waveTicks = 0;
                         stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
@@ -575,18 +575,27 @@ public class BossListener implements Listener {
 
     private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
             Set<UUID> mobs) {
-        Location spawn = loc.clone().add(Math.random() * 8 - 4, 0, Math.random() * 8 - 4);
+        Location spawnBase = loc.clone().add(Math.random() * 12 - 6, 0, Math.random() * 12 - 6);
 
-        // Ensure we spawn on solid ground if possible
-        Block floor = spawn.getBlock();
-        while (floor.getType().isAir() && floor.getY() > 0) {
+        // Find solid ground starting from a bit above to account for rough terrain
+        Block floor = spawnBase.clone().add(0, 2, 0).getBlock();
+        int attempts = 0;
+        while (attempts < 10 && (floor.getType().isAir() || !floor.getType().isSolid())
+                && floor.getY() > (loc.getBlockY() - 5)) {
             floor = floor.getRelative(0, -1, 0);
+            attempts++;
         }
-        Location finalSpawn = floor.getLocation().add(0.5, 1, 0.5);
+
+        // If we found air or something liquid, default back to the altar height or
+        // slightly above
+        Location finalSpawn = floor.getType().isSolid() ? floor.getLocation().add(0.5, 1, 0.5)
+                : spawnBase.add(0, 0.5, 0);
 
         LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(finalSpawn, type);
-        if (e == null)
+        if (e == null) {
+            SkillsBoss.getInstance().getLogger().warning("Failed to spawn entity " + type + " at " + finalSpawn);
             return null;
+        }
 
         e.customName(Component.text(name));
         e.setCustomNameVisible(true);
