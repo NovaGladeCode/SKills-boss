@@ -39,6 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class BossListener implements Listener {
 
+    private static BossListener instance;
     private static final NamespacedKey ALTAR_KEY = new NamespacedKey(SkillsBoss.getInstance(), "boss_altar");
     private static final NamespacedKey WAVE_MOB_KEY = new NamespacedKey(SkillsBoss.getInstance(), "wave_mob");
     private static final NamespacedKey FINAL_BOSS_KEY = new NamespacedKey(SkillsBoss.getInstance(), "final_boss");
@@ -49,6 +50,7 @@ public class BossListener implements Listener {
     private static Location transitionPortal = null;
 
     private final Map<UUID, Set<UUID>> activeWaveMobs = new ConcurrentHashMap<>();
+    private static final Map<UUID, Set<UUID>> manualRituals = new ConcurrentHashMap<>();
     private final Map<UUID, BossBar> activeBars = new ConcurrentHashMap<>();
     private final Set<UUID> bossGroup = Collections.synchronizedSet(new HashSet<>());
     private final Set<UUID> activatingStands = Collections.synchronizedSet(new HashSet<>());
@@ -58,6 +60,7 @@ public class BossListener implements Listener {
     private Team ritualTeam;
 
     public BossListener() {
+        instance = this;
         org.bukkit.scoreboard.Scoreboard sb = Bukkit.getScoreboardManager().getMainScoreboard();
         ritualTeam = sb.getTeam("AvernusRitual");
         if (ritualTeam == null) {
@@ -65,6 +68,10 @@ public class BossListener implements Listener {
         }
         ritualTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
         ritualTeam.setAllowFriendlyFire(false);
+    }
+
+    public static BossListener getInstance() {
+        return instance;
     }
 
     public static boolean isTransitionActive() {
@@ -581,34 +588,142 @@ public class BossListener implements Listener {
         }
     }
 
+    public static void spawnManualRitual(Location loc) {
+        UUID ritualId = UUID.randomUUID();
+        manualRituals.put(ritualId, Collections.synchronizedSet(new HashSet<>()));
+        BossBar ritualBar = Bukkit.createBossBar("§4§lThe Manifestation", BarColor.PURPLE, BarStyle.SEGMENTED_10);
+        for (Player p : loc.getWorld().getPlayers()) {
+            ritualBar.addPlayer(p);
+        }
+
+        new BukkitRunnable() {
+            int waveNum = 0;
+            boolean waiting = false;
+            int waveTicks = 0;
+
+            @Override
+            public void run() {
+                Set<UUID> mobs = manualRituals.get(ritualId);
+                if (mobs == null) {
+                    ritualBar.removeAll();
+                    cancel();
+                    return;
+                }
+
+                if (waiting) {
+                    waveTicks++;
+                    mobs.removeIf(id -> {
+                        Entity ent = Bukkit.getEntity(id);
+                        return ent == null || !ent.isValid() || ent.isDead();
+                    });
+
+                    if (mobs.isEmpty() && waveTicks >= 40) {
+                        waiting = false;
+                        waveTicks = 0;
+                        loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
+                    } else {
+                        return;
+                    }
+                }
+
+                if (waveNum < 4) {
+                    waveNum++;
+                    String[] titles = { "", "§eTrial I", "§9Trial II", "§cTrial III", "§4Trial IV" };
+                    ritualBar.setTitle(titles[waveNum]);
+
+                    // Spawn logic using internal helper
+                    if (instance != null) {
+                        instance.spawnWaveEntities(loc, ritualId, waveNum, mobs);
+                    }
+                    waiting = true;
+                    loc.getWorld().playSound(loc, Sound.BLOCK_BEACON_ACTIVATE, 1f, 1f);
+                } else {
+                    ritualBar.removeAll();
+                    manualRituals.remove(ritualId);
+                    if (instance != null)
+                        instance.spawnBosses(loc);
+                    cancel();
+                }
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 10, 20);
+    }
+
+    private void spawnWaveEntities(Location loc, UUID ritualId, int waveId, Set<UUID> mobs) {
+        if (waveId == 1) {
+            for (int i = 0; i < 8; i++) {
+                LivingEntity e = spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW, ritualId, mobs);
+                if (e != null)
+                    applyDiamondGear(e, 40);
+            }
+        } else if (waveId == 2) {
+            for (int i = 0; i < 8; i++) {
+                LivingEntity e = spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD, ritualId,
+                        mobs);
+                if (e != null)
+                    applyDiamondGear(e, 50);
+            }
+        } else if (waveId == 3) {
+            for (int i = 0; i < 8; i++) {
+                LivingEntity e = spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard", Material.IRON_SWORD,
+                        ritualId, mobs);
+                if (e != null)
+                    applyDiamondGear(e, 75);
+            }
+        } else if (waveId == 4) {
+            for (int i = 0; i < 4; i++) {
+                LivingEntity s = spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW, ritualId, mobs);
+                if (s != null)
+                    applyDiamondGear(s, 40);
+                LivingEntity z = spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD, ritualId,
+                        mobs);
+                if (z != null)
+                    applyDiamondGear(z, 50);
+                LivingEntity w = spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard", Material.IRON_SWORD,
+                        ritualId, mobs);
+                if (w != null)
+                    applyDiamondGear(w, 75);
+            }
+            Skeleton archer = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§6§lThe Gatekeeper (Archer)", Material.BOW,
+                    ritualId, mobs);
+            if (archer != null) {
+                applyDiamondGear(archer, 150);
+                archer.getPersistentDataContainer().set(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
+                        PersistentDataType.BYTE, (byte) 1);
+            }
+            WitherSkeleton warrior = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON,
+                    "§6§lThe Gatekeeper (Warrior)", Material.DIAMOND_SWORD, ritualId, mobs);
+            if (warrior != null) {
+                applyDiamondGear(warrior, 150);
+                setupWarriorLogic(warrior);
+            }
+        }
+    }
+
     private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
             Set<UUID> mobs) {
-        // Randomize spawn location within 8 blocks
-        double rx = (Math.random() * 16) - 8;
-        double rz = (Math.random() * 16) - 8;
+        // Overhauled Spawning Logic for Maximum Reliability
+        double rx = (new Random().nextDouble() * 12) - 6;
+        double rz = (new Random().nextDouble() * 12) - 6;
         Location spawnLoc = loc.clone().add(rx, 0, rz);
 
-        // Find a safe Y level (scan from +3 down to -3)
-        boolean foundFloor = false;
-        for (double dy = 3; dy >= -3; dy--) {
+        // Scan for ground in a wide range
+        boolean found = false;
+        for (int dy = 5; dy >= -5; dy--) {
             Block b = spawnLoc.clone().add(0, dy, 0).getBlock();
-            if (b.getType().isSolid()) {
-                spawnLoc.add(0, dy + 1.1, 0); // Spawning slightly above floor
-                foundFloor = true;
+            if (b.getType().isSolid() && b.getRelative(0, 1, 0).getType().isAir()) {
+                spawnLoc.add(0, dy + 1, 0);
+                found = true;
                 break;
             }
         }
 
-        // If no solid ground found in range, just spawn at altar level + 1
-        if (!foundFloor) {
-            spawnLoc = loc.clone().add(rx, 1.1, rz);
-        }
+        if (!found)
+            spawnLoc = loc.clone().add(rx, 1, rz);
 
         LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(spawnLoc, type);
 
         if (e == null) {
-            SkillsBoss.getInstance().getLogger().warning("[Ritual] FAILED to spawn " + type.name() + " at " + spawnLoc);
-            playerBroadcast(loc.getWorld(), Component.text("A dark energy failed to manifest...", NamedTextColor.RED));
+            SkillsBoss.getInstance().getLogger().warning("[Ritual] Spawning failed for " + name + " at " + spawnLoc);
             return null;
         }
 
@@ -617,14 +732,11 @@ public class BossListener implements Listener {
         if (hand != null)
             e.getEquipment().setItemInMainHand(new ItemStack(hand));
 
-        // Mark the mob
         e.getPersistentDataContainer().set(WAVE_MOB_KEY, PersistentDataType.STRING, standUuid.toString());
-
-        if (ritualTeam != null) {
+        if (ritualTeam != null)
             ritualTeam.addEntry(e.getUniqueId().toString());
-        }
-
         mobs.add(e.getUniqueId());
+
         return e;
     }
 
