@@ -33,7 +33,6 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import org.bukkit.util.Vector;
 
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -129,10 +128,15 @@ public class BossListener implements Listener {
         shieldedBosses.clear();
         bossMinions.clear();
 
-        // Remove any Marker entities with ALTAR_KEY
-        Bukkit.getWorlds().forEach(w -> w.getEntitiesByClass(Marker.class).stream()
-                .filter(m -> m.getPersistentDataContainer().has(ALTAR_KEY, PersistentDataType.BYTE))
-                .forEach(Entity::remove));
+        // Remove any Marker or ArmorStand entities with ALTAR_KEY
+        Bukkit.getWorlds().forEach(world -> {
+            world.getEntitiesByClass(Marker.class).stream()
+                    .filter(m -> m.getPersistentDataContainer().has(ALTAR_KEY, PersistentDataType.BYTE))
+                    .forEach(Entity::remove);
+            world.getEntitiesByClass(ArmorStand.class).stream()
+                    .filter(as -> as.getPersistentDataContainer().has(ALTAR_KEY, PersistentDataType.BYTE))
+                    .forEach(Entity::remove);
+        });
     }
 
     @EventHandler
@@ -537,15 +541,19 @@ public class BossListener implements Listener {
     public static void spawnManualRitual(Location loc) {
         if (instance == null)
             return;
-        Location markerLoc = loc.clone().getBlock().getLocation().add(0.5, 0.1, 0.5);
-        Marker marker = (Marker) loc.getWorld().spawnEntity(markerLoc, EntityType.MARKER);
-        marker.getPersistentDataContainer().set(ALTAR_KEY, PersistentDataType.BYTE, (byte) 1);
+        Location standLoc = loc.clone().getBlock().getLocation().add(0.5, 0.1, 0.5);
+        ArmorStand stand = (ArmorStand) loc.getWorld().spawnEntity(standLoc, EntityType.ARMOR_STAND);
+        stand.setBasePlate(false);
+        stand.setArms(true);
+        stand.customName(Component.text("§4§lThe Avernus Altar"));
+        stand.setCustomNameVisible(true);
+        stand.setInvulnerable(true);
+        stand.getPersistentDataContainer().set(ALTAR_KEY, PersistentDataType.BYTE, (byte) 1);
 
-        marker.getWorld().strikeLightningEffect(markerLoc);
-        marker.getWorld().playSound(markerLoc, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 0.5f);
-        instance.playerBroadcast(loc.getWorld(), Component.text("The Administrator has forced a Manifestation!",
+        stand.getWorld().strikeLightningEffect(standLoc);
+        stand.getWorld().playSound(standLoc, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 0.5f);
+        instance.playerBroadcast(loc.getWorld(), Component.text("A Ritual Altar has been anchored!",
                 NamedTextColor.RED, TextDecoration.BOLD));
-        instance.startRitual(marker);
     }
 
     private void spawnBosses(Location loc) {
