@@ -78,14 +78,61 @@ public class BossListener implements Listener {
 
     @EventHandler
     public void onAltarPlace(BlockPlaceEvent event) {
-        ItemStack item = event.getItemInHand();
-        if (!ItemManager.isBossSpawnItem(item))
-            return;
+        if (ItemManager.isBossSpawnItem(event.getItemInHand())) {
+            // Check for nearby spawner
+            if (findNearbySpawner(event.getBlock().getLocation()) == null) {
+                event.setCancelled(true);
+                event.getPlayer().sendMessage(Component
+                        .text("No Ritual Spawner detected nearby! Place a Spawner first.", NamedTextColor.RED));
+                return;
+            }
+            spawnManualRitual(event.getBlock().getLocation().add(0.5, 0.1, 0.5));
+        }
+    }
 
-        Block block = event.getBlock();
-        Location center = block.getLocation().add(0.5, 0.1, 0.5);
+    private Location findNearbySpawner(Location loc) {
+        for (int x = -15; x <= 15; x++) {
+            for (int y = -5; y <= 5; y++) {
+                for (int z = -15; z <= 15; z++) {
+                    Block b = loc.clone().add(x, y, z).getBlock();
+                    if (b.getType() == Material.SPAWNER) { // Usually custom spawner or just checking for the block
+                        // In practice, we'd check NBT/Metadata, but for simplicity:
+                        return b.getLocation().add(0.5, 0.1, 0.5);
+                    }
+                }
+            }
+        }
+        return null;
+    }
 
-        spawnManualRitual(center);
+    public void resetRitualSystem() {
+        activeBars.values().forEach(BossBar::removeAll);
+        activeBars.clear();
+        activeWaveMobs.values().forEach(uids -> uids.forEach(id -> {
+            Entity e = Bukkit.getEntity(id);
+            if (e != null)
+                e.remove();
+        }));
+        activeWaveMobs.clear();
+        bossGroup.forEach(id -> {
+            Entity e = Bukkit.getEntity(id);
+            if (e != null)
+                e.remove();
+        });
+        bossGroup.clear();
+        activatingStands.forEach(id -> {
+            Entity e = Bukkit.getEntity(id);
+            if (e != null)
+                e.remove();
+        });
+        activatingStands.clear();
+        shieldedBosses.clear();
+        bossMinions.clear();
+
+        // Remove any Marker entities with ALTAR_KEY
+        Bukkit.getWorlds().forEach(w -> w.getEntitiesByClass(Marker.class).stream()
+                .filter(m -> m.getPersistentDataContainer().has(ALTAR_KEY, PersistentDataType.BYTE))
+                .forEach(Entity::remove));
     }
 
     @EventHandler
@@ -376,52 +423,57 @@ public class BossListener implements Listener {
     }
 
     private void spawnWave(Entity stand, int waveId) {
-        Location loc = stand.getLocation();
+        Location altarLoc = stand.getLocation();
+        Location spawnLoc = findNearbySpawner(altarLoc);
+        if (spawnLoc == null)
+            spawnLoc = altarLoc; // Fallback
+
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
         if (waveId == 1) {
             for (int i = 0; i < 8; i++) {
-                LivingEntity e = spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
+                LivingEntity e = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 if (e != null)
                     applyDiamondGear(e, 40);
             }
         } else if (waveId == 2) {
             for (int i = 0; i < 8; i++) {
-                LivingEntity e = spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
+                LivingEntity e = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
                         stand.getUniqueId(), mobs);
                 if (e != null)
                     applyDiamondGear(e, 50);
             }
         } else if (waveId == 3) {
             for (int i = 0; i < 8; i++) {
-                LivingEntity e = spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard", Material.IRON_SWORD,
+                LivingEntity e = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard", Material.IRON_SWORD,
                         stand.getUniqueId(), mobs);
                 if (e != null)
                     applyDiamondGear(e, 75);
             }
         } else if (waveId == 4) {
             for (int i = 0; i < 4; i++) {
-                LivingEntity s = spawnMob(loc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
+                LivingEntity s = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 if (s != null)
                     applyDiamondGear(s, 40);
-                LivingEntity z = spawnMob(loc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
+                LivingEntity z = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
                         stand.getUniqueId(), mobs);
                 if (z != null)
                     applyDiamondGear(z, 50);
-                LivingEntity w = spawnMob(loc, EntityType.WITHER_SKELETON, "§cAvernus Guard", Material.IRON_SWORD,
+                LivingEntity w = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard", Material.IRON_SWORD,
                         stand.getUniqueId(), mobs);
                 if (w != null)
                     applyDiamondGear(w, 75);
             }
-            Skeleton archer = (Skeleton) spawnMob(loc, EntityType.SKELETON, "§6§lThe Gatekeeper (Archer)", Material.BOW,
+            Skeleton archer = (Skeleton) spawnMob(spawnLoc, EntityType.SKELETON, "§6§lThe Gatekeeper (Archer)",
+                    Material.BOW,
                     stand.getUniqueId(), mobs);
             if (archer != null) {
                 applyDiamondGear(archer, 150);
                 archer.getPersistentDataContainer().set(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
                         PersistentDataType.BYTE, (byte) 1);
             }
-            WitherSkeleton warrior = (WitherSkeleton) spawnMob(loc, EntityType.WITHER_SKELETON,
+            WitherSkeleton warrior = (WitherSkeleton) spawnMob(spawnLoc, EntityType.WITHER_SKELETON,
                     "§6§lThe Gatekeeper (Warrior)", Material.DIAMOND_SWORD, stand.getUniqueId(), mobs);
             if (warrior != null) {
                 applyDiamondGear(warrior, 150);
@@ -497,9 +549,13 @@ public class BossListener implements Listener {
     }
 
     private void spawnBosses(Location loc) {
+        Location spawnPoint = findNearbySpawner(loc);
+        if (spawnPoint == null)
+            spawnPoint = loc;
+
         playerBroadcast(loc.getWorld(),
                 Component.text("SUPREMUS AND HIS GUARD HAVE AWAKENED!", NamedTextColor.DARK_RED, TextDecoration.BOLD));
-        Location spawn = loc.clone().add(0, 2, 0);
+        Location spawn = spawnPoint.clone().add(0, 2, 0);
         WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
         boss.customName(Component.text("§4§lSUPREMUS"));
         boss.setCustomNameVisible(true);
@@ -538,7 +594,8 @@ public class BossListener implements Listener {
         String[] titles = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel", "§c§lWar Sentinel",
                 "§8§lShadow Sentinel" };
         for (int i = 0; i < 5; i++) {
-            Location sLoc = loc.clone().add(Math.cos(i * Math.PI * 2 / 5) * 6, 0, Math.sin(i * Math.PI * 2 / 5) * 6);
+            Location sLoc = spawnPoint.clone().add(Math.cos(i * Math.PI * 2 / 5) * 6, 0,
+                    Math.sin(i * Math.PI * 2 / 5) * 6);
             WitherSkeleton sentinel = (WitherSkeleton) loc.getWorld().spawnEntity(sLoc, EntityType.WITHER_SKELETON);
             sentinel.customName(Component.text(titles[i]));
             sentinel.setCustomNameVisible(true);

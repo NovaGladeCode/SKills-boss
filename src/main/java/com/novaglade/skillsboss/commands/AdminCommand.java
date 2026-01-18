@@ -59,6 +59,14 @@ public class AdminCommand implements CommandExecutor {
                     sender.sendMessage(Component.text("Invalid number.", NamedTextColor.RED));
                 }
                 break;
+            case "altar":
+                if (args.length >= 2 && args[1].equalsIgnoreCase("reset")) {
+                    com.novaglade.skillsboss.listeners.BossListener.getInstance().resetRitualSystem();
+                    sender.sendMessage(Component.text("Ritual system has been reset!", NamedTextColor.GREEN));
+                } else {
+                    sender.sendMessage(Component.text("Usage: /admin altar reset", NamedTextColor.RED));
+                }
+                break;
             case "give":
                 handleGive(sender, args);
                 break;
@@ -277,7 +285,8 @@ public class AdminCommand implements CommandExecutor {
         } else if (args[1].equalsIgnoreCase("bossspawn1") || args[1].equalsIgnoreCase("waveboss")
                 || args[1].equalsIgnoreCase("wavespawn")) {
             player.getInventory().addItem(ItemManager.createBossSpawnItem());
-            sender.sendMessage(Component.text("Received Boss Spawn Altar!", NamedTextColor.LIGHT_PURPLE));
+            player.getInventory().addItem(ItemManager.createBossSpawnerItem());
+            sender.sendMessage(Component.text("Received Ritual Core and Ritual Spawner!", NamedTextColor.LIGHT_PURPLE));
         } else if (args[1].equalsIgnoreCase("portal")) {
             player.getInventory().addItem(ItemManager.createPortalObsidian());
             sender.sendMessage(Component.text("Received 16x Portal Obsidian!", NamedTextColor.DARK_PURPLE));
@@ -291,8 +300,11 @@ public class AdminCommand implements CommandExecutor {
                 Component.text("--- SkillsBoss Admin ---", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
         sender.sendMessage(Component.text("/admin progression <0|1> ", NamedTextColor.YELLOW)
                 .append(Component.text("- Start progression stages", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/admin altar reset ", NamedTextColor.YELLOW)
+                .append(Component.text("- Clear all ritual entities and bars", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal> ", NamedTextColor.YELLOW)
-                .append(Component.text("- Give legendary gear, ritual core, or portal obsidian", NamedTextColor.GRAY)));
+                .append(Component.text("- Give legendary gear, ritual items, or portal obsidian",
+                        NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin reload ", NamedTextColor.YELLOW)
                 .append(Component.text("- Reload plugin config", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin version ", NamedTextColor.YELLOW)

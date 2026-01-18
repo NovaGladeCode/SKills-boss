@@ -25,6 +25,30 @@ public class ItemManager {
             "boss_spawn_item");
     private static final NamespacedKey PORTAL_OBSIDIAN_KEY = new NamespacedKey(SkillsBoss.getInstance(),
             "portal_obsidian");
+    private static final NamespacedKey BOSS_SPAWNER_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "boss_spawner_item");
+
+    public static ItemStack createBossSpawnerItem() {
+        ItemStack item = new ItemStack(Material.SPAWNER);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(Component.text("Avernus Ritual Spawner", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("The gateway through which guards emerge.", NamedTextColor.LIGHT_PURPLE));
+            lore.add(Component.empty());
+            lore.add(Component.text("Phase 1: Place this where enemies should spawn.", NamedTextColor.GRAY));
+            meta.lore(lore);
+            meta.getPersistentDataContainer().set(BOSS_SPAWNER_KEY, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isBossSpawnerItem(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+        return item.getItemMeta().getPersistentDataContainer().has(BOSS_SPAWNER_KEY, PersistentDataType.BYTE);
+    }
 
     public static ItemStack createBossSpawnItem() {
         ItemStack item = new ItemStack(Material.RESPAWN_ANCHOR);
