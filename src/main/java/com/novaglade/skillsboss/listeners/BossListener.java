@@ -82,13 +82,8 @@ public class BossListener implements Listener {
         if (!ItemManager.isBossSpawnItem(item))
             return;
 
-        event.setCancelled(true);
         Block block = event.getBlock();
         Location center = block.getLocation().add(0.5, 0.1, 0.5);
-
-        if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-            item.setAmount(item.getAmount() - 1);
-        }
 
         spawnManualRitual(center);
     }
@@ -486,7 +481,6 @@ public class BossListener implements Listener {
     public static void spawnManualRitual(Location loc) {
         if (instance == null)
             return;
-        instance.generateDirectionalAltar(loc, loc.getDirection().setY(0).normalize());
         Location standLoc = loc.clone().getBlock().getLocation().add(0.5, 0.1, 0.5);
         ArmorStand stand = (ArmorStand) loc.getWorld().spawnEntity(standLoc, EntityType.ARMOR_STAND);
         stand.setBasePlate(false);
@@ -665,19 +659,6 @@ public class BossListener implements Listener {
         }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
     }
 
-    private void generateDirectionalAltar(Location center, Vector dir) {
-        Vector cross = new Vector(0, 1, 0).crossProduct(dir).normalize();
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                Location l = center.clone().add(dir.clone().multiply(i)).add(cross.clone().multiply(j)).add(0, -1, 0);
-                l.getBlock().setType(Material.CRYING_OBSIDIAN);
-                if (Math.abs(i) == 1 && Math.abs(j) == 1)
-                    center.clone().add(dir.clone().multiply(i)).add(cross.clone().multiply(j)).getBlock()
-                            .setType(Material.SOUL_LANTERN);
-            }
-        }
-    }
-
     @EventHandler
     public void onPortalPlace(BlockPlaceEvent event) {
         if (ItemManager.isPortalObsidian(event.getItemInHand())) {
@@ -746,16 +727,6 @@ public class BossListener implements Listener {
                 if (check.getBlock().getType() == Material.AIR)
                     check.getBlock().setType(Material.NETHER_PORTAL);
             }
-    }
-
-    private void spawnAltarArmorStand(Location loc) {
-        ArmorStand stand = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
-        stand.setBasePlate(false);
-        stand.setArms(true);
-        stand.customName(Component.text("§4§lThe Avernus Altar"));
-        stand.setCustomNameVisible(true);
-        stand.setInvulnerable(true);
-        stand.getPersistentDataContainer().set(ALTAR_KEY, PersistentDataType.BYTE, (byte) 1);
     }
 
     private void playerBroadcast(World world, Component msg) {
