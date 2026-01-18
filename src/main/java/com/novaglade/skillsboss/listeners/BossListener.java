@@ -288,15 +288,19 @@ public class BossListener implements Listener {
                 || stand.getEquipment().getItemInMainHand().getType() == Material.AIR)
             return;
 
-        UUID standUuid = stand.getUniqueId();
-        if (activatingStands.contains(standUuid))
-            return;
-        activatingStands.add(standUuid);
+        startRitual(stand);
+    }
 
-        activeWaveMobs.put(standUuid, Collections.synchronizedSet(new HashSet<>()));
+    private void startRitual(Entity anchor) {
+        UUID anchorUuid = anchor.getUniqueId();
+        if (activatingStands.contains(anchorUuid))
+            return;
+        activatingStands.add(anchorUuid);
+
+        activeWaveMobs.put(anchorUuid, Collections.synchronizedSet(new HashSet<>()));
         BossBar ritualBar = Bukkit.createBossBar("§4§lThe Descent", BarColor.RED, BarStyle.SEGMENTED_10);
         Bukkit.getOnlinePlayers().forEach(ritualBar::addPlayer);
-        activeBars.put(standUuid, ritualBar);
+        activeBars.put(anchorUuid, ritualBar);
 
         new BukkitRunnable() {
             int waveNum = 0;
@@ -305,13 +309,13 @@ public class BossListener implements Listener {
 
             @Override
             public void run() {
-                if (!stand.isValid()) {
-                    endRitual(standUuid, ritualBar);
+                if (!anchor.isValid()) {
+                    endRitual(anchorUuid, ritualBar);
                     cancel();
                     return;
                 }
 
-                Set<UUID> mobs = activeWaveMobs.get(standUuid);
+                Set<UUID> mobs = activeWaveMobs.get(anchorUuid);
                 if (mobs == null) {
                     cancel();
                     return;
@@ -327,22 +331,22 @@ public class BossListener implements Listener {
                     if (mobs.isEmpty() && waveTicks >= 40) {
                         waiting = false;
                         waveTicks = 0;
-                        stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
+                        anchor.getWorld().playSound(anchor.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
                     }
                     return;
                 }
 
                 if (waveNum < 4) {
                     waveNum++;
-                    startWave(stand, ritualBar, waveNum);
+                    startWave(anchor, ritualBar, waveNum);
                     waiting = true;
                 } else {
                     ritualBar.removeAll();
-                    activeBars.remove(standUuid);
-                    spawnBosses(stand.getLocation());
-                    stand.remove();
-                    activatingStands.remove(standUuid);
-                    activeWaveMobs.remove(standUuid);
+                    activeBars.remove(anchorUuid);
+                    spawnBosses(anchor.getLocation());
+                    anchor.remove();
+                    activatingStands.remove(anchorUuid);
+                    activeWaveMobs.remove(anchorUuid);
                     cancel();
                 }
             }
@@ -356,7 +360,7 @@ public class BossListener implements Listener {
         activatingStands.remove(uuid);
     }
 
-    private void startWave(ArmorStand stand, BossBar bar, int waveId) {
+    private void startWave(Entity stand, BossBar bar, int waveId) {
         String[] titles = { "", "§e§lTrial I: The Fallen Sentries", "§9§lTrial II: The Undead Sentinels",
                 "§c§lTrial III: The Avernus Guards", "§4§lTrial IV: The Final Gate" };
         Component[] msgs = { null,
@@ -371,7 +375,7 @@ public class BossListener implements Listener {
         spawnWave(stand, waveId);
     }
 
-    private void spawnWave(ArmorStand stand, int waveId) {
+    private void spawnWave(Entity stand, int waveId) {
         Location loc = stand.getLocation();
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
         if (waveId == 1) {
@@ -481,25 +485,15 @@ public class BossListener implements Listener {
     public static void spawnManualRitual(Location loc) {
         if (instance == null)
             return;
-        Location standLoc = loc.clone().getBlock().getLocation().add(0.5, 0.1, 0.5);
-        ArmorStand stand = (ArmorStand) loc.getWorld().spawnEntity(standLoc, EntityType.ARMOR_STAND);
-        stand.setBasePlate(false);
-        stand.setArms(true);
-        stand.customName(Component.text("§4§lThe Avernus Altar"));
-        stand.setCustomNameVisible(true);
-        stand.setInvulnerable(true);
-        stand.getPersistentDataContainer().set(ALTAR_KEY, PersistentDataType.BYTE, (byte) 1);
-        stand.getEquipment().setHelmet(ItemManager.createCustomItem(Material.DIAMOND_HELMET));
-        stand.getEquipment().setChestplate(ItemManager.createCustomItem(Material.DIAMOND_CHESTPLATE));
-        stand.getEquipment().setLeggings(ItemManager.createCustomItem(Material.DIAMOND_LEGGINGS));
-        stand.getEquipment().setBoots(ItemManager.createCustomItem(Material.DIAMOND_BOOTS));
-        stand.getEquipment().setItemInMainHand(ItemManager.createCustomItem(Material.DIAMOND_SWORD));
-        stand.setRightArmPose(new EulerAngle(Math.toRadians(-90), 0, 0));
-        stand.getWorld().strikeLightningEffect(standLoc);
-        stand.getWorld().playSound(standLoc, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 0.5f);
+        Location markerLoc = loc.clone().getBlock().getLocation().add(0.5, 0.1, 0.5);
+        Marker marker = (Marker) loc.getWorld().spawnEntity(markerLoc, EntityType.MARKER);
+        marker.getPersistentDataContainer().set(ALTAR_KEY, PersistentDataType.BYTE, (byte) 1);
+
+        marker.getWorld().strikeLightningEffect(markerLoc);
+        marker.getWorld().playSound(markerLoc, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 0.5f);
         instance.playerBroadcast(loc.getWorld(), Component.text("The Administrator has forced a Manifestation!",
                 NamedTextColor.RED, TextDecoration.BOLD));
-        instance.checkActivation(stand);
+        instance.startRitual(marker);
     }
 
     private void spawnBosses(Location loc) {
