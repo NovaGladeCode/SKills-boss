@@ -40,9 +40,11 @@ public class AdminCommand implements CommandExecutor {
                 try {
                     int level = Integer.parseInt(args[1]);
                     if (level == 0) {
-                        SkillsBoss.setProgressionLevel(0);
-                        sender.sendMessage(Component.text("Progression set to 0. Use /admin reset to fully reset.",
-                                NamedTextColor.GREEN));
+                        if (sender instanceof Player) {
+                            startProgressionZeroTransition((Player) sender);
+                        } else {
+                            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+                        }
                     } else if (level == 1) {
                         if (sender instanceof Player) {
                             startProgressionOneCountdown(((Player) sender).getWorld());
@@ -59,9 +61,6 @@ public class AdminCommand implements CommandExecutor {
                 break;
             case "give":
                 handleGive(sender, args);
-                break;
-            case "reset":
-                handleReset(sender);
                 break;
             case "reload":
                 SkillsBoss.getInstance().reloadConfig();
@@ -89,6 +88,75 @@ public class AdminCommand implements CommandExecutor {
                 break;
         }
         return true;
+    }
+
+    private void startProgressionZeroTransition(Player player) {
+        World world = player.getWorld();
+        Location center = player.getLocation();
+
+        // 1. Initial Shock
+        world.playSound(center, Sound.ENTITY_WITHER_DEATH, 1.0f, 0.5f);
+        world.spawnParticle(Particle.FLASH, center, 10, 2, 2, 2, 0);
+
+        Title countdownTitle = Title.title(
+                Component.text("!!! COLLAPSE IMMINENT !!!", NamedTextColor.DARK_RED, TextDecoration.BOLD),
+                Component.text("The world is resetting...", NamedTextColor.RED),
+                Title.Times.times(Duration.ofMillis(100), Duration.ofSeconds(3), Duration.ofMillis(500)));
+
+        for (Player p : Bukkit.getOnlinePlayers())
+            p.showTitle(countdownTitle);
+
+        new BukkitRunnable() {
+            int ticks = 60; // 3 seconds of "horror"
+
+            @Override
+            public void run() {
+                if (ticks <= 0) {
+                    executeReset(player);
+                    cancel();
+                    return;
+                }
+
+                if (ticks % 10 == 0) {
+                    world.playSound(center, Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 1f, 0.5f);
+                    world.spawnParticle(Particle.LARGE_SMOKE, center, 50, 5, 2, 5, 0.1);
+                }
+
+                // Distort vision for everyone
+                for (Player p : world.getPlayers()) {
+                    p.spawnParticle(Particle.WITCH, p.getLocation().add(0, 1, 0), 5, 0.5, 0.5, 0.5, 0);
+                    if (ticks == 20)
+                        p.playSound(p.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, 1f, 1f);
+                }
+
+                ticks--;
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
+    }
+
+    private void executeReset(Player player) {
+        World world = player.getWorld();
+        Location center = player.getLocation();
+
+        SkillsBoss.setProgressionLevel(0);
+        world.setSpawnLocation(center);
+        world.getWorldBorder().setCenter(center);
+        world.getWorldBorder().setSize(19);
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            online.teleport(center);
+            online.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
+            online.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0);
+
+            Title startTitle = Title.title(
+                    Component.text("PROGRESSION 0", NamedTextColor.WHITE, TextDecoration.BOLD),
+                    Component.text("A NEW BEGINNING", NamedTextColor.GRAY, TextDecoration.STRIKETHROUGH),
+                    Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4), Duration.ofSeconds(1)));
+            online.showTitle(startTitle);
+        }
+
+        player.sendMessage(
+                Component.text("World has been reset to Progression 0.", NamedTextColor.GREEN, TextDecoration.BOLD));
     }
 
     private void startProgressionOneCountdown(org.bukkit.World world) {
@@ -200,27 +268,6 @@ public class AdminCommand implements CommandExecutor {
         }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
-    private void handleReset(CommandSender sender) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
-            return;
-        }
-        Player player = (Player) sender;
-
-        SkillsBoss.setProgressionLevel(0);
-        player.getWorld().setSpawnLocation(player.getLocation());
-        player.getWorld().getWorldBorder().setCenter(player.getLocation());
-        player.getWorld().getWorldBorder().setSize(19);
-
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            online.teleport(player.getLocation());
-        }
-
-        sender.sendMessage(
-                Component.text("World reset! Progression set to 0, all players teleported to spawn, border set to 19.",
-                        NamedTextColor.GREEN));
-    }
-
     private void handleGive(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
             sender.sendMessage(Component.text("Only players can use this command.", NamedTextColor.RED));
@@ -262,8 +309,6 @@ public class AdminCommand implements CommandExecutor {
         sender.sendMessage(Component.text("/admin boss wavespawn ", NamedTextColor.YELLOW)
                 .append(Component.text("- Spawn 4 guard waves and then Supremus at your location",
                         NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin reset ", NamedTextColor.YELLOW)
-                .append(Component.text("- Reset world: TP all to spawn, set progression to 0", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin reload ", NamedTextColor.YELLOW)
                 .append(Component.text("- Reload plugin config", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin version ", NamedTextColor.YELLOW)
