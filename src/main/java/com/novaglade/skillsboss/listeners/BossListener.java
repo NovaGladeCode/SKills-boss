@@ -9,6 +9,7 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
@@ -591,6 +592,11 @@ public class BossListener implements Listener {
         boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
         boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
         boss.getEquipment().setItemInMainHand(new ItemStack(Material.MACE));
+        boss.getEquipment().setItemInMainHandDropChance(0f);
+        boss.getEquipment().setHelmetDropChance(0f);
+        boss.getEquipment().setChestplateDropChance(0f);
+        boss.getEquipment().setLeggingsDropChance(0f);
+        boss.getEquipment().setBootsDropChance(0f);
 
         ritualTeam.addEntry(boss.getUniqueId().toString());
         bossGroup.add(boss.getUniqueId());
@@ -703,13 +709,19 @@ public class BossListener implements Listener {
                     return;
                 }
 
+                if (ticks % 10 == 0) {
+                    boss.getWorld().spawnParticle(Particle.SOUL, boss.getEyeLocation(), 10, 0.5, 0.5, 0.5, 0.05);
+                    boss.getWorld().spawnParticle(Particle.DRAGON_BREATH, boss.getLocation(), 5, 1, 2, 1, 0.02);
+                }
+
                 if (ticks % 100 == 0) {
                     boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 0.5f);
+                    boss.getWorld().spawnParticle(Particle.SONIC_BOOM, boss.getLocation(), 3, 2, 2, 2, 0);
                     for (Entity e : boss.getNearbyEntities(15, 10, 15)) {
                         if (e instanceof Player && !e.isOp()) {
                             ((LivingEntity) e).damage(phase >= 2 ? 35 : 25, boss);
                             e.setVelocity(e.getLocation().subtract(boss.getLocation()).toVector().normalize()
-                                    .multiply(1.5).setY(0.5));
+                                    .multiply(2.0).setY(0.7));
                         }
                     }
                 }
@@ -724,23 +736,32 @@ public class BossListener implements Listener {
             event.setCancelled(true);
             if (event.getPlayer().getGameMode() != GameMode.CREATIVE)
                 event.getItemInHand().setAmount(event.getItemInHand().getAmount() - 1);
-            generateNetherPortalFrame(event.getBlock().getLocation());
+            generateNetherPortalFrame(event.getBlock().getLocation(), event.getPlayer().getFacing());
             event.getPlayer().sendMessage(
                     Component.text("The Portal Frame manifests before you...", NamedTextColor.DARK_PURPLE));
         }
     }
 
-    private void generateNetherPortalFrame(Location center) {
-        for (int x = -2; x <= 2; x++)
-            for (int y = 0; y <= 5; y++)
-                center.clone().add(x, y, 0).getBlock().setType(Material.AIR);
-        for (int x = -2; x <= 2; x++) {
-            center.clone().add(x, 0, 0).getBlock().setType(Material.CRYING_OBSIDIAN);
-            center.clone().add(x, 5, 0).getBlock().setType(Material.CRYING_OBSIDIAN);
+    private void generateNetherPortalFrame(Location center, BlockFace face) {
+        boolean axisZ = (face == BlockFace.EAST || face == BlockFace.WEST);
+        for (int i = -2; i <= 2; i++) {
+            for (int y = 0; y <= 5; y++) {
+                int dx = axisZ ? 0 : i;
+                int dz = axisZ ? i : 0;
+                center.clone().add(dx, y, dz).getBlock().setType(Material.AIR);
+            }
+        }
+        for (int i = -2; i <= 2; i++) {
+            int dx = axisZ ? 0 : i;
+            int dz = axisZ ? i : 0;
+            center.clone().add(dx, 0, dz).getBlock().setType(Material.CRYING_OBSIDIAN);
+            center.clone().add(dx, 5, dz).getBlock().setType(Material.CRYING_OBSIDIAN);
         }
         for (int y = 1; y <= 4; y++) {
-            center.clone().add(-2, y, 0).getBlock().setType(Material.CRYING_OBSIDIAN);
-            center.clone().add(2, y, 0).getBlock().setType(Material.CRYING_OBSIDIAN);
+            int dx = axisZ ? 0 : 2;
+            int dz = axisZ ? 2 : 0;
+            center.clone().add(dx, y, dz).getBlock().setType(Material.CRYING_OBSIDIAN);
+            center.clone().add(-dx, y, -dz).getBlock().setType(Material.CRYING_OBSIDIAN);
         }
     }
 
@@ -780,12 +801,46 @@ public class BossListener implements Listener {
     }
 
     private void lightPortalFrame(Location base) {
-        for (int y = 1; y <= 4; y++)
-            for (int x = -1; x <= 1; x++) {
-                Location check = base.clone().add(x, y, 0);
+        boolean axisZ = false;
+        // Detect axis
+        if (base.clone().add(0, 0, 1).getBlock().getType() == Material.CRYING_OBSIDIAN ||
+                base.clone().add(0, 0, 2).getBlock().getType() == Material.CRYING_OBSIDIAN) {
+            axisZ = true;
+        }
+
+        for (int y = 1; y <= 4; y++) {
+            for (int i = -1; i <= 1; i++) {
+                int dx = axisZ ? 0 : i;
+                int dz = axisZ ? i : 0;
+                Location check = base.clone().add(dx, y, dz);
                 if (check.getBlock().getType() == Material.AIR)
                     check.getBlock().setType(Material.NETHER_PORTAL);
             }
+        }
+
+        // Portal Pull Animation
+        new BukkitRunnable() {
+            int ticks = 0;
+
+            @Override
+            public void run() {
+                if (ticks > 200) {
+                    cancel();
+                    return;
+                }
+                base.getWorld().spawnParticle(Particle.PORTAL, base.clone().add(0, 2, 0), 20, 1, 2, 1, 0.1);
+                for (Player p : base.getWorld().getPlayers()) {
+                    if (p.getLocation().distance(base) < 12) {
+                        Vector pull = base.clone().add(0, 2, 0).toVector().subtract(p.getLocation().toVector())
+                                .normalize().multiply(0.15);
+                        p.setVelocity(p.getVelocity().add(pull));
+                        if (ticks % 20 == 0)
+                            p.playSound(p.getLocation(), Sound.BLOCK_PORTAL_AMBIENT, 0.5f, 0.5f);
+                    }
+                }
+                ticks++;
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
     private void playerBroadcast(World world, Component msg) {
@@ -809,6 +864,10 @@ public class BossListener implements Listener {
 
     private void enterPhase2(LivingEntity boss, int type) {
         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.8f);
+        Title title = Title.title(Component.text("PHASE II", NamedTextColor.YELLOW, TextDecoration.BOLD),
+                Component.text("SUPREMUS ENRAGES", NamedTextColor.GOLD));
+        Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
+        boss.getWorld().spawnParticle(Particle.FLASH, boss.getLocation(), 10);
         playerBroadcast(boss.getWorld(),
                 Component.text("Supremus enters Phase 2!", NamedTextColor.YELLOW, TextDecoration.BOLD));
         if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
@@ -818,6 +877,10 @@ public class BossListener implements Listener {
 
     private void enterPhase3(LivingEntity boss, int type) {
         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2f, 0.5f);
+        Title title = Title.title(Component.text("FINAL PHASE", NamedTextColor.RED, TextDecoration.BOLD),
+                Component.text("THE END IS NIGH", NamedTextColor.DARK_RED));
+        Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
+        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 5);
         playerBroadcast(boss.getWorld(),
                 Component.text("Supremus enters FINAL PHASE!", NamedTextColor.RED, TextDecoration.BOLD));
         boss.setInvulnerable(true);
