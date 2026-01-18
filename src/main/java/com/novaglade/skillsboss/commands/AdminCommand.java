@@ -70,19 +70,6 @@ public class AdminCommand implements CommandExecutor {
                 sender.sendMessage(Component.text(
                         "SkillsBoss v" + SkillsBoss.getInstance().getDescription().getVersion(), NamedTextColor.GREEN));
                 break;
-            case "boss":
-                if (args.length >= 2 && args[1].equalsIgnoreCase("wavespawn")) {
-                    if (sender instanceof Player) {
-                        Player p = (Player) sender;
-                        com.novaglade.skillsboss.listeners.BossListener.spawnManualRitual(p.getLocation());
-                        sender.sendMessage(Component.text("Manual Ritual Started!", NamedTextColor.GREEN));
-                    } else {
-                        sender.sendMessage(Component.text("Must be a player.", NamedTextColor.RED));
-                    }
-                } else {
-                    sender.sendMessage(Component.text("Usage: /admin boss wavespawn", NamedTextColor.RED));
-                }
-                break;
             default:
                 sendHelp(sender);
                 break;
@@ -305,10 +292,7 @@ public class AdminCommand implements CommandExecutor {
         sender.sendMessage(Component.text("/admin progression <0|1> ", NamedTextColor.YELLOW)
                 .append(Component.text("- Start progression stages", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal> ", NamedTextColor.YELLOW)
-                .append(Component.text("- Give legendary gear, boss altar, or portal obsidian", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin boss wavespawn ", NamedTextColor.YELLOW)
-                .append(Component.text("- Spawn 4 guard waves and then Supremus at your location",
-                        NamedTextColor.GRAY)));
+                .append(Component.text("- Give legendary gear, ritual core, or portal obsidian", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin reload ", NamedTextColor.YELLOW)
                 .append(Component.text("- Reload plugin config", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin version ", NamedTextColor.YELLOW)

@@ -27,15 +27,15 @@ public class ItemManager {
             "portal_obsidian");
 
     public static ItemStack createBossSpawnItem() {
-        ItemStack item = new ItemStack(Material.GHAST_SPAWN_EGG);
+        ItemStack item = new ItemStack(Material.RESPAWN_ANCHOR);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(
-                    Component.text("Avernus Ritual Egg", NamedTextColor.DARK_RED, TextDecoration.BOLD));
+                    Component.text("Avernus Ritual Core", NamedTextColor.DARK_RED, TextDecoration.BOLD));
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Use this to anchor the ritual site.", NamedTextColor.RED));
+            lore.add(Component.text("A pulsing core that anchors the ritual site.", NamedTextColor.RED));
             lore.add(Component.empty());
-            lore.add(Component.text("Requires Legendary Diamond Gear to begin the ritual.", NamedTextColor.GRAY,
+            lore.add(Component.text("Place this to begin the Manifestation.", NamedTextColor.GRAY,
                     TextDecoration.ITALIC));
             meta.lore(lore);
             meta.getPersistentDataContainer().set(BOSS_SPAWN_KEY, PersistentDataType.BYTE, (byte) 1);

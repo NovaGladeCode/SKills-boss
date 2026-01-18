@@ -77,35 +77,20 @@ public class BossListener implements Listener {
     }
 
     @EventHandler
-    public void onAltarPlace(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK)
-            return;
-        if (event.getHand() != EquipmentSlot.HAND)
-            return;
-        ItemStack item = event.getItem();
-        if (item == null || item.getType() == Material.AIR)
-            return;
+    public void onAltarPlace(BlockPlaceEvent event) {
+        ItemStack item = event.getItemInHand();
         if (!ItemManager.isBossSpawnItem(item))
             return;
 
         event.setCancelled(true);
-        Block block = event.getClickedBlock();
-        if (block == null)
-            return;
+        Block block = event.getBlock();
+        Location center = block.getLocation().add(0.5, 0.1, 0.5);
 
-        Location center = block.getLocation().add(0.5, 1, 0.5);
-        item.setAmount(item.getAmount() - 1);
+        if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+            item.setAmount(item.getAmount() - 1);
+        }
 
-        playerBroadcast(center.getWorld(),
-                Component.text("The Avernus Core has been anchored.", NamedTextColor.DARK_RED, TextDecoration.BOLD));
-
-        Vector direction = event.getPlayer().getLocation().getDirection().setY(0).normalize();
-        generateDirectionalAltar(center, direction);
-
-        spawnAltarArmorStand(center.clone().add(0, 0.1, 0));
-
-        center.getWorld().strikeLightningEffect(center);
-        center.getWorld().playSound(center, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 0.5f);
+        spawnManualRitual(center);
     }
 
     @EventHandler
