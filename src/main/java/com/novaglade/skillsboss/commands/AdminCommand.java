@@ -55,12 +55,15 @@ public class AdminCommand implements CommandExecutor {
                     } else if (level == 1) {
                         if (sender instanceof Player) {
                             Player p = (Player) sender;
-                            Location beaconLoc = findNearbyProgression1Beacon(p.getLocation(), 50);
+                            Location beaconLoc = findNearbyProgression1Beacon(p.getLocation(), 20); // Reduced radius to
+                                                                                                    // 20 for
+                                                                                                    // performance
                             if (beaconLoc != null) {
-                                startProgression1At(p.getWorld(), beaconLoc.add(0.5, 0, 0.5));
+                                startProgression1At(p.getWorld(), beaconLoc.clone().add(0.5, 0, 0.5));
                             } else {
                                 sender.sendMessage(
-                                        Component.text("No Progression I Catalyst found nearby! Place one first.",
+                                        Component.text(
+                                                "No Progression I Catalyst found nearby (20 blocks)! Place one first.",
                                                 NamedTextColor.RED));
                             }
                         } else {
@@ -143,80 +146,90 @@ public class AdminCommand implements CommandExecutor {
                 try {
                     int seconds = (int) Math.ceil(ticks / 20.0);
 
-                    // Massive Rising Vortex Animation with 20 streams
-                    double radius = 1.0 + (maxTicks - ticks) * 0.1;
-                    double angle = ticks * 0.5;
-                    for (int i = 0; i < 20; i++) {
-                        double subAngle = angle + (i * (Math.PI * 2 / 20));
+                    // SUPREME VORTEX - 30 Streams
+                    double radius = 1.0 + (maxTicks - ticks) * 0.12;
+                    double angle = ticks * 0.6;
+                    for (int i = 0; i < 30; i++) {
+                        double subAngle = angle + (i * (Math.PI * 2 / 30));
                         double x = Math.cos(subAngle) * radius;
                         double z = Math.sin(subAngle) * radius;
-                        double y = (maxTicks - ticks) * 0.2;
-                        if (y > 50)
-                            y = 50;
+                        double y = (maxTicks - ticks) * 0.25;
+                        if (y > 60)
+                            y = 60;
 
                         Location partLoc = center.clone().add(x, y, z);
-                        world.spawnParticle(Particle.END_ROD, partLoc, 10, 0.2, 0.2, 0.2, 0.01);
+                        world.spawnParticle(Particle.END_ROD, partLoc, 15, 0.2, 0.2, 0.2, 0.02);
+                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, partLoc, 5, 0.1, 0.1, 0.1, 0.02);
                         world.spawnParticle(Particle.WITCH, partLoc, 5, 0.2, 0.2, 0.2, 0.01);
-                        world.spawnParticle(Particle.GLOW, partLoc, 5, 0.2, 0.2, 0.2, 0.01);
-                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, partLoc, 3, 0.1, 0.1, 0.1, 0.01);
 
-                        // Laser Beams (Dust lines) - Cyan Energy
+                        // Energy Strands
                         if (ticks % 2 == 0) {
-                            for (int j = 0; j < 30; j++) {
-                                Location laserPoint = center.clone().add(x * (j / 30.0), y * (j / 30.0),
-                                        z * (j / 30.0));
+                            for (int j = 0; j < 40; j++) {
+                                double ratio = j / 40.0;
+                                Location laserPoint = center.clone().add(x * ratio, y * ratio, z * ratio);
                                 world.spawnParticle(Particle.DUST, laserPoint, 1,
-                                        new Particle.DustOptions(org.bukkit.Color.AQUA, 0.4f));
+                                        new Particle.DustOptions(org.bukkit.Color.fromRGB(0, 255, 255), 0.6f));
                             }
                         }
                     }
 
-                    // Rotating Light Lasers (Yellow)
+                    // DUAL LAYER ROTATING LASERS
                     if (ticks % 2 == 0) {
-                        for (int i = 0; i < 6; i++) {
-                            double lAngle = ticks * 0.15 + (i * Math.PI * 2 / 6);
-                            for (double d = 0; d < 20; d += 0.4) {
-                                double lx = Math.cos(lAngle) * d;
-                                double lz = Math.sin(lAngle) * d;
-                                double ly = Math.sin(ticks * 0.08 + (i * 1.5)) * 8 + 10;
-                                world.spawnParticle(Particle.DUST, center.clone().add(lx, ly, lz), 1,
-                                        new Particle.DustOptions(org.bukkit.Color.YELLOW, 1.0f));
-                            }
-                        }
-                    }
-
-                    // END CRYSTAL LASERS (Purple/Magenta dense beams)
-                    if (ticks % 5 == 0) {
-                        for (int i = 0; i < 4; i++) {
-                            double pAngle = (ticks * 0.05) + (i * Math.PI / 2);
-                            double px = Math.cos(pAngle) * 15;
-                            double pz = Math.sin(pAngle) * 15;
-                            Location beamStart = center.clone().add(px, 30, pz);
-                            Vector dir = center.clone().add(0, 2, 0).toVector().subtract(beamStart.toVector());
-                            double len = dir.length();
-                            dir.normalize();
-                            for (double d = 0; d < len; d += 0.3) {
-                                world.spawnParticle(Particle.DUST, beamStart.clone().add(dir.clone().multiply(d)), 3,
-                                        new Particle.DustOptions(org.bukkit.Color.fromRGB(200, 0, 255), 1.5f));
-                                if (d % 2 < 0.3) {
-                                    world.spawnParticle(Particle.DRAGON_BREATH,
-                                            beamStart.clone().add(dir.clone().multiply(d)), 1, 0, 0, 0, 0);
+                        for (int layer = 0; layer < 2; layer++) {
+                            double lSpeed = (layer == 0 ? 0.2 : -0.15);
+                            int lCount = (layer == 0 ? 8 : 4);
+                            for (int i = 0; i < lCount; i++) {
+                                double lAngle = ticks * lSpeed + (i * Math.PI * 2 / lCount);
+                                double dist = 10 + (layer * 10);
+                                for (double d = 0; d < dist; d += 0.5) {
+                                    double lx = Math.cos(lAngle) * d;
+                                    double lz = Math.sin(lAngle) * d;
+                                    double ly = Math.sin(ticks * 0.1 + (i * 2) + layer) * 12 + 15;
+                                    org.bukkit.Color color = (layer == 0 ? org.bukkit.Color.YELLOW
+                                            : org.bukkit.Color.ORANGE);
+                                    world.spawnParticle(Particle.DUST, center.clone().add(lx, ly, lz), 1,
+                                            new Particle.DustOptions(color, 1.2f));
                                 }
                             }
                         }
                     }
 
-                    // Chaos Particles (Lightning/Fire/Smoke)
-                    if (random.nextInt(10) == 0) {
-                        double rx = (random.nextDouble() - 0.5) * 40;
-                        double rz = (random.nextDouble() - 0.5) * 40;
-                        Location chaosLoc = center.clone().add(rx, 0, rz);
-                        world.spawnParticle(Particle.EXPLOSION_EMITTER, chaosLoc, 1);
-                        world.playSound(chaosLoc, Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 1.5f);
+                    // HYPER BEAMS (PURPLE END CRYSTAL EFFECT)
+                    if (ticks % 3 == 0) {
+                        for (int i = 0; i < 6; i++) {
+                            double pAngle = (ticks * 0.04) + (i * Math.PI / 3);
+                            double px = Math.cos(pAngle) * 20;
+                            double pz = Math.sin(pAngle) * 20;
+                            Location beamStart = center.clone().add(px, 40, pz);
+                            Vector dir = center.clone().add(0, 1.5, 0).toVector().subtract(beamStart.toVector());
+                            double len = dir.length();
+                            dir.normalize();
+                            for (double d = 0; d < len; d += 0.2) {
+                                Location pos = beamStart.clone().add(dir.clone().multiply(d));
+                                world.spawnParticle(Particle.DUST, pos, 4,
+                                        new Particle.DustOptions(org.bukkit.Color.fromRGB(255, 0, 255), 2.0f));
+                                if (d % 3 < 0.2) {
+                                    world.spawnParticle(Particle.DRAGON_BREATH, pos, 2, 0, 0, 0, 0);
+                                    world.spawnParticle(Particle.FLASH, pos, 1);
+                                }
+                            }
+                        }
                     }
-                    if (ticks % 10 == 0) {
-                        world.spawnParticle(Particle.SOUL, center, 100, 10, 5, 10, 0.05);
-                        world.spawnParticle(Particle.LARGE_SMOKE, center, 50, 15, 2, 15, 0.02);
+
+                    // WORLD FRACTURE EFFECTS
+                    if (random.nextInt(5) == 0) {
+                        double rx = (random.nextDouble() - 0.5) * 60;
+                        double rz = (random.nextDouble() - 0.5) * 60;
+                        Location spikeLoc = center.clone().add(rx, 0, rz);
+                        world.spawnParticle(Particle.EXPLOSION_EMITTER, spikeLoc, 2);
+                        world.spawnParticle(Particle.SONIC_BOOM, spikeLoc.clone().add(0, 1, 0), 1);
+                        world.playSound(spikeLoc, Sound.ENTITY_WARDEN_SONIC_BOOM, 0.6f, 1.5f);
+                    }
+
+                    if (ticks % 15 == 0) {
+                        world.spawnParticle(Particle.REVERSE_PORTAL, center, 300, 20, 5, 20, 0.01);
+                        world.spawnParticle(Particle.SOUL, center, 200, 15, 10, 15, 0.02);
+                        world.playSound(center, Sound.BLOCK_BEACON_POWER_SELECT, 2f, 0.5f);
                     }
 
                     if (ticks % 20 == 0 && seconds > 0) {
@@ -293,8 +306,11 @@ public class AdminCommand implements CommandExecutor {
                         // Delete the beacon catalyst
                         if (center.getBlock().getType() == Material.BEACON) {
                             center.getBlock().setType(Material.AIR);
-                            world.spawnParticle(Particle.EXPLOSION_EMITTER, center.clone().add(0, 0.5, 0), 20);
-                            world.playSound(center, Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
+                            world.spawnParticle(Particle.EXPLOSION_EMITTER, center.clone().add(0, 1, 0), 50);
+                            world.spawnParticle(Particle.FLASH, center.clone().add(0, 1, 0), 20);
+                            world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 2f, 0.5f);
+                            world.playSound(center, Sound.BLOCK_BEACON_DEACTIVATE, 2f, 0.5f);
+                            world.strikeLightningEffect(center);
                         }
 
                         world.getWorldBorder().setCenter(center);
@@ -326,11 +342,14 @@ public class AdminCommand implements CommandExecutor {
 
     private static Location findNearbyProgression1Beacon(Location playerLoc, int radius) {
         World world = playerLoc.getWorld();
+        int px = playerLoc.getBlockX();
+        int py = playerLoc.getBlockY();
+        int pz = playerLoc.getBlockZ();
+
         for (int x = -radius; x <= radius; x++) {
-            for (int y = -radius; y <= radius; y++) {
-                for (int z = -radius; z <= radius; z++) {
-                    Location checkLoc = playerLoc.clone().add(x, y, z);
-                    Block block = checkLoc.getBlock();
+            for (int z = -radius; z <= radius; z++) {
+                for (int y = -10; y <= 10; y++) { // Optimized Y scan
+                    Block block = world.getBlockAt(px + x, py + y, pz + z);
                     if (block.getType() == Material.BEACON) {
                         // Check if this beacon has the Progression 1 marker
                         if (block.getState() instanceof TileState) {
