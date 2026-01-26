@@ -148,18 +148,40 @@ public class AdminCommand implements CommandExecutor {
                         double subAngle = angle + (i * (Math.PI * 2 / 10));
                         double x = Math.cos(subAngle) * radius;
                         double z = Math.sin(subAngle) * radius;
-                        double y = (maxTicks - ticks) * 0.1;
-                        if (y > 30)
-                            y = 30; // Cap height
+                        double y = (maxTicks - ticks) * 0.15; // Increased height speed
+                        if (y > 40)
+                            y = 40; // Increased cap height
 
                         Location partLoc = center.clone().add(x, y, z);
-                        world.spawnParticle(Particle.END_ROD, partLoc, 3, 0.1, 0.1, 0.1, 0.01);
-                        world.spawnParticle(Particle.WITCH, partLoc, 2, 0.1, 0.1, 0.1, 0.01);
+                        world.spawnParticle(Particle.END_ROD, partLoc, 5, 0.1, 0.1, 0.1, 0.01);
+                        world.spawnParticle(Particle.WITCH, partLoc, 3, 0.1, 0.1, 0.1, 0.01);
+                        world.spawnParticle(Particle.GLOW, partLoc, 2, 0.1, 0.1, 0.1, 0.01);
 
                         // Vertical beams
-                        if (ticks % 5 == 0) {
+                        if (ticks % 4 == 0) {
                             world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(0, y, 0), 10, 0.5, 1, 0.5,
                                     0.05);
+                            // Laser Beams (Dust lines)
+                            for (int j = 0; j < 20; j++) {
+                                Location laserPoint = center.clone().add(x * (j / 20.0), y * (j / 20.0),
+                                        z * (j / 20.0));
+                                world.spawnParticle(Particle.DUST, laserPoint, 1,
+                                        new Particle.DustOptions(org.bukkit.Color.AQUA, 0.5f));
+                            }
+                        }
+                    }
+
+                    // Rotating Light Lasers
+                    if (ticks % 2 == 0) {
+                        for (int i = 0; i < 3; i++) {
+                            double lAngle = ticks * 0.1 + (i * Math.PI * 2 / 3);
+                            for (double d = 0; d < 15; d += 0.5) {
+                                double lx = Math.cos(lAngle) * d;
+                                double lz = Math.sin(lAngle) * d;
+                                double ly = Math.sin(ticks * 0.05) * 5 + 5;
+                                world.spawnParticle(Particle.DUST, center.clone().add(lx, ly, lz), 1,
+                                        new Particle.DustOptions(org.bukkit.Color.YELLOW, 0.8f));
+                            }
                         }
                     }
 
@@ -234,6 +256,13 @@ public class AdminCommand implements CommandExecutor {
                             }.runTaskLater(SkillsBoss.getInstance(), delay);
                         }
 
+                        // Delete the beacon catalyst
+                        if (center.getBlock().getType() == Material.BEACON) {
+                            center.getBlock().setType(Material.AIR);
+                            world.spawnParticle(Particle.FLASH, center.clone().add(0, 0.5, 0), 20);
+                            world.playSound(center, Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
+                        }
+
                         world.getWorldBorder().setCenter(center);
                         world.getWorldBorder().setSize(1000);
                         for (Player online : Bukkit.getOnlinePlayers()) {
@@ -245,6 +274,9 @@ public class AdminCommand implements CommandExecutor {
                                                         TextDecoration.BOLD)));
                                 online.showTitle(finalTitle);
                                 online.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 2));
+                                online.addPotionEffect(new PotionEffect(PotionEffectType.RESI_POTENCY, 200, 1)); // Added
+                                                                                                                 // more
+                                                                                                                 // effects
                             }
                         }
                         cancel();
