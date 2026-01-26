@@ -34,7 +34,8 @@ public class ItemManager {
         ItemStack item = new ItemStack(Material.SPAWNER);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(Component.text("Avernus Ritual Spawner", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
+            meta.displayName(
+                    Component.text("Avernus Ritual Spawner", NamedTextColor.DARK_PURPLE).decorate(TextDecoration.BOLD));
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text("The gateway through which guards emerge.", NamedTextColor.LIGHT_PURPLE));
             lore.add(Component.empty());
@@ -57,7 +58,7 @@ public class ItemManager {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(
-                    Component.text("Avernus Ritual Core", NamedTextColor.DARK_RED, TextDecoration.BOLD));
+                    Component.text("Avernus Ritual Core", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD));
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text("A pulsing core that anchors the ritual site.", NamedTextColor.RED));
             lore.add(Component.empty());
@@ -117,7 +118,7 @@ public class ItemManager {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(
-                    Component.text("Portal Obsidian", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD));
+                    Component.text("Portal Obsidian", NamedTextColor.DARK_PURPLE).decorate(TextDecoration.BOLD));
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text("Ancient obsidian imbued with dimensional energy.", NamedTextColor.LIGHT_PURPLE));
             lore.add(Component.empty());
@@ -144,7 +145,7 @@ public class ItemManager {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(
-                    Component.text("Portal Igniter", NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD));
+                    Component.text("Portal Igniter", NamedTextColor.LIGHT_PURPLE).decorate(TextDecoration.BOLD));
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text("A mystical lighter pulsing with dimensional energy.", NamedTextColor.DARK_PURPLE));
             lore.add(Component.empty());
@@ -168,7 +169,7 @@ public class ItemManager {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(
-                    Component.text("Progression I Catalyst", NamedTextColor.GOLD, TextDecoration.BOLD));
+                    Component.text("Progression I Catalyst", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text("A beacon of hope that signals a new era.", NamedTextColor.YELLOW));
             lore.add(Component.empty());

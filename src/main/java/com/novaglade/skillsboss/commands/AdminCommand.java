@@ -115,14 +115,15 @@ public class AdminCommand implements CommandExecutor {
             online.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0);
 
             Title startTitle = Title.title(
-                    Component.text("PROGRESSION 0", NamedTextColor.WHITE, TextDecoration.BOLD),
+                    Component.text("PROGRESSION 0", NamedTextColor.WHITE).decorate(TextDecoration.BOLD),
                     Component.text("A NEW BEGINNING", NamedTextColor.GRAY),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4), Duration.ofSeconds(1)));
             online.showTitle(startTitle);
         }
 
         player.sendMessage(
-                Component.text("World has been reset to Progression 0.", NamedTextColor.GREEN, TextDecoration.BOLD));
+                Component.text("World has been reset to Progression 0.", NamedTextColor.GREEN)
+                        .decorate(TextDecoration.BOLD));
     }
 
     private static void startProgressionOneCountdown(org.bukkit.World world) {
@@ -219,10 +220,10 @@ public class AdminCommand implements CommandExecutor {
                     }
 
                     if (ticks % 20 == 0 && seconds > 0) {
-                        Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.GOLD,
-                                TextDecoration.BOLD);
+                        Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.GOLD)
+                                .decorate(TextDecoration.BOLD);
                         Component subTitle = Component.text("A New Era Approaches...",
-                                NamedTextColor.YELLOW, TextDecoration.ITALIC);
+                                NamedTextColor.YELLOW).decorate(TextDecoration.ITALIC);
                         Title title = Title.title(mainTitle, subTitle,
                                 Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800),
                                         Duration.ofMillis(100)));
@@ -250,10 +251,10 @@ public class AdminCommand implements CommandExecutor {
 
                     if (ticks <= 0) {
                         SkillsBoss.setProgressionLevel(1);
-                        Component mainTitle = Component.text("PROGRESSION I", NamedTextColor.GREEN,
-                                TextDecoration.BOLD);
-                        Component subTitle = Component.text("A NEW BEGINNING", NamedTextColor.DARK_RED,
-                                TextDecoration.BOLD);
+                        Component mainTitle = Component.text("PROGRESSION I", NamedTextColor.GREEN)
+                                .decorate(TextDecoration.BOLD);
+                        Component subTitle = Component.text("A NEW BEGINNING", NamedTextColor.DARK_RED)
+                                .decorate(TextDecoration.BOLD);
 
                         Title finalTitle = Title.title(mainTitle, subTitle,
                                 Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(3000),
@@ -301,10 +302,10 @@ public class AdminCommand implements CommandExecutor {
                         for (Player online : Bukkit.getOnlinePlayers()) {
                             if (online.getWorld().equals(world)) {
                                 online.sendMessage(Component
-                                        .text("PROGRESSION I: ", NamedTextColor.GREEN, TextDecoration.BOLD)
+                                        .text("PROGRESSION I: ", NamedTextColor.GREEN).decorate(TextDecoration.BOLD)
                                         .append(Component
-                                                .text("A New Beginning", NamedTextColor.DARK_RED,
-                                                        TextDecoration.BOLD)));
+                                                .text("A New Beginning", NamedTextColor.DARK_RED)
+                                                .decorate(TextDecoration.BOLD)));
                                 online.showTitle(finalTitle);
                                 online.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 2));
                                 online.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 200, 1)); // Added

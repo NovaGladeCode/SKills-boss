@@ -227,14 +227,14 @@ public class BossListener implements Listener {
 
             Location deathLoc = entity.getLocation();
             playerBroadcast(deathLoc.getWorld(),
-                    Component.text("THE CATACLYSM IS AVERTED!", NamedTextColor.GOLD, TextDecoration.BOLD));
+                    Component.text("THE CATACLYSM IS AVERTED!", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
 
             deathLoc.getWorld().dropItemNaturally(deathLoc, ItemManager.createPortalIgniter());
             deathLoc.getWorld().dropItemNaturally(deathLoc, ItemManager.createCustomItem(Material.DIAMOND_SWORD));
 
             playerBroadcast(deathLoc.getWorld(),
-                    Component.text("The Portal Igniter has been dropped!", NamedTextColor.LIGHT_PURPLE,
-                            TextDecoration.BOLD));
+                    Component.text("The Portal Igniter has been dropped!", NamedTextColor.LIGHT_PURPLE)
+                            .decorate(TextDecoration.BOLD));
 
             deathLoc.getWorld().getNearbyEntities(deathLoc, 50, 50, 50).forEach(e -> {
                 if (e.getType() == EntityType.ARMOR_STAND && e.customName() != null &&
@@ -282,8 +282,8 @@ public class BossListener implements Listener {
                         boss.setAI(true);
                         boss.getWorld().playSound(boss.getLocation(), Sound.BLOCK_GLASS_BREAK, 2f, 0.5f);
                         playerBroadcast(boss.getWorld(),
-                                Component.text("The shield has shattered!", NamedTextColor.YELLOW,
-                                        TextDecoration.BOLD));
+                                Component.text("The shield has shattered!", NamedTextColor.YELLOW)
+                                        .decorate(TextDecoration.BOLD));
                     }
                 }
                 break;
@@ -420,7 +420,7 @@ public class BossListener implements Listener {
                 Component.text("The fallen rise in diamond plate...", NamedTextColor.YELLOW),
                 Component.text("The undead manifest from the depths...", NamedTextColor.BLUE),
                 Component.text("The Avernus Guards have arrived.", NamedTextColor.RED),
-                Component.text("THE GATEKEEPER HAS AWAKENED!", NamedTextColor.DARK_RED, TextDecoration.BOLD)
+                Component.text("THE GATEKEEPER HAS AWAKENED!", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD)
         };
 
         bar.setTitle(titles[waveId]);
@@ -516,8 +516,8 @@ public class BossListener implements Listener {
                                     1f, 0.5f);
                             target.damage(25, warrior);
                             target.setVelocity(warrior.getLocation().getDirection().multiply(2.5).setY(0.8));
-                            target.sendMessage(Component.text("The Gatekeeper SMASHES you away!", NamedTextColor.GOLD,
-                                    TextDecoration.BOLD));
+                            target.sendMessage(Component.text("The Gatekeeper SMASHES you away!", NamedTextColor.GOLD)
+                                    .decorate(TextDecoration.BOLD));
                         }
                     }.runTaskLater(SkillsBoss.getInstance(), 10);
                 }
@@ -555,7 +555,7 @@ public class BossListener implements Listener {
         stand.getWorld().strikeLightningEffect(standLoc);
         stand.getWorld().playSound(standLoc, Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 0.5f);
         instance.playerBroadcast(loc.getWorld(), Component.text("A Ritual Altar has been anchored!",
-                NamedTextColor.RED, TextDecoration.BOLD));
+                NamedTextColor.RED).decorate(TextDecoration.BOLD));
     }
 
     private void spawnBosses(Location loc) {
@@ -564,7 +564,8 @@ public class BossListener implements Listener {
             spawnPoint = loc;
 
         playerBroadcast(loc.getWorld(),
-                Component.text("SUPREMUS AND HIS GUARD HAVE AWAKENED!", NamedTextColor.DARK_RED, TextDecoration.BOLD));
+                Component.text("SUPREMUS AND HIS GUARD HAVE AWAKENED!", NamedTextColor.DARK_RED)
+                        .decorate(TextDecoration.BOLD));
         Location spawn = spawnPoint.clone().add(0, 2, 0);
         WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
         boss.customName(Component.text("§4§lSUPREMUS"));
@@ -750,7 +751,8 @@ public class BossListener implements Listener {
 
             event.getPlayer().sendMessage(
                     Component.text("Progression I Catalyst placed! Use ", NamedTextColor.GOLD)
-                            .append(Component.text("/admin progression 1", NamedTextColor.YELLOW, TextDecoration.BOLD))
+                            .append(Component.text("/admin progression 1", NamedTextColor.YELLOW)
+                                    .decorate(TextDecoration.BOLD))
                             .append(Component.text(" to activate it.", NamedTextColor.GOLD)));
         } else if (ItemManager.isPortalObsidian(event.getItemInHand())) {
             event.setCancelled(true);
@@ -801,8 +803,9 @@ public class BossListener implements Listener {
             item.setAmount(item.getAmount() - 1);
             lightPortalFrame(portalBase);
             SkillsBoss.setProgressionLevel(2);
-            Title title = Title.title(Component.text("PROGRESSION II", NamedTextColor.RED, TextDecoration.BOLD),
-                    Component.text("THE PORTAL AWAKENS", NamedTextColor.DARK_RED, TextDecoration.BOLD));
+            Title title = Title.title(
+                    Component.text("PROGRESSION II", NamedTextColor.RED).decorate(TextDecoration.BOLD),
+                    Component.text("THE PORTAL AWAKENS", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD));
             Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
         }
     }
@@ -884,12 +887,12 @@ public class BossListener implements Listener {
 
     private void enterPhase2(LivingEntity boss, int type) {
         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.8f);
-        Title title = Title.title(Component.text("PHASE II", NamedTextColor.YELLOW, TextDecoration.BOLD),
+        Title title = Title.title(Component.text("PHASE II", NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
                 Component.text("SUPREMUS ENRAGES", NamedTextColor.GOLD));
         Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
         boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10);
         playerBroadcast(boss.getWorld(),
-                Component.text("Supremus enters Phase 2!", NamedTextColor.YELLOW, TextDecoration.BOLD));
+                Component.text("Supremus enters Phase 2!", NamedTextColor.YELLOW).decorate(TextDecoration.BOLD));
         if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
             boss.getAttribute(Attribute.MOVEMENT_SPEED)
                     .setBaseValue(boss.getAttribute(Attribute.MOVEMENT_SPEED).getBaseValue() * 1.2);
@@ -897,12 +900,12 @@ public class BossListener implements Listener {
 
     private void enterPhase3(LivingEntity boss, int type) {
         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2f, 0.5f);
-        Title title = Title.title(Component.text("FINAL PHASE", NamedTextColor.RED, TextDecoration.BOLD),
+        Title title = Title.title(Component.text("FINAL PHASE", NamedTextColor.RED).decorate(TextDecoration.BOLD),
                 Component.text("THE END IS NIGH", NamedTextColor.DARK_RED));
         Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
         boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 5);
         playerBroadcast(boss.getWorld(),
-                Component.text("Supremus enters FINAL PHASE!", NamedTextColor.RED, TextDecoration.BOLD));
+                Component.text("Supremus enters FINAL PHASE!", NamedTextColor.RED).decorate(TextDecoration.BOLD));
         boss.setInvulnerable(true);
         shieldedBosses.add(boss.getUniqueId());
         Set<UUID> minions = bossMinions.get(boss.getUniqueId());
