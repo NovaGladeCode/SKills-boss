@@ -357,7 +357,7 @@ public class AdminCommand implements CommandExecutor {
                             if (state.getPersistentDataContainer().has(
                                     new NamespacedKey(SkillsBoss.getInstance(), "progression_1_beacon"),
                                     PersistentDataType.BYTE)) {
-                                return checkLoc;
+                                return block.getLocation();
                             }
                         }
                     }
