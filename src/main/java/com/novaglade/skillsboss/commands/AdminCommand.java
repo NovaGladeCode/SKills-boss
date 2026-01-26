@@ -141,48 +141,80 @@ public class AdminCommand implements CommandExecutor {
                 try {
                     int seconds = (int) Math.ceil(ticks / 20.0);
 
-                    // Massive Rising Vortex Animation with 10 streams
-                    double radius = 1.0 + (maxTicks - ticks) * 0.08;
-                    double angle = ticks * 0.4;
-                    for (int i = 0; i < 10; i++) {
-                        double subAngle = angle + (i * (Math.PI * 2 / 10));
+                    // Massive Rising Vortex Animation with 20 streams
+                    double radius = 1.0 + (maxTicks - ticks) * 0.1;
+                    double angle = ticks * 0.5;
+                    for (int i = 0; i < 20; i++) {
+                        double subAngle = angle + (i * (Math.PI * 2 / 20));
                         double x = Math.cos(subAngle) * radius;
                         double z = Math.sin(subAngle) * radius;
-                        double y = (maxTicks - ticks) * 0.15; // Increased height speed
-                        if (y > 40)
-                            y = 40; // Increased cap height
+                        double y = (maxTicks - ticks) * 0.2;
+                        if (y > 50)
+                            y = 50;
 
                         Location partLoc = center.clone().add(x, y, z);
-                        world.spawnParticle(Particle.END_ROD, partLoc, 5, 0.1, 0.1, 0.1, 0.01);
-                        world.spawnParticle(Particle.WITCH, partLoc, 3, 0.1, 0.1, 0.1, 0.01);
-                        world.spawnParticle(Particle.GLOW, partLoc, 2, 0.1, 0.1, 0.1, 0.01);
+                        world.spawnParticle(Particle.END_ROD, partLoc, 10, 0.2, 0.2, 0.2, 0.01);
+                        world.spawnParticle(Particle.WITCH, partLoc, 5, 0.2, 0.2, 0.2, 0.01);
+                        world.spawnParticle(Particle.GLOW, partLoc, 5, 0.2, 0.2, 0.2, 0.01);
+                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, partLoc, 3, 0.1, 0.1, 0.1, 0.01);
 
-                        // Vertical beams
-                        if (ticks % 4 == 0) {
-                            world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(0, y, 0), 10, 0.5, 1, 0.5,
-                                    0.05);
-                            // Laser Beams (Dust lines)
-                            for (int j = 0; j < 20; j++) {
-                                Location laserPoint = center.clone().add(x * (j / 20.0), y * (j / 20.0),
-                                        z * (j / 20.0));
+                        // Laser Beams (Dust lines) - Cyan Energy
+                        if (ticks % 2 == 0) {
+                            for (int j = 0; j < 30; j++) {
+                                Location laserPoint = center.clone().add(x * (j / 30.0), y * (j / 30.0),
+                                        z * (j / 30.0));
                                 world.spawnParticle(Particle.DUST, laserPoint, 1,
-                                        new Particle.DustOptions(org.bukkit.Color.AQUA, 0.5f));
+                                        new Particle.DustOptions(org.bukkit.Color.AQUA, 0.4f));
                             }
                         }
                     }
 
-                    // Rotating Light Lasers
+                    // Rotating Light Lasers (Yellow)
                     if (ticks % 2 == 0) {
-                        for (int i = 0; i < 3; i++) {
-                            double lAngle = ticks * 0.1 + (i * Math.PI * 2 / 3);
-                            for (double d = 0; d < 15; d += 0.5) {
+                        for (int i = 0; i < 6; i++) {
+                            double lAngle = ticks * 0.15 + (i * Math.PI * 2 / 6);
+                            for (double d = 0; d < 20; d += 0.4) {
                                 double lx = Math.cos(lAngle) * d;
                                 double lz = Math.sin(lAngle) * d;
-                                double ly = Math.sin(ticks * 0.05) * 5 + 5;
+                                double ly = Math.sin(ticks * 0.08 + (i * 1.5)) * 8 + 10;
                                 world.spawnParticle(Particle.DUST, center.clone().add(lx, ly, lz), 1,
-                                        new Particle.DustOptions(org.bukkit.Color.YELLOW, 0.8f));
+                                        new Particle.DustOptions(org.bukkit.Color.YELLOW, 1.0f));
                             }
                         }
+                    }
+
+                    // END CRYSTAL LASERS (Purple/Magenta dense beams)
+                    if (ticks % 5 == 0) {
+                        for (int i = 0; i < 4; i++) {
+                            double pAngle = (ticks * 0.05) + (i * Math.PI / 2);
+                            double px = Math.cos(pAngle) * 15;
+                            double pz = Math.sin(pAngle) * 15;
+                            Location beamStart = center.clone().add(px, 30, pz);
+                            Vector dir = center.clone().add(0, 2, 0).toVector().subtract(beamStart.toVector());
+                            double len = dir.length();
+                            dir.normalize();
+                            for (double d = 0; d < len; d += 0.3) {
+                                world.spawnParticle(Particle.DUST, beamStart.clone().add(dir.clone().multiply(d)), 3,
+                                        new Particle.DustOptions(org.bukkit.Color.fromRGB(200, 0, 255), 1.5f));
+                                if (d % 2 < 0.3) {
+                                    world.spawnParticle(Particle.DRAGON_BREATH,
+                                            beamStart.clone().add(dir.clone().multiply(d)), 1, 0, 0, 0, 0);
+                                }
+                            }
+                        }
+                    }
+
+                    // Chaos Particles (Lightning/Fire/Smoke)
+                    if (random.nextInt(10) == 0) {
+                        double rx = (random.nextDouble() - 0.5) * 40;
+                        double rz = (random.nextDouble() - 0.5) * 40;
+                        Location chaosLoc = center.clone().add(rx, 0, rz);
+                        world.spawnParticle(Particle.EXPLOSION_EMITTER, chaosLoc, 1);
+                        world.playSound(chaosLoc, Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 1.5f);
+                    }
+                    if (ticks % 10 == 0) {
+                        world.spawnParticle(Particle.SOUL, center, 100, 10, 5, 10, 0.05);
+                        world.spawnParticle(Particle.LARGE_SMOKE, center, 50, 15, 2, 15, 0.02);
                     }
 
                     if (ticks % 20 == 0 && seconds > 0) {
