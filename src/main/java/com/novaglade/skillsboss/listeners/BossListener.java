@@ -733,14 +733,20 @@ public class BossListener implements Listener {
     @EventHandler
     public void onPortalPlace(BlockPlaceEvent event) {
         if (ItemManager.isProgression1Item(event.getItemInHand())) {
-            event.setCancelled(true);
+            // Don't cancel - let the beacon place normally
             if (event.getPlayer().getGameMode() != GameMode.CREATIVE)
                 event.getItemInHand().setAmount(event.getItemInHand().getAmount() - 1);
 
-            Location center = event.getBlock().getLocation().add(0.5, 0, 0.5);
-            com.novaglade.skillsboss.commands.AdminCommand.startProgression1At(center.getWorld(), center);
+            // Mark the beacon with a persistent data tag
+            Block placedBlock = event.getBlock();
+            placedBlock.getPersistentDataContainer().set(
+                    new NamespacedKey(SkillsBoss.getInstance(), "progression_1_beacon"),
+                    PersistentDataType.BYTE, (byte) 1);
+
             event.getPlayer().sendMessage(
-                    Component.text("The Progression I ritual begins...", NamedTextColor.GOLD, TextDecoration.BOLD));
+                    Component.text("Progression I Catalyst placed! Use ", NamedTextColor.GOLD)
+                            .append(Component.text("/admin progression 1", NamedTextColor.YELLOW, TextDecoration.BOLD))
+                            .append(Component.text(" to activate it.", NamedTextColor.GOLD)));
         } else if (ItemManager.isPortalObsidian(event.getItemInHand())) {
             event.setCancelled(true);
             if (event.getPlayer().getGameMode() != GameMode.CREATIVE)

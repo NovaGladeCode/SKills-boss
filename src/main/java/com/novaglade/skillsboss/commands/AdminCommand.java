@@ -7,10 +7,12 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -50,7 +52,15 @@ public class AdminCommand implements CommandExecutor {
                         }
                     } else if (level == 1) {
                         if (sender instanceof Player) {
-                            startProgression1At(((Player) sender).getWorld(), null);
+                            Player p = (Player) sender;
+                            Location beaconLoc = findNearbyProgression1Beacon(p.getLocation(), 50);
+                            if (beaconLoc != null) {
+                                startProgression1At(p.getWorld(), beaconLoc.add(0.5, 0, 0.5));
+                            } else {
+                                sender.sendMessage(
+                                        Component.text("No Progression I Catalyst found nearby! Place one first.",
+                                                NamedTextColor.RED));
+                            }
                         } else {
                             sender.sendMessage(
                                     Component.text("Must be run by player to determine world.", NamedTextColor.RED));
@@ -130,11 +140,11 @@ public class AdminCommand implements CommandExecutor {
                 try {
                     int seconds = (int) Math.ceil(ticks / 20.0);
 
-                    // Massive Rising Vortex Animation
+                    // Massive Rising Vortex Animation with 10 streams
                     double radius = 1.0 + (maxTicks - ticks) * 0.08;
                     double angle = ticks * 0.4;
-                    for (int i = 0; i < 4; i++) {
-                        double subAngle = angle + (i * (Math.PI / 2));
+                    for (int i = 0; i < 10; i++) {
+                        double subAngle = angle + (i * (Math.PI * 2 / 10));
                         double x = Math.cos(subAngle) * radius;
                         double z = Math.sin(subAngle) * radius;
                         double y = (maxTicks - ticks) * 0.1;
@@ -245,6 +255,26 @@ public class AdminCommand implements CommandExecutor {
                 }
             }
         }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
+    }
+
+    private static Location findNearbyProgression1Beacon(Location playerLoc, int radius) {
+        World world = playerLoc.getWorld();
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    Location checkLoc = playerLoc.clone().add(x, y, z);
+                    if (checkLoc.getBlock().getType() == Material.BEACON) {
+                        // Check if this beacon has the Progression 1 marker
+                        if (checkLoc.getBlock().getPersistentDataContainer().has(
+                                new NamespacedKey(SkillsBoss.getInstance(), "progression_1_beacon"),
+                                PersistentDataType.BYTE)) {
+                            return checkLoc;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private void handleGive(CommandSender sender, String[] args) {
