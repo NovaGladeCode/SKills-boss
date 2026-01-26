@@ -259,7 +259,7 @@ public class AdminCommand implements CommandExecutor {
                         // Delete the beacon catalyst
                         if (center.getBlock().getType() == Material.BEACON) {
                             center.getBlock().setType(Material.AIR);
-                            world.spawnParticle(Particle.FLASH, center.clone().add(0, 0.5, 0), 20);
+                            world.spawnParticle(Particle.EXPLOSION_EMITTER, center.clone().add(0, 0.5, 0), 20);
                             world.playSound(center, Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
                         }
 
@@ -274,9 +274,9 @@ public class AdminCommand implements CommandExecutor {
                                                         TextDecoration.BOLD)));
                                 online.showTitle(finalTitle);
                                 online.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 2));
-                                online.addPotionEffect(new PotionEffect(PotionEffectType.RESI_POTENCY, 200, 1)); // Added
-                                                                                                                 // more
-                                                                                                                 // effects
+                                online.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 200, 1)); // Added
+                                                                                                               // more
+                                                                                                               // effects
                             }
                         }
                         cancel();
