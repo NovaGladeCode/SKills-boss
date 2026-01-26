@@ -732,7 +732,16 @@ public class BossListener implements Listener {
 
     @EventHandler
     public void onPortalPlace(BlockPlaceEvent event) {
-        if (ItemManager.isPortalObsidian(event.getItemInHand())) {
+        if (ItemManager.isProgression1Item(event.getItemInHand())) {
+            event.setCancelled(true);
+            if (event.getPlayer().getGameMode() != GameMode.CREATIVE)
+                event.getItemInHand().setAmount(event.getItemInHand().getAmount() - 1);
+
+            Location center = event.getBlock().getLocation().add(0.5, 0, 0.5);
+            com.novaglade.skillsboss.commands.AdminCommand.startProgression1At(center.getWorld(), center);
+            event.getPlayer().sendMessage(
+                    Component.text("The Progression I ritual begins...", NamedTextColor.GOLD, TextDecoration.BOLD));
+        } else if (ItemManager.isPortalObsidian(event.getItemInHand())) {
             event.setCancelled(true);
             if (event.getPlayer().getGameMode() != GameMode.CREATIVE)
                 event.getItemInHand().setAmount(event.getItemInHand().getAmount() - 1);

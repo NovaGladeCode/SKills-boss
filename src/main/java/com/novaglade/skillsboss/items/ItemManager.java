@@ -27,6 +27,8 @@ public class ItemManager {
             "portal_obsidian");
     private static final NamespacedKey BOSS_SPAWNER_KEY = new NamespacedKey(SkillsBoss.getInstance(),
             "boss_spawner_item");
+    private static final NamespacedKey PROGRESSION_1_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "progression_1_item");
 
     public static ItemStack createBossSpawnerItem() {
         ItemStack item = new ItemStack(Material.SPAWNER);
@@ -159,5 +161,31 @@ public class ItemManager {
         if (item == null || !item.hasItemMeta())
             return false;
         return item.getItemMeta().getPersistentDataContainer().has(PORTAL_IGNITER_KEY, PersistentDataType.BYTE);
+    }
+
+    public static ItemStack createProgression1Item() {
+        ItemStack item = new ItemStack(Material.BEACON);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(
+                    Component.text("Progression I Catalyst", NamedTextColor.GOLD, TextDecoration.BOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("A beacon of hope that signals a new era.", NamedTextColor.YELLOW));
+            lore.add(Component.empty());
+            lore.add(Component.text("Place this to trigger the Progression I ritual.", NamedTextColor.GRAY,
+                    TextDecoration.ITALIC));
+            lore.add(Component.text("This location becomes the center of the ceremony.", NamedTextColor.GRAY,
+                    TextDecoration.ITALIC));
+            meta.lore(lore);
+            meta.getPersistentDataContainer().set(PROGRESSION_1_KEY, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isProgression1Item(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+        return item.getItemMeta().getPersistentDataContainer().has(PROGRESSION_1_KEY, PersistentDataType.BYTE);
     }
 }

@@ -50,7 +50,7 @@ public class AdminCommand implements CommandExecutor {
                         }
                     } else if (level == 1) {
                         if (sender instanceof Player) {
-                            startProgressionOneCountdown(((Player) sender).getWorld());
+                            startProgression1At(((Player) sender).getWorld(), null);
                         } else {
                             sender.sendMessage(
                                     Component.text("Must be run by player to determine world.", NamedTextColor.RED));
@@ -91,77 +91,6 @@ public class AdminCommand implements CommandExecutor {
     private void startProgressionZeroTransition(Player player) {
         World world = player.getWorld();
         Location center = player.getLocation();
-        Random random = new Random();
-
-        // 1. Initial Shock - Darkness and Growl
-        world.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 2.0f, 0.5f);
-        world.playSound(center, Sound.ENTITY_WITHER_DEATH, 1.0f, 0.5f);
-        world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0);
-
-        for (Player p : world.getPlayers()) {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 100, 1));
-            p.playSound(p.getLocation(), Sound.BLOCK_BELL_RESONATE, 1f, 0.5f);
-        }
-
-        Title countdownTitle = Title.title(
-                Component.text("!!! COLLAPSE IMMINENT !!!", NamedTextColor.DARK_RED, TextDecoration.BOLD),
-                Component.text("The world is fracturing...", NamedTextColor.RED),
-                Title.Times.times(Duration.ofMillis(100), Duration.ofSeconds(3), Duration.ofMillis(500)));
-
-        for (Player p : Bukkit.getOnlinePlayers())
-            p.showTitle(countdownTitle);
-
-        new BukkitRunnable() {
-            int ticks = 80; // 4 seconds of horror
-
-            @Override
-            public void run() {
-                if (ticks <= 0) {
-                    executeReset(player);
-                    cancel();
-                    return;
-                }
-
-                // Random Lightning Strikes
-                if (ticks % 8 == 0) {
-                    double angle = random.nextDouble() * 2 * Math.PI;
-                    double dist = random.nextDouble() * 15;
-                    Location strikeLoc = center.clone().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
-                    world.strikeLightningEffect(strikeLoc);
-                    world.playSound(strikeLoc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.8f, 0.5f + random.nextFloat());
-                }
-
-                if (ticks % 10 == 0) {
-                    world.playSound(center, Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 1.5f, 0.1f);
-                    world.spawnParticle(Particle.LARGE_SMOKE, center, 100, 10, 2, 10, 0.1);
-                    world.spawnParticle(Particle.SOUL, center, 50, 8, 5, 8, 0.05);
-                    world.spawnParticle(Particle.REVERSE_PORTAL, center, 100, 15, 1, 15, 0.01);
-                }
-
-                // Rising debris simulation
-                for (int i = 0; i < 8; i++) {
-                    double rx = (random.nextDouble() - 0.5) * 30;
-                    double rz = (random.nextDouble() - 0.5) * 30;
-                    world.spawnParticle(Particle.GUST, center.clone().add(rx, 0, rz), 1, 0, 0.2, 0, 0.2);
-                }
-
-                // Distort vision for everyone
-                for (Player p : world.getPlayers()) {
-                    p.spawnParticle(Particle.WITCH, p.getLocation().add(0, 1, 0), 10, 0.8, 0.8, 0.8, 0);
-                    if (ticks == 30) {
-                        p.playSound(p.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, 1.5f, 0.8f);
-                        p.playSound(p.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 2f, 0.5f);
-                    }
-                }
-
-                ticks--;
-            }
-        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
-    }
-
-    private void executeReset(Player player) {
-        World world = player.getWorld();
-        Location center = player.getLocation();
 
         SkillsBoss.setProgressionLevel(0);
         world.setSpawnLocation(center);
@@ -175,7 +104,7 @@ public class AdminCommand implements CommandExecutor {
 
             Title startTitle = Title.title(
                     Component.text("PROGRESSION 0", NamedTextColor.WHITE, TextDecoration.BOLD),
-                    Component.text("A NEW BEGINNING", NamedTextColor.GRAY, TextDecoration.STRIKETHROUGH),
+                    Component.text("A NEW BEGINNING", NamedTextColor.GRAY),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4), Duration.ofSeconds(1)));
             online.showTitle(startTitle);
         }
@@ -184,8 +113,12 @@ public class AdminCommand implements CommandExecutor {
                 Component.text("World has been reset to Progression 0.", NamedTextColor.GREEN, TextDecoration.BOLD));
     }
 
-    private void startProgressionOneCountdown(org.bukkit.World world) {
-        Location center = world.getSpawnLocation();
+    private static void startProgressionOneCountdown(org.bukkit.World world) {
+        startProgression1At(world, null);
+    }
+
+    public static void startProgression1At(org.bukkit.World world, Location customCenter) {
+        Location center = customCenter != null ? customCenter : world.getSpawnLocation();
         Random random = new Random();
 
         new BukkitRunnable() {
@@ -205,15 +138,17 @@ public class AdminCommand implements CommandExecutor {
                         double x = Math.cos(subAngle) * radius;
                         double z = Math.sin(subAngle) * radius;
                         double y = (maxTicks - ticks) * 0.1;
-                        if (y > 30) y = 30; // Cap height
+                        if (y > 30)
+                            y = 30; // Cap height
 
                         Location partLoc = center.clone().add(x, y, z);
                         world.spawnParticle(Particle.END_ROD, partLoc, 3, 0.1, 0.1, 0.1, 0.01);
                         world.spawnParticle(Particle.WITCH, partLoc, 2, 0.1, 0.1, 0.1, 0.01);
-                        
+
                         // Vertical beams
                         if (ticks % 5 == 0) {
-                            world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(0, y, 0), 10, 0.5, 1, 0.5, 0.05);
+                            world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(0, y, 0), 10, 0.5, 1, 0.5,
+                                    0.05);
                         }
                     }
 
@@ -226,7 +161,8 @@ public class AdminCommand implements CommandExecutor {
                                 Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800),
                                         Duration.ofMillis(100)));
 
-                        world.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 2f, 0.5f + ((float)(maxTicks - ticks) / maxTicks));
+                        world.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 2f,
+                                0.5f + ((float) (maxTicks - ticks) / maxTicks));
                         world.playSound(center, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.5f);
 
                         for (Player online : Bukkit.getOnlinePlayers()) {
@@ -273,10 +209,13 @@ public class AdminCommand implements CommandExecutor {
                                         double rad = Math.toRadians(i);
                                         double rx = Math.cos(rad) * currentR;
                                         double rz = Math.sin(rad) * currentR;
-                                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(rx, 1.0, rz), 2, 0, 0.1, 0, 0.01);
-                                        world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(rx, 2.0, rz), 2, 0, 0.1, 0, 0.01);
+                                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(rx, 1.0, rz),
+                                                2, 0, 0.1, 0, 0.01);
+                                        world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(rx, 2.0, rz), 2,
+                                                0, 0.1, 0, 0.01);
                                         if (currentR % 10 == 0) {
-                                            world.spawnParticle(Particle.EXPLOSION, center.clone().add(rx, 0.5, rz), 1, 0, 0, 0, 0);
+                                            world.spawnParticle(Particle.EXPLOSION, center.clone().add(rx, 0.5, rz), 1,
+                                                    0, 0, 0, 0);
                                         }
                                     }
                                     world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 0.5f);
@@ -285,7 +224,7 @@ public class AdminCommand implements CommandExecutor {
                         }
 
                         world.getWorldBorder().setCenter(center);
-                        world.getWorldBorder().setSize(750);
+                        world.getWorldBorder().setSize(1000);
                         for (Player online : Bukkit.getOnlinePlayers()) {
                             if (online.getWorld().equals(world)) {
                                 online.sendMessage(Component
@@ -334,7 +273,10 @@ public class AdminCommand implements CommandExecutor {
             sender.sendMessage(Component.text("Received Ritual Core and Ritual Spawner!", NamedTextColor.LIGHT_PURPLE));
         } else if (args[1].equalsIgnoreCase("portal")) {
             player.getInventory().addItem(ItemManager.createPortalObsidian());
-            sender.sendMessage(Component.text("Received 16x Portal Obsidian!", NamedTextColor.DARK_PURPLE));
+            sender.sendMessage(Component.text("Received Portal Obsidian!", NamedTextColor.DARK_PURPLE));
+        } else if (args[1].equalsIgnoreCase("prog1")) {
+            player.getInventory().addItem(ItemManager.createProgression1Item());
+            sender.sendMessage(Component.text("Received Progression 1 Catalyst!", NamedTextColor.GOLD));
         } else {
             sender.sendMessage(Component.text("Unknown item.", NamedTextColor.RED));
         }
@@ -347,8 +289,8 @@ public class AdminCommand implements CommandExecutor {
                 .append(Component.text("- Start progression stages", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin altar reset ", NamedTextColor.YELLOW)
                 .append(Component.text("- Clear all ritual entities and bars", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal> ", NamedTextColor.YELLOW)
-                .append(Component.text("- Give legendary gear, ritual items, or portal obsidian",
+        sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal|prog1> ", NamedTextColor.YELLOW)
+                .append(Component.text("- Give legendary gear, ritual items, portal obsidian, or progression catalyst",
                         NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin reload ", NamedTextColor.YELLOW)
                 .append(Component.text("- Reload plugin config", NamedTextColor.GRAY)));
