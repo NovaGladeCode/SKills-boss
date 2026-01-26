@@ -9,6 +9,7 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
+import org.bukkit.block.TileState;
 import org.bukkit.block.BlockFace;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -739,9 +740,13 @@ public class BossListener implements Listener {
 
             // Mark the beacon with a persistent data tag
             Block placedBlock = event.getBlock();
-            placedBlock.getPersistentDataContainer().set(
-                    new NamespacedKey(SkillsBoss.getInstance(), "progression_1_beacon"),
-                    PersistentDataType.BYTE, (byte) 1);
+            if (placedBlock.getState() instanceof TileState) {
+                TileState state = (TileState) placedBlock.getState();
+                state.getPersistentDataContainer().set(
+                        new NamespacedKey(SkillsBoss.getInstance(), "progression_1_beacon"),
+                        PersistentDataType.BYTE, (byte) 1);
+                state.update();
+            }
 
             event.getPlayer().sendMessage(
                     Component.text("Progression I Catalyst placed! Use ", NamedTextColor.GOLD)

@@ -8,6 +8,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.TileState;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -263,12 +264,16 @@ public class AdminCommand implements CommandExecutor {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
                     Location checkLoc = playerLoc.clone().add(x, y, z);
-                    if (checkLoc.getBlock().getType() == Material.BEACON) {
+                    Block block = checkLoc.getBlock();
+                    if (block.getType() == Material.BEACON) {
                         // Check if this beacon has the Progression 1 marker
-                        if (checkLoc.getBlock().getPersistentDataContainer().has(
-                                new NamespacedKey(SkillsBoss.getInstance(), "progression_1_beacon"),
-                                PersistentDataType.BYTE)) {
-                            return checkLoc;
+                        if (block.getState() instanceof TileState) {
+                            TileState state = (TileState) block.getState();
+                            if (state.getPersistentDataContainer().has(
+                                    new NamespacedKey(SkillsBoss.getInstance(), "progression_1_beacon"),
+                                    PersistentDataType.BYTE)) {
+                                return checkLoc;
+                            }
                         }
                     }
                 }
