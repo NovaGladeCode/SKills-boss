@@ -867,7 +867,7 @@ public class BossListener implements Listener {
         Title title = Title.title(Component.text("PHASE II", NamedTextColor.YELLOW, TextDecoration.BOLD),
                 Component.text("SUPREMUS ENRAGES", NamedTextColor.GOLD));
         Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
-        boss.getWorld().spawnParticle(Particle.FLASH, boss.getLocation(), 10);
+        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10);
         playerBroadcast(boss.getWorld(),
                 Component.text("Supremus enters Phase 2!", NamedTextColor.YELLOW, TextDecoration.BOLD));
         if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)

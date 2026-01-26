@@ -11,9 +11,12 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.time.Duration;
+import java.util.Random;
 
 public class AdminCommand implements CommandExecutor {
 
@@ -88,21 +91,28 @@ public class AdminCommand implements CommandExecutor {
     private void startProgressionZeroTransition(Player player) {
         World world = player.getWorld();
         Location center = player.getLocation();
+        Random random = new Random();
 
-        // 1. Initial Shock
+        // 1. Initial Shock - Darkness and Growl
+        world.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 2.0f, 0.5f);
         world.playSound(center, Sound.ENTITY_WITHER_DEATH, 1.0f, 0.5f);
-        world.spawnParticle(Particle.FLASH, center, 10, 2, 2, 2, 0);
+        world.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0);
+
+        for (Player p : world.getPlayers()) {
+            p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 100, 1));
+            p.playSound(p.getLocation(), Sound.BLOCK_BELL_RESONATE, 1f, 0.5f);
+        }
 
         Title countdownTitle = Title.title(
                 Component.text("!!! COLLAPSE IMMINENT !!!", NamedTextColor.DARK_RED, TextDecoration.BOLD),
-                Component.text("The world is resetting...", NamedTextColor.RED),
+                Component.text("The world is fracturing...", NamedTextColor.RED),
                 Title.Times.times(Duration.ofMillis(100), Duration.ofSeconds(3), Duration.ofMillis(500)));
 
         for (Player p : Bukkit.getOnlinePlayers())
             p.showTitle(countdownTitle);
 
         new BukkitRunnable() {
-            int ticks = 60; // 3 seconds of "horror"
+            int ticks = 80; // 4 seconds of horror
 
             @Override
             public void run() {
@@ -112,16 +122,36 @@ public class AdminCommand implements CommandExecutor {
                     return;
                 }
 
+                // Random Lightning Strikes
+                if (ticks % 8 == 0) {
+                    double angle = random.nextDouble() * 2 * Math.PI;
+                    double dist = random.nextDouble() * 15;
+                    Location strikeLoc = center.clone().add(Math.cos(angle) * dist, 0, Math.sin(angle) * dist);
+                    world.strikeLightningEffect(strikeLoc);
+                    world.playSound(strikeLoc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.8f, 0.5f + random.nextFloat());
+                }
+
                 if (ticks % 10 == 0) {
-                    world.playSound(center, Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 1f, 0.5f);
-                    world.spawnParticle(Particle.LARGE_SMOKE, center, 50, 5, 2, 5, 0.1);
+                    world.playSound(center, Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 1.5f, 0.1f);
+                    world.spawnParticle(Particle.LARGE_SMOKE, center, 100, 10, 2, 10, 0.1);
+                    world.spawnParticle(Particle.SOUL, center, 50, 8, 5, 8, 0.05);
+                    world.spawnParticle(Particle.REVERSE_PORTAL, center, 100, 15, 1, 15, 0.01);
+                }
+
+                // Rising debris simulation
+                for (int i = 0; i < 8; i++) {
+                    double rx = (random.nextDouble() - 0.5) * 30;
+                    double rz = (random.nextDouble() - 0.5) * 30;
+                    world.spawnParticle(Particle.GUST, center.clone().add(rx, 0, rz), 1, 0, 0.2, 0, 0.2);
                 }
 
                 // Distort vision for everyone
                 for (Player p : world.getPlayers()) {
-                    p.spawnParticle(Particle.WITCH, p.getLocation().add(0, 1, 0), 5, 0.5, 0.5, 0.5, 0);
-                    if (ticks == 20)
-                        p.playSound(p.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, 1f, 1f);
+                    p.spawnParticle(Particle.WITCH, p.getLocation().add(0, 1, 0), 10, 0.8, 0.8, 0.8, 0);
+                    if (ticks == 30) {
+                        p.playSound(p.getLocation(), Sound.BLOCK_END_PORTAL_SPAWN, 1.5f, 0.8f);
+                        p.playSound(p.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 2f, 0.5f);
+                    }
                 }
 
                 ticks--;
@@ -156,9 +186,10 @@ public class AdminCommand implements CommandExecutor {
 
     private void startProgressionOneCountdown(org.bukkit.World world) {
         Location center = world.getSpawnLocation();
+        Random random = new Random();
 
         new BukkitRunnable() {
-            int maxTicks = 10 * 20; // 10 seconds
+            int maxTicks = 15 * 20; // 15 seconds (made it longer for more epicness)
             int ticks = maxTicks;
 
             @Override
@@ -166,25 +197,37 @@ public class AdminCommand implements CommandExecutor {
                 try {
                     int seconds = (int) Math.ceil(ticks / 20.0);
 
-                    // Spiral Animation
-                    double radius = 3.0;
-                    double y = (maxTicks - ticks) * 0.15;
-                    if (y > 15)
-                        y = 15;
-                    double angle = ticks * 0.3;
-                    double x = Math.cos(angle) * radius;
-                    double z = Math.sin(angle) * radius;
-                    world.spawnParticle(Particle.END_ROD, center.clone().add(x, y, z), 2, 0, 0, 0, 0);
-                    world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(-x, y, -z), 2, 0, 0, 0, 0);
+                    // Massive Rising Vortex Animation
+                    double radius = 1.0 + (maxTicks - ticks) * 0.08;
+                    double angle = ticks * 0.4;
+                    for (int i = 0; i < 4; i++) {
+                        double subAngle = angle + (i * (Math.PI / 2));
+                        double x = Math.cos(subAngle) * radius;
+                        double z = Math.sin(subAngle) * radius;
+                        double y = (maxTicks - ticks) * 0.1;
+                        if (y > 30) y = 30; // Cap height
+
+                        Location partLoc = center.clone().add(x, y, z);
+                        world.spawnParticle(Particle.END_ROD, partLoc, 3, 0.1, 0.1, 0.1, 0.01);
+                        world.spawnParticle(Particle.WITCH, partLoc, 2, 0.1, 0.1, 0.1, 0.01);
+                        
+                        // Vertical beams
+                        if (ticks % 5 == 0) {
+                            world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(0, y, 0), 10, 0.5, 1, 0.5, 0.05);
+                        }
+                    }
 
                     if (ticks % 20 == 0 && seconds > 0) {
-                        Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.RED,
+                        Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.GOLD,
                                 TextDecoration.BOLD);
                         Component subTitle = Component.text("A New Era Approaches...",
-                                NamedTextColor.YELLOW);
+                                NamedTextColor.YELLOW, TextDecoration.ITALIC);
                         Title title = Title.title(mainTitle, subTitle,
                                 Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800),
                                         Duration.ofMillis(100)));
+
+                        world.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 2f, 0.5f + ((float)(maxTicks - ticks) / maxTicks));
+                        world.playSound(center, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.5f);
 
                         for (Player online : Bukkit.getOnlinePlayers()) {
                             if (online.getWorld().equals(world)) {
@@ -194,11 +237,12 @@ public class AdminCommand implements CommandExecutor {
                             }
                         }
 
-                        for (int i = 0; i < 360; i += 15) {
+                        // Expanding Golden Rings
+                        for (int i = 0; i < 360; i += 10) {
                             double rad = Math.toRadians(i);
-                            double rx = Math.cos(rad) * (4 + (10 - seconds));
-                            double rz = Math.sin(rad) * (4 + (10 - seconds));
-                            world.spawnParticle(Particle.FLAME, center.clone().add(rx, 0.5, rz), 1, 0, 0, 0, 0);
+                            double rx = Math.cos(rad) * (5 + (15 - seconds) * 2);
+                            double rz = Math.sin(rad) * (5 + (15 - seconds) * 2);
+                            world.spawnParticle(Particle.GLOW, center.clone().add(rx, 1.0, rz), 2, 0.1, 0.1, 0.1, 0.01);
                         }
                     }
 
@@ -210,35 +254,35 @@ public class AdminCommand implements CommandExecutor {
                                 TextDecoration.BOLD);
 
                         Title finalTitle = Title.title(mainTitle, subTitle,
-                                Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1500),
-                                        Duration.ofMillis(300)));
+                                Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(3000),
+                                        Duration.ofMillis(1000)));
 
-                        world.spawnParticle(Particle.EXPLOSION_EMITTER, center.clone().add(0, 5, 0), 50, 2, 5, 2, 0);
+                        world.spawnParticle(Particle.EXPLOSION_EMITTER, center.clone().add(0, 5, 0), 100, 5, 10, 5, 0);
+                        world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 2.0f, 1.0f);
+                        world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 2.0f, 1.0f);
+                        world.playSound(center, Sound.ENTITY_WITHER_SPAWN, 1.0f, 0.5f);
 
-                        // Expanding Massive Shockwave
-                        for (double r = 0; r < 25; r += 1.0) {
+                        // Massive Shockwave
+                        for (double r = 0; r < 40; r += 2.0) {
                             final double currentR = r;
-                            int delay = (int) (r / 1.5);
+                            int delay = (int) (r / 2.0);
                             new BukkitRunnable() {
                                 @Override
                                 public void run() {
-                                    for (int i = 0; i < 360; i += 5) {
+                                    for (int i = 0; i < 360; i += 4) {
                                         double rad = Math.toRadians(i);
                                         double rx = Math.cos(rad) * currentR;
                                         double rz = Math.sin(rad) * currentR;
-                                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(rx, 0.5, rz),
-                                                1, 0, 0, 0, 0);
-                                        world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(rx, 1.5, rz), 1,
-                                                0, 0, 0, 0);
+                                        world.spawnParticle(Particle.SOUL_FIRE_FLAME, center.clone().add(rx, 1.0, rz), 2, 0, 0.1, 0, 0.01);
+                                        world.spawnParticle(Particle.DRAGON_BREATH, center.clone().add(rx, 2.0, rz), 2, 0, 0.1, 0, 0.01);
+                                        if (currentR % 10 == 0) {
+                                            world.spawnParticle(Particle.EXPLOSION, center.clone().add(rx, 0.5, rz), 1, 0, 0, 0, 0);
+                                        }
                                     }
-                                    world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 0.2f, 0.5f);
+                                    world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 0.5f);
                                 }
                             }.runTaskLater(SkillsBoss.getInstance(), delay);
                         }
-
-                        world.playSound(center, Sound.ENTITY_WITHER_SPAWN, 1.0f, 0.5f);
-                        world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1.0f, 1.0f);
-                        world.playSound(center, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
 
                         world.getWorldBorder().setCenter(center);
                         world.getWorldBorder().setSize(750);
@@ -250,6 +294,7 @@ public class AdminCommand implements CommandExecutor {
                                                 .text("A New Beginning", NamedTextColor.DARK_RED,
                                                         TextDecoration.BOLD)));
                                 online.showTitle(finalTitle);
+                                online.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 200, 2));
                             }
                         }
                         cancel();
