@@ -13,6 +13,8 @@ import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -21,6 +23,17 @@ import java.util.Map;
 import java.util.Set;
 
 public class ProgressionListener implements Listener {
+
+    public ProgressionListener() {
+        // Periodic task to catch command-based changes or items that missed events
+        org.bukkit.Bukkit.getScheduler().runTaskTimer(SkillsBoss.getInstance(), () -> {
+            if (SkillsBoss.getProgressionLevel() == 1) {
+                for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+                    sanitizeInventory(player);
+                }
+            }
+        }, 20L, 20L); // Every second
+    }
 
     private static final Set<Material> RESTRICTED_ITEMS = EnumSet.of(
             Material.DIAMOND_HELMET,
@@ -215,8 +228,22 @@ public class ProgressionListener implements Listener {
         sanitizeInventory(event.getPlayer());
     }
 
+    @EventHandler
+    public void onItemHeld(PlayerItemHeldEvent event) {
+        if (SkillsBoss.getProgressionLevel() == 1) {
+            sanitizeInventory(event.getPlayer());
+        }
+    }
+
+    @EventHandler
+    public void onSwapHand(PlayerSwapHandItemsEvent event) {
+        if (SkillsBoss.getProgressionLevel() == 1) {
+            sanitizeInventory(event.getPlayer());
+        }
+    }
+
     private void sanitizeInventory(Player player) {
-        if (player.isOp() || SkillsBoss.getProgressionLevel() != 1)
+        if (SkillsBoss.getProgressionLevel() != 1)
             return;
 
         int gapCount = 0;
@@ -231,8 +258,11 @@ public class ProgressionListener implements Listener {
             // 1. Restricted items (Diamond/Netherite)
             if (RESTRICTED_ITEMS.contains(item.getType())) {
                 if (!ItemManager.isCustomItem(item)) {
-                    player.getInventory().setItem(i, null);
-                    continue;
+                    if (!player.isOp()) { // Still allow OPs to hold forbidden gear if they want, but sanitize enchants
+                                          // for everyone
+                        player.getInventory().setItem(i, null);
+                        continue;
+                    }
                 }
             }
 
@@ -240,6 +270,7 @@ public class ProgressionListener implements Listener {
             sanitizeItem(item);
 
             // 3. Gap and Cobweb limits
+            // Gaps/Cobwebs are restricted for everyone in Progression 1
             if (item.getType() == Material.GOLDEN_APPLE || item.getType() == Material.ENCHANTED_GOLDEN_APPLE) {
                 if (gapCount >= 8) {
                     player.getInventory().setItem(i, null);
