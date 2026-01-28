@@ -2,14 +2,22 @@ package com.novaglade.skillsboss.listeners;
 
 import com.novaglade.skillsboss.SkillsBoss;
 import com.novaglade.skillsboss.items.ItemManager;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Set;
 
 public class ProgressionListener implements Listener {
@@ -20,11 +28,18 @@ public class ProgressionListener implements Listener {
             Material.DIAMOND_LEGGINGS,
             Material.DIAMOND_BOOTS,
             Material.DIAMOND_SWORD,
+            Material.DIAMOND_AXE,
+            Material.DIAMOND_SHOVEL,
+            Material.DIAMOND_HOE,
             Material.NETHERITE_HELMET,
             Material.NETHERITE_CHESTPLATE,
             Material.NETHERITE_LEGGINGS,
             Material.NETHERITE_BOOTS,
             Material.NETHERITE_SWORD,
+            Material.NETHERITE_AXE,
+            Material.NETHERITE_SHOVEL,
+            Material.NETHERITE_HOE,
+            Material.NETHERITE_PICKAXE,
             Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
 
     @EventHandler
@@ -35,17 +50,19 @@ public class ProgressionListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player))
             return;
         Player player = (Player) event.getWhoClicked();
+
+        // Run sanitization task to handle the inventory after the click
+        org.bukkit.Bukkit.getScheduler().runTask(SkillsBoss.getInstance(), () -> sanitizeInventory(player));
+
         if (player.isOp())
             return;
-
-        checkAndRemove(player);
 
         ItemStack item = event.getCurrentItem();
         if (item != null && RESTRICTED_ITEMS.contains(item.getType())) {
             if (!ItemManager.isCustomItem(item)) {
                 event.setCurrentItem(null);
-                player.sendMessage(net.kyori.adventure.text.Component.text("This gear is forbidden in Phase One!",
-                        net.kyori.adventure.text.format.NamedTextColor.RED));
+                player.sendMessage(Component.text("This gear is forbidden in Phase One!",
+                        NamedTextColor.RED));
             }
         }
 
@@ -53,9 +70,19 @@ public class ProgressionListener implements Listener {
         if (cursor != null && RESTRICTED_ITEMS.contains(cursor.getType())) {
             if (!ItemManager.isCustomItem(cursor)) {
                 event.setCursor(null);
-                player.sendMessage(net.kyori.adventure.text.Component.text("This gear is forbidden in Phase One!",
-                        net.kyori.adventure.text.format.NamedTextColor.RED));
+                player.sendMessage(Component.text("This gear is forbidden in Phase One!",
+                        NamedTextColor.RED));
             }
+        }
+    }
+
+    @EventHandler
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (SkillsBoss.getProgressionLevel() < 1)
+            return;
+        if (event.getWhoClicked() instanceof Player) {
+            Player player = (Player) event.getWhoClicked();
+            org.bukkit.Bukkit.getScheduler().runTask(SkillsBoss.getInstance(), () -> sanitizeInventory(player));
         }
     }
 
@@ -74,10 +101,14 @@ public class ProgressionListener implements Listener {
             if (!ItemManager.isCustomItem(item)) {
                 event.setCancelled(true);
                 event.getItem().remove();
-                player.sendMessage(net.kyori.adventure.text.Component.text("You cannot pick up this gear in Phase One!",
-                        net.kyori.adventure.text.format.NamedTextColor.RED));
+                player.sendMessage(Component.text("You cannot pick up this gear in Phase One!",
+                        NamedTextColor.RED));
+                return;
             }
         }
+
+        // Sanitize the picked up item or the inventory after pickup
+        org.bukkit.Bukkit.getScheduler().runTask(SkillsBoss.getInstance(), () -> sanitizeInventory(player));
     }
 
     @EventHandler
@@ -127,12 +158,36 @@ public class ProgressionListener implements Listener {
     }
 
     @EventHandler
-    public void onEnchant(org.bukkit.event.enchantment.EnchantItemEvent event) {
-        if (SkillsBoss.getProgressionLevel() < 1)
+    public void onEnchant(EnchantItemEvent event) {
+        if (SkillsBoss.getProgressionLevel() != 1)
             return;
 
-        event.getEnchantsToAdd().entrySet().removeIf(
-                entry -> entry.getKey().equals(org.bukkit.enchantments.Enchantment.PROTECTION) && entry.getValue() > 2);
+        Map<Enchantment, Integer> enchants = event.getEnchantsToAdd();
+
+        if (enchants.containsKey(Enchantment.PROTECTION) && enchants.get(Enchantment.PROTECTION) > 3) {
+            enchants.put(Enchantment.PROTECTION, 3);
+        }
+
+        if (enchants.containsKey(Enchantment.SHARPNESS) && enchants.get(Enchantment.SHARPNESS) > 1) {
+            enchants.put(Enchantment.SHARPNESS, 1);
+        }
+
+        enchants.remove(Enchantment.FIRE_ASPECT);
+    }
+
+    @EventHandler
+    public void onAnvil(PrepareAnvilEvent event) {
+        if (SkillsBoss.getProgressionLevel() != 1)
+            return;
+
+        ItemStack result = event.getResult();
+        if (result == null || result.getType() == Material.AIR)
+            return;
+
+        boolean changed = sanitizeItem(result);
+        if (changed) {
+            event.setResult(result);
+        }
     }
 
     @EventHandler
@@ -157,18 +212,87 @@ public class ProgressionListener implements Listener {
     public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
-        checkAndRemove(event.getPlayer());
+        sanitizeInventory(event.getPlayer());
     }
 
-    private void checkAndRemove(Player player) {
-        if (player.isOp())
+    private void sanitizeInventory(Player player) {
+        if (player.isOp() || SkillsBoss.getProgressionLevel() != 1)
             return;
-        for (ItemStack item : player.getInventory().getContents()) {
-            if (item != null && RESTRICTED_ITEMS.contains(item.getType())) {
+
+        int gapCount = 0;
+        int cobwebCount = 0;
+
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack item = contents[i];
+            if (item == null || item.getType() == Material.AIR)
+                continue;
+
+            // 1. Restricted items (Diamond/Netherite)
+            if (RESTRICTED_ITEMS.contains(item.getType())) {
                 if (!ItemManager.isCustomItem(item)) {
-                    player.getInventory().remove(item);
+                    player.getInventory().setItem(i, null);
+                    continue;
+                }
+            }
+
+            // 2. Enchantment limits
+            sanitizeItem(item);
+
+            // 3. Gap and Cobweb limits
+            if (item.getType() == Material.GOLDEN_APPLE || item.getType() == Material.ENCHANTED_GOLDEN_APPLE) {
+                if (gapCount >= 8) {
+                    player.getInventory().setItem(i, null);
+                } else if (gapCount + item.getAmount() > 8) {
+                    item.setAmount(8 - gapCount);
+                    gapCount = 8;
+                } else {
+                    gapCount += item.getAmount();
+                }
+            } else if (item.getType() == Material.COBWEB) {
+                if (cobwebCount >= 8) {
+                    player.getInventory().setItem(i, null);
+                } else if (cobwebCount + item.getAmount() > 8) {
+                    item.setAmount(8 - cobwebCount);
+                    cobwebCount = 8;
+                } else {
+                    cobwebCount += item.getAmount();
                 }
             }
         }
+    }
+
+    private boolean sanitizeItem(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null)
+            return false;
+        boolean changed = false;
+
+        if (meta.hasEnchant(Enchantment.PROTECTION)) {
+            if (meta.getEnchantLevel(Enchantment.PROTECTION) > 3) {
+                meta.addEnchant(Enchantment.PROTECTION, 3, true);
+                changed = true;
+            }
+        }
+
+        if (meta.hasEnchant(Enchantment.SHARPNESS)) {
+            if (meta.getEnchantLevel(Enchantment.SHARPNESS) > 1) {
+                meta.addEnchant(Enchantment.SHARPNESS, 1, true);
+                changed = true;
+            }
+        }
+
+        if (meta.hasEnchant(Enchantment.FIRE_ASPECT)) {
+            meta.removeEnchant(Enchantment.FIRE_ASPECT);
+            changed = true;
+        }
+
+        if (changed) {
+            item.setItemMeta(meta);
+        }
+        return changed;
     }
 }
