@@ -372,7 +372,8 @@ public class AdminCommand implements CommandExecutor {
             sender.sendMessage(Component.text("Received Ritual Core and Ritual Spawner!", NamedTextColor.LIGHT_PURPLE));
         } else if (args[1].equalsIgnoreCase("portal")) {
             player.getInventory().addItem(ItemManager.createPortalObsidian());
-            sender.sendMessage(Component.text("Received Portal Obsidian!", NamedTextColor.DARK_PURPLE));
+            player.getInventory().addItem(ItemManager.createPortalIgniter());
+            sender.sendMessage(Component.text("Received Portal Frame Block and Igniter!", NamedTextColor.LIGHT_PURPLE));
         } else if (args[1].equalsIgnoreCase("prog1")) {
             player.getInventory().addItem(ItemManager.createProgression1Item());
             sender.sendMessage(Component.text("Received Progression 1 Catalyst!", NamedTextColor.GOLD));

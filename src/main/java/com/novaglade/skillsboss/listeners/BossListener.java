@@ -755,36 +755,106 @@ public class BossListener implements Listener {
                                     .decorate(TextDecoration.BOLD))
                             .append(Component.text(" to activate it.", NamedTextColor.GOLD)));
         } else if (ItemManager.isPortalObsidian(event.getItemInHand())) {
-            event.setCancelled(true);
-            if (event.getPlayer().getGameMode() != GameMode.CREATIVE)
-                event.getItemInHand().setAmount(event.getItemInHand().getAmount() - 1);
-            generateNetherPortalFrame(event.getBlock().getLocation(), event.getPlayer().getFacing());
+            // Allow placing the barrier block normally
             event.getPlayer().sendMessage(
-                    Component.text("The Portal Frame manifests before you...", NamedTextColor.DARK_PURPLE));
+                    Component.text("Portal Frame Block placed. Build your shape, then ignite it!",
+                            NamedTextColor.LIGHT_PURPLE));
         }
     }
 
-    private void generateNetherPortalFrame(Location center, BlockFace face) {
-        boolean axisZ = (face == BlockFace.EAST || face == BlockFace.WEST);
-        for (int i = -2; i <= 2; i++) {
-            for (int y = 0; y <= 5; y++) {
-                int dx = axisZ ? 0 : i;
-                int dz = axisZ ? i : 0;
-                center.clone().add(dx, y, dz).getBlock().setType(Material.AIR);
+    private void igniteCustomPortal(Block startBlock) {
+        Set<Block> portalBlocks = new HashSet<>();
+        Queue<Block> toCheck = new LinkedList<>();
+        toCheck.add(startBlock);
+
+        while (!toCheck.isEmpty()) {
+            Block current = toCheck.poll();
+            if (current.getType() == Material.BARRIER && !portalBlocks.contains(current)) {
+                portalBlocks.add(current);
+                // Check all 6 neighbors
+                for (BlockFace face : BlockFace.values()) {
+                    if (face.isCartesian()) {
+                        toCheck.add(current.getRelative(face));
+                    }
+                }
             }
         }
-        for (int i = -2; i <= 2; i++) {
-            int dx = axisZ ? 0 : i;
-            int dz = axisZ ? i : 0;
-            center.clone().add(dx, 0, dz).getBlock().setType(Material.CRYING_OBSIDIAN);
-            center.clone().add(dx, 5, dz).getBlock().setType(Material.CRYING_OBSIDIAN);
+
+        if (portalBlocks.isEmpty())
+            return;
+
+        Location center = startBlock.getLocation();
+        for (Block b : portalBlocks) {
+            b.setType(Material.NETHER_PORTAL);
         }
-        for (int y = 1; y <= 4; y++) {
-            int dx = axisZ ? 0 : 2;
-            int dz = axisZ ? 2 : 0;
-            center.clone().add(dx, y, dz).getBlock().setType(Material.CRYING_OBSIDIAN);
-            center.clone().add(-dx, y, -dz).getBlock().setType(Material.CRYING_OBSIDIAN);
-        }
+
+        SkillsBoss.setProgressionLevel(2);
+        Title title = Title.title(
+                Component.text("PROGRESSION II", NamedTextColor.RED).decorate(TextDecoration.BOLD),
+                Component.text("THE PORTAL AWAKENS", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD));
+        Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
+
+        // Global Portal Pull Animation
+        new BukkitRunnable() {
+            int ticks = 0;
+
+            @Override
+            public void run() {
+                if (ticks > 200) {
+                    cancel();
+                    return;
+                }
+
+                // Visual effects at the portal
+                for (Block b : portalBlocks) {
+                    if (ticks % 5 == 0) {
+                        b.getWorld().spawnParticle(Particle.PORTAL, b.getLocation().add(0.5, 0.5, 0.5), 3, 0.3, 0.3,
+                                0.3,
+                                0.1);
+                    }
+                }
+
+                // Global pull
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (!p.getWorld().equals(center.getWorld()))
+                        continue;
+                    double dist = p.getLocation().distance(center);
+                    if (dist > 500)
+                        dist = 500; // Cap distance for force calculation
+
+                    Vector pull = center.toVector().subtract(p.getLocation().toVector()).normalize();
+
+                    // Stronger pull that scales with distance to ensure everyone arrives
+                    double force = 0.1 + (dist * 0.005);
+                    if (force > 0.8)
+                        force = 0.8;
+
+                    if (dist < 1.5) {
+                        // Teleport to Nether
+                        org.bukkit.World nether = Bukkit.getWorlds().stream()
+                                .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NETHER)
+                                .findFirst().orElse(null);
+                        if (nether != null) {
+                            p.teleport(nether.getSpawnLocation());
+                            p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
+                            p.sendMessage(
+                                    Component.text("You have been consumed by the Avernus!", NamedTextColor.DARK_RED));
+                        }
+                        continue;
+                    }
+
+                    p.setVelocity(p.getVelocity().add(pull.multiply(force)));
+
+                    if (ticks % 20 == 0) {
+                        p.playSound(p.getLocation(), Sound.BLOCK_PORTAL_AMBIENT, 0.3f, 0.5f);
+                        p.sendMessage(
+                                Component.text("The dimensional rift pulls at your soul...", NamedTextColor.DARK_RED)
+                                        .decorate(TextDecoration.ITALIC));
+                    }
+                }
+                ticks++;
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
     @EventHandler
@@ -795,75 +865,12 @@ public class BossListener implements Listener {
         if (item == null || !ItemManager.isPortalIgniter(item))
             return;
         Block block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.CRYING_OBSIDIAN)
+        if (block == null || block.getType() != Material.BARRIER)
             return;
         event.setCancelled(true);
-        Location portalBase = findNearbyPortalFrame(block.getLocation(), 5);
-        if (portalBase != null) {
-            item.setAmount(item.getAmount() - 1);
-            lightPortalFrame(portalBase);
-            SkillsBoss.setProgressionLevel(2);
-            Title title = Title.title(
-                    Component.text("PROGRESSION II", NamedTextColor.RED).decorate(TextDecoration.BOLD),
-                    Component.text("THE PORTAL AWAKENS", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD));
-            Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
-        }
-    }
 
-    private Location findNearbyPortalFrame(Location center, int radius) {
-        Location best = null;
-        for (int x = -radius; x <= radius; x++)
-            for (int y = -radius; y <= radius; y++)
-                for (int z = -radius; z <= radius; z++) {
-                    Location check = center.clone().add(x, y, z);
-                    if (check.getBlock().getType() == Material.CRYING_OBSIDIAN)
-                        if (best == null || check.getY() < best.getY())
-                            best = check;
-                }
-        return best;
-    }
-
-    private void lightPortalFrame(Location base) {
-        boolean axisZ = false;
-        // Detect axis
-        if (base.clone().add(0, 0, 1).getBlock().getType() == Material.CRYING_OBSIDIAN ||
-                base.clone().add(0, 0, 2).getBlock().getType() == Material.CRYING_OBSIDIAN) {
-            axisZ = true;
-        }
-
-        for (int y = 1; y <= 4; y++) {
-            for (int i = -1; i <= 1; i++) {
-                int dx = axisZ ? 0 : i;
-                int dz = axisZ ? i : 0;
-                Location check = base.clone().add(dx, y, dz);
-                if (check.getBlock().getType() == Material.AIR)
-                    check.getBlock().setType(Material.NETHER_PORTAL);
-            }
-        }
-
-        // Portal Pull Animation
-        new BukkitRunnable() {
-            int ticks = 0;
-
-            @Override
-            public void run() {
-                if (ticks > 200) {
-                    cancel();
-                    return;
-                }
-                base.getWorld().spawnParticle(Particle.PORTAL, base.clone().add(0, 2, 0), 20, 1, 2, 1, 0.1);
-                for (Player p : base.getWorld().getPlayers()) {
-                    if (p.getLocation().distance(base) < 12) {
-                        Vector pull = base.clone().add(0, 2, 0).toVector().subtract(p.getLocation().toVector())
-                                .normalize().multiply(0.15);
-                        p.setVelocity(p.getVelocity().add(pull));
-                        if (ticks % 20 == 0)
-                            p.playSound(p.getLocation(), Sound.BLOCK_PORTAL_AMBIENT, 0.5f, 0.5f);
-                    }
-                }
-                ticks++;
-            }
-        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
+        item.setAmount(item.getAmount() - 1);
+        igniteCustomPortal(block);
     }
 
     private void playerBroadcast(World world, Component msg) {

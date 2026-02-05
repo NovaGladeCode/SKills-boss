@@ -114,15 +114,17 @@ public class ItemManager {
     }
 
     public static ItemStack createPortalObsidian() {
-        ItemStack item = new ItemStack(Material.CRYING_OBSIDIAN, 1);
+        ItemStack item = new ItemStack(Material.BARRIER, 1);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(
-                    Component.text("Portal Obsidian", NamedTextColor.DARK_PURPLE).decorate(TextDecoration.BOLD));
+                    Component.text("Portal Frame Block", NamedTextColor.LIGHT_PURPLE).decorate(TextDecoration.BOLD));
             List<Component> lore = new ArrayList<>();
-            lore.add(Component.text("Ancient obsidian imbued with dimensional energy.", NamedTextColor.LIGHT_PURPLE));
+            lore.add(Component.text("A dimensional anchor used to shape the portal.", NamedTextColor.GRAY));
             lore.add(Component.empty());
-            lore.add(Component.text("Place this to spawn the Avernus Portal.", NamedTextColor.GRAY,
+            lore.add(Component.text("Build your custom portal shape with these,", NamedTextColor.DARK_PURPLE,
+                    TextDecoration.ITALIC));
+            lore.add(Component.text("then ignite it with the Portal Igniter.", NamedTextColor.DARK_PURPLE,
                     TextDecoration.ITALIC));
             meta.lore(lore);
             meta.getPersistentDataContainer().set(PORTAL_OBSIDIAN_KEY, PersistentDataType.BYTE, (byte) 1);
