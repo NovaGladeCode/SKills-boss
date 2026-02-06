@@ -33,10 +33,12 @@ import org.bukkit.scoreboard.Team;
 import org.bukkit.util.EulerAngle;
 import java.util.Random;
 import java.util.stream.Collectors;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.util.Vector;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.event.entity.EntityShootBowEvent;
 
 public class BossListener implements Listener {
 
@@ -230,7 +232,6 @@ public class BossListener implements Listener {
                     Component.text("THE CATACLYSM IS AVERTED!", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
 
             deathLoc.getWorld().dropItemNaturally(deathLoc, ItemManager.createPortalIgniter());
-            deathLoc.getWorld().dropItemNaturally(deathLoc, ItemManager.createCustomItem(Material.DIAMOND_SWORD));
 
             playerBroadcast(deathLoc.getWorld(),
                     Component.text("The Portal Igniter has been dropped!", NamedTextColor.LIGHT_PURPLE)
@@ -381,7 +382,7 @@ public class BossListener implements Listener {
                         return ent == null || !ent.isValid() || ent.isDead();
                     });
 
-                    if (mobs.isEmpty() && waveTicks >= 40) {
+                    if (mobs.isEmpty() && waveTicks >= 10) {
                         waiting = false;
                         waveTicks = 0;
                         anchor.getWorld().playSound(anchor.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
@@ -425,6 +426,18 @@ public class BossListener implements Listener {
 
         bar.setTitle(titles[waveId]);
         playerBroadcast(stand.getWorld(), msgs[waveId]);
+
+        // Visual Shockwave
+        stand.getWorld().playSound(stand.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1f, 1.5f);
+        for (int i = 0; i < 360; i += 15) {
+            double angle = Math.toRadians(i);
+            Vector dir = new Vector(Math.cos(angle), 0, Math.sin(angle));
+            for (double d = 1; d < 10; d += 0.5) {
+                stand.getWorld().spawnParticle(Particle.CLOUD, stand.getLocation().clone().add(dir.clone().multiply(d)),
+                        1, 0, 0.1, 0, 0.02);
+            }
+        }
+
         spawnWave(stand, waveId);
     }
 
@@ -440,44 +453,49 @@ public class BossListener implements Listener {
                 LivingEntity e = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 if (e != null)
-                    applyDiamondGear(e, 40);
+                    applyDiamondGear(e, 80);
             }
         } else if (waveId == 2) {
             for (int i = 0; i < 8; i++) {
-                LivingEntity e = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
+                LivingEntity e = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (e != null)
-                    applyDiamondGear(e, 50);
+                    applyDiamondGear(e, 80);
             }
         } else if (waveId == 3) {
             for (int i = 0; i < 8; i++) {
-                LivingEntity e = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard", Material.IRON_SWORD,
+                LivingEntity e = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
+                        Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (e != null)
-                    applyDiamondGear(e, 75);
+                    applyDiamondGear(e, 100);
             }
         } else if (waveId == 4) {
             for (int i = 0; i < 4; i++) {
                 LivingEntity s = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 if (s != null)
-                    applyDiamondGear(s, 40);
-                LivingEntity z = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.IRON_SWORD,
+                    applyDiamondGear(s, 80);
+                LivingEntity z = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (z != null)
-                    applyDiamondGear(z, 50);
-                LivingEntity w = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard", Material.IRON_SWORD,
+                    applyDiamondGear(z, 80);
+                LivingEntity w = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
+                        Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (w != null)
-                    applyDiamondGear(w, 75);
+                    applyDiamondGear(w, 100);
             }
             Skeleton archer = (Skeleton) spawnMob(spawnLoc, EntityType.SKELETON, "§6§lThe Gatekeeper (Archer)",
                     Material.BOW,
                     stand.getUniqueId(), mobs);
             if (archer != null) {
-                applyDiamondGear(archer, 150);
+                applyDiamondGear(archer, 300);
                 archer.getPersistentDataContainer().set(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
                         PersistentDataType.BYTE, (byte) 1);
+                ItemStack bow = archer.getEquipment().getItemInMainHand();
+                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 5);
+                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, 2);
             }
             WitherSkeleton warrior = (WitherSkeleton) spawnMob(spawnLoc, EntityType.WITHER_SKELETON,
                     "§6§lThe Gatekeeper (Warrior)", Material.DIAMOND_SWORD, stand.getUniqueId(), mobs);
@@ -534,10 +552,20 @@ public class BossListener implements Listener {
         e.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
         e.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
         e.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+
+        if (e instanceof Skeleton) {
+            ItemStack bow = e.getEquipment().getItemInMainHand();
+            if (bow != null && bow.getType() == Material.BOW) {
+                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 3);
+                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FLAME, 1);
+            }
+        }
+
         e.getEquipment().setHelmetDropChance(0);
         e.getEquipment().setChestplateDropChance(0);
         e.getEquipment().setLeggingsDropChance(0);
         e.getEquipment().setBootsDropChance(0);
+        e.getEquipment().setItemInMainHandDropChance(0);
     }
 
     public static void spawnManualRitual(Location loc) {
@@ -566,6 +594,16 @@ public class BossListener implements Listener {
         playerBroadcast(loc.getWorld(),
                 Component.text("SUPREMUS AND HIS GUARD HAVE AWAKENED!", NamedTextColor.DARK_RED)
                         .decorate(TextDecoration.BOLD));
+
+        // Cinematic Spawn
+        loc.getWorld().strikeLightningEffect(loc);
+        loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 2f, 0.5f);
+        for (int i = 0; i < 360; i += 10) {
+            double angle = Math.toRadians(i);
+            Location pLoc = loc.clone().add(Math.cos(angle) * 5, 0, Math.sin(angle) * 5);
+            loc.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, pLoc, 10, 0.1, 2, 0.1, 0.05);
+        }
+
         Location spawn = spawnPoint.clone().add(0, 2, 0);
         WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
         boss.customName(Component.text("§4§lSUPREMUS"));
@@ -622,22 +660,6 @@ public class BossListener implements Listener {
             }
             if (sentinel.getAttribute(Attribute.ATTACK_DAMAGE) != null)
                 sentinel.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(40.0);
-
-            Material dropMaterial = null;
-            if (i == 0)
-                dropMaterial = Material.DIAMOND_HELMET;
-            else if (i == 1)
-                dropMaterial = Material.DIAMOND_CHESTPLATE;
-            else if (i == 2)
-                dropMaterial = Material.DIAMOND_LEGGINGS;
-            else if (i == 3)
-                dropMaterial = Material.DIAMOND_BOOTS;
-            else if (i == 4)
-                dropMaterial = Material.DIAMOND_SWORD;
-
-            if (dropMaterial != null)
-                sentinel.getPersistentDataContainer().set(DROP_ITEM_KEY, PersistentDataType.STRING,
-                        dropMaterial.name());
 
             ritualTeam.addEntry(sentinel.getUniqueId().toString());
             minions.add(sentinel.getUniqueId());
@@ -754,18 +776,31 @@ public class BossListener implements Listener {
                             .append(Component.text("/admin progression 1", NamedTextColor.YELLOW)
                                     .decorate(TextDecoration.BOLD))
                             .append(Component.text(" to activate it.", NamedTextColor.GOLD)));
-        } else if (ItemManager.isPortalObsidian(event.getItemInHand())) {
-            // Allow placing the barrier block normally
+        } else if (ItemManager.isPortalCoreBlock(event.getItemInHand())) {
             event.getPlayer().sendMessage(
-                    Component.text("Portal Frame Block placed. Build your shape, then ignite it!",
-                            NamedTextColor.LIGHT_PURPLE));
+                    Component.text("Portal Ignition Core placed. Build your shape with Barrier blocks around it!",
+                            NamedTextColor.GOLD));
+        } else if (event.getItemInHand().getType() == Material.BARRIER) {
+            // Already handled by being a barrier, but we can add a message
+            if (event.getPlayer().getInventory().getItemInMainHand().getType() == Material.BARRIER) {
+                // Just let it place
+            }
         }
     }
 
-    private void igniteCustomPortal(Block startBlock) {
+    private void igniteCustomPortal(Block coreBlock) {
         Set<Block> portalBlocks = new HashSet<>();
         Queue<Block> toCheck = new LinkedList<>();
-        toCheck.add(startBlock);
+
+        // Start by checking all neighbors of the core for barriers
+        for (BlockFace face : BlockFace.values()) {
+            if (face.isCartesian()) {
+                Block neighbor = coreBlock.getRelative(face);
+                if (neighbor.getType() == Material.BARRIER) {
+                    toCheck.add(neighbor);
+                }
+            }
+        }
 
         while (!toCheck.isEmpty()) {
             Block current = toCheck.poll();
@@ -865,12 +900,17 @@ public class BossListener implements Listener {
         if (item == null || !ItemManager.isPortalIgniter(item))
             return;
         Block block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.BARRIER)
+        if (block == null || block.getType() != Material.CRYING_OBSIDIAN)
             return;
-        event.setCancelled(true);
 
-        item.setAmount(item.getAmount() - 1);
+        // We only ignite if it's Crying Obsidian (our Core)
+        event.setCancelled(true);
         igniteCustomPortal(block);
+
+        // Damage the igniter or reduce its amount
+        if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
+            item.setAmount(item.getAmount() - 1);
+        }
     }
 
     private void playerBroadcast(World world, Component msg) {
@@ -888,6 +928,36 @@ public class BossListener implements Listener {
                         : event.getEntity().getLocation();
                 hit.getWorld().createExplosion(hit, 2.0f, false, false);
                 event.getEntity().remove();
+            }
+        }
+    }
+
+    @EventHandler
+    public void onArrowShoot(EntityShootBowEvent event) {
+        if (event.getEntity() instanceof Skeleton) {
+            Skeleton s = (Skeleton) event.getEntity();
+            if (s.getPersistentDataContainer().has(WAVE_MOB_KEY, PersistentDataType.STRING)) {
+                Entity arrow = event.getProjectile();
+                boolean isGatekeeper = s.getCustomName() != null &&
+                        PlainTextComponentSerializer.plainText().serialize(s.customName()).contains("Gatekeeper");
+
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (!arrow.isValid() || arrow.isOnGround()) {
+                            cancel();
+                            return;
+                        }
+                        if (isGatekeeper) {
+                            arrow.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, arrow.getLocation(), 3, 0.05, 0.05,
+                                    0.05, 0.02);
+                            arrow.getWorld().spawnParticle(Particle.LARGE_SMOKE, arrow.getLocation(), 1, 0, 0, 0, 0.01);
+                        } else {
+                            arrow.getWorld().spawnParticle(Particle.FLAME, arrow.getLocation(), 2, 0.02, 0.02, 0.02,
+                                    0.01);
+                        }
+                    }
+                }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
             }
         }
     }
@@ -935,29 +1005,37 @@ public class BossListener implements Listener {
     private void triggerBossAbility(LivingEntity boss, int type, boolean enhanced) {
         double multiplier = enhanced ? 1.5 : 1.0;
         if (type == 0) {
+            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_BLAZE_SHOOT, 1f, 0.5f);
             boss.getWorld().spawnParticle(Particle.FLAME, boss.getLocation(), (int) (200 * multiplier), 4, 1, 4, 0.2);
+            boss.getWorld().spawnParticle(Particle.LAVA, boss.getLocation(), (int) (50 * multiplier), 3, 1, 3, 0.1);
             boss.getNearbyEntities(8, 6, 8).forEach(e -> {
                 if (e instanceof Player && !e.isOp())
                     e.setFireTicks((int) (160 * multiplier));
             });
         } else if (type == 1) {
+            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.5f);
             boss.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), (int) (100 * multiplier), 3, 2,
                     3, 0.05);
+            boss.getWorld().spawnParticle(Particle.SOUL, boss.getLocation(), (int) (40 * multiplier), 2, 2, 2, 0.02);
             boss.getNearbyEntities(10, 10, 10).forEach(e -> {
                 if (e instanceof Player && !e.isOp())
                     ((Player) e).addPotionEffect(
                             new PotionEffect(PotionEffectType.WITHER, (int) (100 * multiplier), enhanced ? 2 : 1));
             });
         } else if (type == 2) {
-            boss.getWorld().spawnParticle(Particle.PORTAL, boss.getLocation(), (int) (200 * multiplier), 10, 2, 10, 0);
+            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.2f);
+            boss.getWorld().spawnParticle(Particle.REVERSE_PORTAL, boss.getLocation(), (int) (200 * multiplier), 10, 2,
+                    10, 0);
             boss.getNearbyEntities(12, 12, 12).forEach(e -> {
                 if (e instanceof Player && !e.isOp())
                     e.setVelocity(boss.getLocation().subtract(e.getLocation()).toVector().normalize()
                             .multiply(1.6 * multiplier));
             });
         } else if (type == 3) {
+            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 0.5f);
             boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), (int) (5 * multiplier), 4,
                     0.5, 4, 0);
+            boss.getWorld().spawnParticle(Particle.FLASH, boss.getLocation(), (int) (3 * multiplier), 2, 1, 2, 0);
             boss.getNearbyEntities(10, 5, 10).forEach(e -> {
                 if (e instanceof Player && !e.isOp()) {
                     e.setVelocity(new Vector(0, 1.8 * multiplier, 0));

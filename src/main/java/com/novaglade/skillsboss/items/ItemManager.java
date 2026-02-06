@@ -23,8 +23,10 @@ public class ItemManager {
             "custom_legendary_item");
     private static final NamespacedKey BOSS_SPAWN_KEY = new NamespacedKey(SkillsBoss.getInstance(),
             "boss_spawn_item");
-    private static final NamespacedKey PORTAL_OBSIDIAN_KEY = new NamespacedKey(SkillsBoss.getInstance(),
-            "portal_obsidian");
+    private static final NamespacedKey PORTAL_FRAME_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "portal_frame");
+    private static final NamespacedKey PORTAL_CORE_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "portal_core");
     private static final NamespacedKey BOSS_SPAWNER_KEY = new NamespacedKey(SkillsBoss.getInstance(),
             "boss_spawner_item");
     private static final NamespacedKey PROGRESSION_1_KEY = new NamespacedKey(SkillsBoss.getInstance(),
@@ -113,7 +115,7 @@ public class ItemManager {
         return item.getItemMeta().getPersistentDataContainer().has(BOSS_SPAWN_KEY, PersistentDataType.BYTE);
     }
 
-    public static ItemStack createPortalObsidian() {
+    public static ItemStack createPortalFrameBlock() {
         ItemStack item = new ItemStack(Material.BARRIER, 1);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
@@ -122,21 +124,41 @@ public class ItemManager {
             List<Component> lore = new ArrayList<>();
             lore.add(Component.text("A dimensional anchor used to shape the portal.", NamedTextColor.GRAY));
             lore.add(Component.empty());
-            lore.add(Component.text("Build your custom portal shape with these,", NamedTextColor.DARK_PURPLE,
-                    TextDecoration.ITALIC));
-            lore.add(Component.text("then ignite it with the Portal Igniter.", NamedTextColor.DARK_PURPLE,
+            lore.add(Component.text("Build your custom portal shape with these.", NamedTextColor.DARK_PURPLE,
                     TextDecoration.ITALIC));
             meta.lore(lore);
-            meta.getPersistentDataContainer().set(PORTAL_OBSIDIAN_KEY, PersistentDataType.BYTE, (byte) 1);
+            meta.getPersistentDataContainer().set(PORTAL_FRAME_KEY, PersistentDataType.BYTE, (byte) 1);
             item.setItemMeta(meta);
         }
         return item;
     }
 
-    public static boolean isPortalObsidian(ItemStack item) {
+    public static boolean isPortalFrameBlock(ItemStack item) {
         if (item == null || !item.hasItemMeta())
             return false;
-        return item.getItemMeta().getPersistentDataContainer().has(PORTAL_OBSIDIAN_KEY, PersistentDataType.BYTE);
+        return item.getItemMeta().getPersistentDataContainer().has(PORTAL_FRAME_KEY, PersistentDataType.BYTE);
+    }
+
+    public static ItemStack createPortalCoreBlock() {
+        ItemStack item = new ItemStack(Material.CRYING_OBSIDIAN, 1);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(
+                    Component.text("Portal Ignition Core", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Place this as the heart of your portal.", NamedTextColor.YELLOW));
+            lore.add(Component.text("Ignite this block to activate the frame.", NamedTextColor.GRAY));
+            meta.lore(lore);
+            meta.getPersistentDataContainer().set(PORTAL_CORE_KEY, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isPortalCoreBlock(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+        return item.getItemMeta().getPersistentDataContainer().has(PORTAL_CORE_KEY, PersistentDataType.BYTE);
     }
 
     private static final NamespacedKey PORTAL_IGNITER_KEY = new NamespacedKey(SkillsBoss.getInstance(),
