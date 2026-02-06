@@ -561,11 +561,11 @@ public class BossListener implements Listener {
             }
         }
 
-        e.getEquipment().setHelmetDropChance(0);
-        e.getEquipment().setChestplateDropChance(0);
-        e.getEquipment().setLeggingsDropChance(0);
-        e.getEquipment().setBootsDropChance(0);
-        e.getEquipment().setItemInMainHandDropChance(0);
+        e.getEquipment().setHelmetDropChance(0.0f);
+        e.getEquipment().setChestplateDropChance(0.0f);
+        e.getEquipment().setLeggingsDropChance(0.0f);
+        e.getEquipment().setBootsDropChance(0.0f);
+        e.getEquipment().setItemInMainHandDropChance(0.0f);
     }
 
     public static void spawnManualRitual(Location loc) {
@@ -818,7 +818,7 @@ public class BossListener implements Listener {
         if (portalBlocks.isEmpty())
             return;
 
-        Location center = startBlock.getLocation();
+        Location center = coreBlock.getLocation();
         for (Block b : portalBlocks) {
             b.setType(Material.NETHER_PORTAL);
         }
