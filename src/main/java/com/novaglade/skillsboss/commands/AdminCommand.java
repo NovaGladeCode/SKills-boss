@@ -138,7 +138,7 @@ public class AdminCommand implements CommandExecutor {
         Random random = new Random();
 
         new BukkitRunnable() {
-            int maxTicks = 15 * 20; // 15 seconds (made it longer for more epicness)
+            int maxTicks = 5 * 20; // Reduced to 5 seconds
             int ticks = maxTicks;
 
             @Override

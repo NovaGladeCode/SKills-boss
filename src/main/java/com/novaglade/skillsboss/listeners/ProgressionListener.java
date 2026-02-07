@@ -223,9 +223,11 @@ public class ProgressionListener implements Listener {
 
     @EventHandler
     public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
-        sanitizeInventory(event.getPlayer());
+        sanitizeInventory(player);
     }
 
     @EventHandler

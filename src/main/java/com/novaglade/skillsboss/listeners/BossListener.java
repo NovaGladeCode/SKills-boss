@@ -382,7 +382,7 @@ public class BossListener implements Listener {
                         return ent == null || !ent.isValid() || ent.isDead();
                     });
 
-                    if (mobs.isEmpty() && waveTicks >= 10) {
+                    if (mobs.isEmpty() && waveTicks >= 2) {
                         waiting = false;
                         waveTicks = 0;
                         anchor.getWorld().playSound(anchor.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
