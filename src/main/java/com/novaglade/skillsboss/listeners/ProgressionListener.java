@@ -42,6 +42,7 @@ public class ProgressionListener implements Listener {
             Material.DIAMOND_BOOTS,
             Material.DIAMOND_SWORD,
             Material.DIAMOND_AXE,
+            Material.DIAMOND_PICKAXE,
             Material.DIAMOND_SHOVEL,
             Material.DIAMOND_HOE,
             Material.NETHERITE_HELMET,

@@ -231,11 +231,13 @@ public class BossListener implements Listener {
             playerBroadcast(deathLoc.getWorld(),
                     Component.text("THE CATACLYSM IS AVERTED!", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
 
-            deathLoc.getWorld().dropItemNaturally(deathLoc, ItemManager.createPortalIgniter());
-
-            playerBroadcast(deathLoc.getWorld(),
-                    Component.text("The Portal Igniter has been dropped!", NamedTextColor.LIGHT_PURPLE)
-                            .decorate(TextDecoration.BOLD));
+            // Epic death effects
+            deathLoc.getWorld().strikeLightningEffect(deathLoc);
+            for (int i = 0; i < 360; i += 15) {
+                double angle = Math.toRadians(i);
+                Location pLoc = deathLoc.clone().add(Math.cos(angle) * 3, 0, Math.sin(angle) * 3);
+                deathLoc.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, pLoc, 10, 0.1, 2, 0.1, 0.1);
+            }
 
             deathLoc.getWorld().getNearbyEntities(deathLoc, 50, 50, 50).forEach(e -> {
                 if (e.getType() == EntityType.ARMOR_STAND && e.customName() != null &&
@@ -255,6 +257,7 @@ public class BossListener implements Listener {
 
             deathLoc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, deathLoc, 50, 2, 2, 2, 0);
             deathLoc.getWorld().playSound(deathLoc, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+            deathLoc.getWorld().playSound(deathLoc, Sound.ENTITY_ENDER_DRAGON_DEATH, 1.0f, 0.5f);
         }
 
         for (Map.Entry<UUID, Set<UUID>> entry : bossMinions.entrySet()) {
@@ -447,62 +450,82 @@ public class BossListener implements Listener {
         if (spawnLoc == null)
             spawnLoc = altarLoc; // Fallback
 
+        // Spawn shockwave animation
+        spawnLoc.getWorld().strikeLightningEffect(spawnLoc);
+        spawnLoc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, spawnLoc, 2, 1, 1, 1, 0);
+
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
         if (waveId == 1) {
             for (int i = 0; i < 8; i++) {
                 LivingEntity e = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 if (e != null)
-                    applyDiamondGear(e, 80);
+                    applyDiamondGear(e, 120);
             }
         } else if (waveId == 2) {
             for (int i = 0; i < 8; i++) {
                 LivingEntity e = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
-                if (e != null)
-                    applyDiamondGear(e, 80);
+                if (e != null) {
+                    applyDiamondGear(e, 120);
+                    if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
+                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(12.0);
+                }
             }
         } else if (waveId == 3) {
             for (int i = 0; i < 8; i++) {
                 LivingEntity e = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
                         Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
-                if (e != null)
-                    applyDiamondGear(e, 100);
+                if (e != null) {
+                    applyDiamondGear(e, 200);
+                    if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
+                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(15.0);
+                    if (e.getAttribute(Attribute.MOVEMENT_SPEED) != null)
+                        e.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.30);
+                }
             }
         } else if (waveId == 4) {
             for (int i = 0; i < 4; i++) {
                 LivingEntity s = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 if (s != null)
-                    applyDiamondGear(s, 80);
+                    applyDiamondGear(s, 120);
                 LivingEntity z = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
-                if (z != null)
-                    applyDiamondGear(z, 80);
+                if (z != null) {
+                    applyDiamondGear(z, 120);
+                    if (z.getAttribute(Attribute.ATTACK_DAMAGE) != null)
+                        z.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(12.0);
+                }
                 LivingEntity w = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
                         Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
-                if (w != null)
-                    applyDiamondGear(w, 100);
+                if (w != null) {
+                    applyDiamondGear(w, 200);
+                    if (w.getAttribute(Attribute.ATTACK_DAMAGE) != null)
+                        w.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(15.0);
+                }
             }
             Skeleton archer = (Skeleton) spawnMob(spawnLoc, EntityType.SKELETON, "§6§lThe Gatekeeper (Archer)",
                     Material.BOW,
                     stand.getUniqueId(), mobs);
             if (archer != null) {
-                applyDiamondGear(archer, 300);
+                applyDiamondGear(archer, 400);
                 archer.getPersistentDataContainer().set(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
                         PersistentDataType.BYTE, (byte) 1);
                 ItemStack bow = archer.getEquipment().getItemInMainHand();
                 bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 5);
-                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, 2);
+                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, 3);
             }
             WitherSkeleton warrior = (WitherSkeleton) spawnMob(spawnLoc, EntityType.WITHER_SKELETON,
                     "§6§lThe Gatekeeper (Warrior)", Material.DIAMOND_SWORD, stand.getUniqueId(), mobs);
             if (warrior != null) {
-                applyDiamondGear(warrior, 150);
+                applyDiamondGear(warrior, 250);
                 if (warrior.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                     warrior.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40);
+                if (warrior.getAttribute(Attribute.ATTACK_DAMAGE) != null)
+                    warrior.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(20.0);
                 setupWarriorLogic(warrior);
             }
         }
@@ -586,46 +609,69 @@ public class BossListener implements Listener {
                 NamedTextColor.RED).decorate(TextDecoration.BOLD));
     }
 
+    private Location findSafeSpawnLocation(Location base, double offsetX, double offsetZ) {
+        Location loc = base.clone().add(offsetX, 0, offsetZ);
+        // Search upward from Y-2 to Y+5 for a safe location (solid below, air at feet
+        // and head)
+        for (int dy = -2; dy <= 5; dy++) {
+            Block feet = loc.clone().add(0, dy, 0).getBlock();
+            Block head = loc.clone().add(0, dy + 1, 0).getBlock();
+            Block ground = loc.clone().add(0, dy - 1, 0).getBlock();
+            if (ground.getType().isSolid() && !feet.getType().isSolid() && !head.getType().isSolid()) {
+                return loc.clone().add(0, dy, 0);
+            }
+        }
+        // Fallback: just spawn above the base
+        return base.clone().add(offsetX, 1, offsetZ);
+    }
+
     private void spawnBosses(Location loc) {
         Location spawnPoint = findNearbySpawner(loc);
         if (spawnPoint == null)
             spawnPoint = loc;
 
         playerBroadcast(loc.getWorld(),
-                Component.text("SUPREMUS AND HIS GUARD HAVE AWAKENED!", NamedTextColor.DARK_RED)
+                Component.text("SUPREMUS HAS AWAKENED!", NamedTextColor.DARK_RED)
                         .decorate(TextDecoration.BOLD));
 
-        // Cinematic Spawn
+        // Cinematic Spawn - bigger and better
         loc.getWorld().strikeLightningEffect(loc);
+        loc.getWorld().strikeLightningEffect(loc.clone().add(3, 0, 0));
+        loc.getWorld().strikeLightningEffect(loc.clone().add(-3, 0, 0));
         loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_SPAWN, 2f, 0.5f);
-        for (int i = 0; i < 360; i += 10) {
+        loc.getWorld().playSound(loc, Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.3f);
+        for (int i = 0; i < 360; i += 5) {
             double angle = Math.toRadians(i);
-            Location pLoc = loc.clone().add(Math.cos(angle) * 5, 0, Math.sin(angle) * 5);
-            loc.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, pLoc, 10, 0.1, 2, 0.1, 0.05);
+            for (double r = 2; r <= 8; r += 2) {
+                Location pLoc = loc.clone().add(Math.cos(angle) * r, 0, Math.sin(angle) * r);
+                loc.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, pLoc, 5, 0.1, 2, 0.1, 0.05);
+            }
         }
+        loc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, loc, 5, 1, 1, 1, 0);
 
-        Location spawn = spawnPoint.clone().add(0, 2, 0);
+        // Supremus spawns ALONE - no guards yet
+        Location spawn = findSafeSpawnLocation(spawnPoint, 0, 0).add(0, 1, 0);
         WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
         boss.customName(Component.text("§4§lSUPREMUS"));
         boss.setCustomNameVisible(true);
 
         if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
-            boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1000);
-            boss.setHealth(1000);
+            boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1200);
+            boss.setHealth(1200);
         }
         if (boss.getAttribute(Attribute.SCALE) != null)
             boss.getAttribute(Attribute.SCALE).setBaseValue(3.0);
         if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-            boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(25.0);
+            boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(30.0);
+        if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
+            boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
 
         boss.getPersistentDataContainer().set(FINAL_BOSS_KEY, PersistentDataType.BYTE, (byte) 2);
         boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 1);
 
+        // NO shield, NO frozen AI - Supremus fights immediately
         Set<UUID> minions = Collections.synchronizedSet(new HashSet<>());
         bossMinions.put(boss.getUniqueId(), minions);
-        shieldedBosses.add(boss.getUniqueId());
-        boss.setInvulnerable(true);
-        boss.setAI(false);
 
         boss.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
         boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
@@ -645,50 +691,12 @@ public class BossListener implements Listener {
         Bukkit.getOnlinePlayers().forEach(suBar::addPlayer);
         activeBars.put(boss.getUniqueId(), suBar);
 
-        String[] titles = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel", "§c§lWar Sentinel",
-                "§8§lShadow Sentinel" };
-        for (int i = 0; i < 5; i++) {
-            Location sLoc = spawnPoint.clone().add(Math.cos(i * Math.PI * 2 / 5) * 6, 0,
-                    Math.sin(i * Math.PI * 2 / 5) * 6);
-            WitherSkeleton sentinel = (WitherSkeleton) loc.getWorld().spawnEntity(sLoc, EntityType.WITHER_SKELETON);
-            sentinel.customName(Component.text(titles[i]));
-            sentinel.setCustomNameVisible(true);
+        final Location bossSpawnPoint = spawnPoint.clone();
 
-            if (sentinel.getAttribute(Attribute.MAX_HEALTH) != null) {
-                sentinel.getAttribute(Attribute.MAX_HEALTH).setBaseValue(150);
-                sentinel.setHealth(150);
-            }
-            if (sentinel.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                sentinel.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(40.0);
-
-            ritualTeam.addEntry(sentinel.getUniqueId().toString());
-            minions.add(sentinel.getUniqueId());
-
-            final int type = i;
-            new BukkitRunnable() {
-                @Override
-                public void run() {
-                    if (!sentinel.isValid()) {
-                        cancel();
-                        return;
-                    }
-                    if (Math.random() < 0.12) {
-                        try {
-                            triggerBossAbility(sentinel, type, false);
-                        } catch (Exception ignored) {
-                        }
-                    }
-                    if (sentinel.getLocation().distance(spawn) > 20)
-                        sentinel.teleport(spawn);
-                }
-            }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
-        }
-
-        playerBroadcast(loc.getWorld(), Component.text("Supremus is shielded by his Guard!", NamedTextColor.GOLD));
-
+        // Boss behavior loop
         new BukkitRunnable() {
             int ticks = 0;
-            int phase = 1;
+            boolean guardsSpawned = false;
 
             @Override
             public void run() {
@@ -698,21 +706,114 @@ public class BossListener implements Listener {
                     cancel();
                     return;
                 }
-                suBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 1000.0)));
+                suBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 1200.0)));
 
-                if (boss.getHealth() <= 666 && phase == 1) {
-                    phase = 2;
-                    enterPhase2(boss, 0);
-                }
-                if (boss.getHealth() <= 333 && phase == 2) {
-                    phase = 3;
-                    enterPhase3(boss, 0);
+                // At 50% HP: shield + freeze + spawn guards
+                if (!guardsSpawned && boss.getHealth() <= 600) {
+                    guardsSpawned = true;
+                    shieldedBosses.add(boss.getUniqueId());
+                    boss.setInvulnerable(true);
+                    boss.setAI(false);
+
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2f, 0.3f);
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.5f);
+                    boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10, 2, 2, 2, 0);
+                    boss.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), 200, 3, 3, 3, 0.1);
+
+                    Title guardTitle = Title.title(
+                            Component.text("THE GUARD AWAKENS!", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD),
+                            Component.text("Destroy the Sentinels to break the shield!", NamedTextColor.GOLD));
+                    Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(guardTitle));
+                    playerBroadcast(boss.getWorld(),
+                            Component.text("SUPREMUS IS SHIELDED! DESTROY HIS GUARD!", NamedTextColor.GOLD)
+                                    .decorate(TextDecoration.BOLD));
+
+                    // Spawn 5 sentinels in safe locations around the boss
+                    String[] sentinelNames = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel",
+                            "§c§lWar Sentinel", "§8§lShadow Sentinel" };
+                    Material[] sentinelDrops = { Material.DIAMOND_HELMET, Material.DIAMOND_CHESTPLATE,
+                            Material.DIAMOND_LEGGINGS, Material.DIAMOND_BOOTS, Material.DIAMOND_SWORD };
+                    for (int i = 0; i < 5; i++) {
+                        double angle = i * Math.PI * 2 / 5;
+                        Location sLoc = findSafeSpawnLocation(boss.getLocation(), Math.cos(angle) * 6,
+                                Math.sin(angle) * 6);
+
+                        // Lightning at spawn point
+                        boss.getWorld().strikeLightningEffect(sLoc);
+
+                        WitherSkeleton sentinel = (WitherSkeleton) boss.getWorld().spawnEntity(sLoc,
+                                EntityType.WITHER_SKELETON);
+                        sentinel.customName(Component.text(sentinelNames[i]));
+                        sentinel.setCustomNameVisible(true);
+
+                        if (sentinel.getAttribute(Attribute.MAX_HEALTH) != null) {
+                            sentinel.getAttribute(Attribute.MAX_HEALTH).setBaseValue(200);
+                            sentinel.setHealth(200);
+                        }
+                        if (sentinel.getAttribute(Attribute.ATTACK_DAMAGE) != null)
+                            sentinel.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(20.0);
+                        if (sentinel.getAttribute(Attribute.MOVEMENT_SPEED) != null)
+                            sentinel.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
+
+                        sentinel.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
+                        sentinel.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
+                        sentinel.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
+                        sentinel.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+                        sentinel.getEquipment().setItemInMainHand(new ItemStack(Material.DIAMOND_SWORD));
+                        sentinel.getEquipment().setHelmetDropChance(0f);
+                        sentinel.getEquipment().setChestplateDropChance(0f);
+                        sentinel.getEquipment().setLeggingsDropChance(0f);
+                        sentinel.getEquipment().setBootsDropChance(0f);
+                        sentinel.getEquipment().setItemInMainHandDropChance(0f);
+
+                        // Tag sentinel to drop legendary item
+                        sentinel.getPersistentDataContainer().set(DROP_ITEM_KEY, PersistentDataType.STRING,
+                                sentinelDrops[i].name());
+
+                        ritualTeam.addEntry(sentinel.getUniqueId().toString());
+                        minions.add(sentinel.getUniqueId());
+
+                        // Sentinel ability loop
+                        final int type = i;
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                if (!sentinel.isValid()) {
+                                    cancel();
+                                    return;
+                                }
+                                // Ambient particles
+                                sentinel.getWorld().spawnParticle(Particle.ENCHANT, sentinel.getLocation().add(0, 1, 0),
+                                        5, 0.3, 0.5, 0.3, 0.5);
+                                if (Math.random() < 0.15) {
+                                    try {
+                                        triggerBossAbility(sentinel, type, false);
+                                    } catch (Exception ignored) {
+                                    }
+                                }
+                                // Leash to boss area
+                                if (sentinel.getLocation().distance(boss.getLocation()) > 25)
+                                    sentinel.teleport(boss.getLocation());
+                            }
+                        }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
+                    }
                 }
 
+                // Shield visual effects
                 if (shieldedBosses.contains(boss.getUniqueId())) {
+                    if (ticks % 5 == 0) {
+                        // Rotating shield particles
+                        double shieldAngle = Math.toRadians(ticks * 9);
+                        for (int i = 0; i < 4; i++) {
+                            double a = shieldAngle + (i * Math.PI / 2);
+                            Location sp = boss.getLocation().add(Math.cos(a) * 2, 1.5 + Math.sin(ticks * 0.1),
+                                    Math.sin(a) * 2);
+                            boss.getWorld().spawnParticle(Particle.WITCH, sp, 3, 0.1, 0.1, 0.1, 0);
+                            boss.getWorld().spawnParticle(Particle.END_ROD, sp, 1, 0, 0, 0, 0.01);
+                        }
+                    }
                     if (ticks % 20 == 0) {
-                        boss.getWorld().spawnParticle(Particle.WITCH, boss.getLocation().add(0, 1, 0), 10, 0.5, 1, 0.5,
-                                0);
+                        // Energy tethers to sentinels
                         Set<UUID> mSet = bossMinions.get(boss.getUniqueId());
                         if (mSet != null) {
                             mSet.forEach(mId -> {
@@ -721,10 +822,14 @@ public class BossListener implements Listener {
                                     Location s = boss.getLocation().add(0, 1.5, 0);
                                     Location e = m.getLocation().add(0, 1.5, 0);
                                     Vector dir = e.toVector().subtract(s.toVector()).normalize();
-                                    for (double d = 0; d < s.distance(e); d++)
+                                    double dist = s.distance(e);
+                                    for (double d = 0; d < dist; d += 0.5) {
                                         boss.getWorld().spawnParticle(Particle.DUST,
                                                 s.clone().add(dir.clone().multiply(d)), 1,
-                                                new Particle.DustOptions(org.bukkit.Color.MAROON, 1f));
+                                                new Particle.DustOptions(org.bukkit.Color.MAROON, 1.2f));
+                                        boss.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME,
+                                                s.clone().add(dir.clone().multiply(d)), 1, 0.05, 0.05, 0.05, 0);
+                                    }
                                 }
                             });
                         }
@@ -733,25 +838,51 @@ public class BossListener implements Listener {
                     return;
                 }
 
-                if (ticks % 10 == 0) {
-                    boss.getWorld().spawnParticle(Particle.SOUL, boss.getEyeLocation(), 10, 0.5, 0.5, 0.5, 0.05);
-                    boss.getWorld().spawnParticle(Particle.DRAGON_BREATH, boss.getLocation(), 5, 1, 2, 1, 0.02);
+                // Ambient boss particles when fighting
+                if (ticks % 5 == 0) {
+                    boss.getWorld().spawnParticle(Particle.SOUL, boss.getEyeLocation(), 5, 0.5, 0.5, 0.5, 0.05);
+                    boss.getWorld().spawnParticle(Particle.DRAGON_BREATH, boss.getLocation(), 3, 1, 0.5, 1, 0.02);
+                    boss.getWorld().spawnParticle(Particle.FLAME, boss.getLocation().add(0, 0.5, 0), 3, 0.5, 0.5, 0.5,
+                            0.01);
                 }
 
+                // Ground slam attack every 5 seconds
                 if (ticks % 100 == 0) {
                     boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WARDEN_SONIC_BOOM, 1f, 0.5f);
                     boss.getWorld().spawnParticle(Particle.SONIC_BOOM, boss.getLocation(), 3, 2, 2, 2, 0);
+                    // Expanding shockwave ring
+                    for (int ring = 0; ring < 360; ring += 10) {
+                        double a = Math.toRadians(ring);
+                        Location ringLoc = boss.getLocation().add(Math.cos(a) * 5, 0.5, Math.sin(a) * 5);
+                        boss.getWorld().spawnParticle(Particle.EXPLOSION, ringLoc, 1, 0, 0, 0, 0);
+                    }
                     for (Entity e : boss.getNearbyEntities(15, 10, 15)) {
                         if (e instanceof Player && !e.isOp()) {
-                            ((LivingEntity) e).damage(phase >= 2 ? 35 : 25, boss);
+                            ((LivingEntity) e).damage(30, boss);
                             e.setVelocity(e.getLocation().subtract(boss.getLocation()).toVector().normalize()
-                                    .multiply(2.0).setY(0.7));
+                                    .multiply(2.5).setY(0.8));
                         }
+                    }
+                }
+
+                // Teleport slam every 7.5 seconds
+                if (ticks % 150 == 75) {
+                    List<Player> nearby = boss.getWorld().getNearbyEntities(boss.getLocation(), 20, 10, 20).stream()
+                            .filter(e -> e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)
+                            .map(e -> (Player) e).collect(Collectors.toList());
+                    if (!nearby.isEmpty()) {
+                        Player target = nearby.get(new Random().nextInt(nearby.size()));
+                        boss.getWorld().spawnParticle(Particle.REVERSE_PORTAL, boss.getLocation(), 50, 1, 1, 1, 0.5);
+                        boss.teleport(target.getLocation().add(0, 0, 2));
+                        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 2f, 0.3f);
+                        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 3, 1, 1, 1, 0);
+                        target.damage(20, boss);
+                        target.setVelocity(new Vector(0, 1.5, 0));
                     }
                 }
                 ticks++;
             }
-        }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
+        }.runTaskTimer(SkillsBoss.getInstance(), 20, 5);
     }
 
     @EventHandler
@@ -892,114 +1023,9 @@ public class BossListener implements Listener {
         }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
-    @EventHandler
-    public void onPortalIgniterUse(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK || event.getHand() != EquipmentSlot.HAND)
-            return;
-        ItemStack item = event.getItem();
-        if (item == null || !ItemManager.isPortalIgniter(item))
-            return;
-        Block block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.CRYING_OBSIDIAN)
-            return;
-
-        // We only ignite if it's Crying Obsidian (our Core)
-        event.setCancelled(true);
-        igniteCustomPortal(block);
-
-        // Damage the igniter or reduce its amount
-        if (event.getPlayer().getGameMode() != GameMode.CREATIVE) {
-            item.setAmount(item.getAmount() - 1);
-        }
-    }
-
     private void playerBroadcast(World world, Component msg) {
         if (msg != null)
             world.getPlayers().forEach(p -> p.sendMessage(msg));
-    }
-
-    @EventHandler
-    public void onProjectileHit(org.bukkit.event.entity.ProjectileHitEvent event) {
-        if (event.getEntity() instanceof Arrow && event.getEntity().getShooter() instanceof Skeleton) {
-            Skeleton shooter = (Skeleton) event.getEntity().getShooter();
-            if (shooter.getPersistentDataContainer().has(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
-                    PersistentDataType.BYTE)) {
-                Location hit = event.getHitBlock() != null ? event.getHitBlock().getLocation()
-                        : event.getEntity().getLocation();
-                hit.getWorld().createExplosion(hit, 2.0f, false, false);
-                event.getEntity().remove();
-            }
-        }
-    }
-
-    @EventHandler
-    public void onArrowShoot(EntityShootBowEvent event) {
-        if (event.getEntity() instanceof Skeleton) {
-            Skeleton s = (Skeleton) event.getEntity();
-            if (s.getPersistentDataContainer().has(WAVE_MOB_KEY, PersistentDataType.STRING)) {
-                Entity arrow = event.getProjectile();
-                boolean isGatekeeper = s.getCustomName() != null &&
-                        PlainTextComponentSerializer.plainText().serialize(s.customName()).contains("Gatekeeper");
-
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        if (!arrow.isValid() || arrow.isOnGround()) {
-                            cancel();
-                            return;
-                        }
-                        if (isGatekeeper) {
-                            arrow.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, arrow.getLocation(), 3, 0.05, 0.05,
-                                    0.05, 0.02);
-                            arrow.getWorld().spawnParticle(Particle.LARGE_SMOKE, arrow.getLocation(), 1, 0, 0, 0, 0.01);
-                        } else {
-                            arrow.getWorld().spawnParticle(Particle.FLAME, arrow.getLocation(), 2, 0.02, 0.02, 0.02,
-                                    0.01);
-                        }
-                    }
-                }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
-            }
-        }
-    }
-
-    private void enterPhase2(LivingEntity boss, int type) {
-        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.8f);
-        Title title = Title.title(Component.text("PHASE II", NamedTextColor.YELLOW).decorate(TextDecoration.BOLD),
-                Component.text("SUPREMUS ENRAGES", NamedTextColor.GOLD));
-        Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
-        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10);
-        playerBroadcast(boss.getWorld(),
-                Component.text("Supremus enters Phase 2!", NamedTextColor.YELLOW).decorate(TextDecoration.BOLD));
-        if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
-            boss.getAttribute(Attribute.MOVEMENT_SPEED)
-                    .setBaseValue(boss.getAttribute(Attribute.MOVEMENT_SPEED).getBaseValue() * 1.2);
-    }
-
-    private void enterPhase3(LivingEntity boss, int type) {
-        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2f, 0.5f);
-        Title title = Title.title(Component.text("FINAL PHASE", NamedTextColor.RED).decorate(TextDecoration.BOLD),
-                Component.text("THE END IS NIGH", NamedTextColor.DARK_RED));
-        Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(title));
-        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 5);
-        playerBroadcast(boss.getWorld(),
-                Component.text("Supremus enters FINAL PHASE!", NamedTextColor.RED).decorate(TextDecoration.BOLD));
-        boss.setInvulnerable(true);
-        shieldedBosses.add(boss.getUniqueId());
-        Set<UUID> minions = bossMinions.get(boss.getUniqueId());
-        String[] minionNames = { "§4Crimson Guard", "§5Void Guard", "§1Frost Guard", "§cWar Guard" };
-        for (int i = 0; i < 4; i++) {
-            Location spawnLoc = boss.getLocation().clone().add(Math.cos(i * Math.PI / 2) * 4, 0,
-                    Math.sin(i * Math.PI / 2) * 4);
-            WitherSkeleton minion = (WitherSkeleton) boss.getWorld().spawnEntity(spawnLoc, EntityType.WITHER_SKELETON);
-            minion.customName(Component.text(minionNames[i]));
-            minion.setCustomNameVisible(true);
-            if (minion.getAttribute(Attribute.MAX_HEALTH) != null) {
-                minion.getAttribute(Attribute.MAX_HEALTH).setBaseValue(80);
-                minion.setHealth(80);
-            }
-            minions.add(minion.getUniqueId());
-            ritualTeam.addEntry(minion.getUniqueId().toString());
-        }
     }
 
     private void triggerBossAbility(LivingEntity boss, int type, boolean enhanced) {
@@ -1047,20 +1073,9 @@ public class BossListener implements Listener {
 
     private LivingEntity spawnMob(Location loc, EntityType type, String name, Material hand, UUID standUuid,
             Set<UUID> mobs) {
-        double rx = (new Random().nextDouble() * 3) - 1.5;
-        double rz = (new Random().nextDouble() * 3) - 1.5;
-        Location spawnLoc = loc.clone().add(rx, 0, rz);
-        boolean found = false;
-        for (int dy = 2; dy >= -2; dy--) {
-            Block b = spawnLoc.clone().add(0, dy, 0).getBlock();
-            if (b.getType() == Material.CRYING_OBSIDIAN || b.getType().isSolid()) {
-                spawnLoc.add(0, dy + 1, 0);
-                found = true;
-                break;
-            }
-        }
-        if (!found)
-            spawnLoc = loc.clone().add(rx, 0.1, rz);
+        double rx = (new Random().nextDouble() * 6) - 3;
+        double rz = (new Random().nextDouble() * 6) - 3;
+        Location spawnLoc = findSafeSpawnLocation(loc, rx, rz);
         LivingEntity e = (LivingEntity) loc.getWorld().spawnEntity(spawnLoc, type);
         if (e == null)
             return null;
@@ -1072,6 +1087,10 @@ public class BossListener implements Listener {
         if (ritualTeam != null)
             ritualTeam.addEntry(e.getUniqueId().toString());
         mobs.add(e.getUniqueId());
+
+        // Spawn particle effect
+        e.getWorld().spawnParticle(Particle.SMOKE, spawnLoc, 15, 0.3, 0.5, 0.3, 0.05);
+        e.getWorld().spawnParticle(Particle.FLAME, spawnLoc, 5, 0.2, 0.2, 0.2, 0.02);
         return e;
     }
 }
