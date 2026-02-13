@@ -818,7 +818,7 @@ public class BossListener implements Listener {
         if (portalBlocks.isEmpty())
             return;
 
-        Location center = startBlock.getLocation();
+        Location center = coreBlock.getLocation();
         for (Block b : portalBlocks) {
             b.setType(Material.NETHER_PORTAL);
         }

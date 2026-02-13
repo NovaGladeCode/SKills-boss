@@ -9,3 +9,7 @@ commands:
     description: Administration command for SkillsBoss.
     usage: /admin <subcommand>
     permission: skillsboss.admin
+  skills:
+    description: View Skills plugin information and recipes.
+    usage: /skills <subcommand>
+

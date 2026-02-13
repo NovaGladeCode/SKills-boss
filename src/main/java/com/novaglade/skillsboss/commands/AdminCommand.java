@@ -17,6 +17,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 import java.time.Duration;
@@ -138,7 +139,7 @@ public class AdminCommand implements CommandExecutor {
         Random random = new Random();
 
         new BukkitRunnable() {
-            int maxTicks = 15 * 20; // 15 seconds (made it longer for more epicness)
+            int maxTicks = 10 * 20; // 10 seconds
             int ticks = maxTicks;
 
             @Override

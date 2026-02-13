@@ -1,5 +1,10 @@
 package com.novaglade.skillsboss;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class SkillsBoss extends JavaPlugin {
@@ -18,6 +23,7 @@ public class SkillsBoss extends JavaPlugin {
         // Register commands and events here
         registerCommands();
         registerListeners();
+        registerCustomRecipes();
     }
 
     @Override
@@ -29,6 +35,9 @@ public class SkillsBoss extends JavaPlugin {
         if (getCommand("admin") != null) {
             getCommand("admin").setExecutor(new com.novaglade.skillsboss.commands.AdminCommand());
         }
+        if (getCommand("skills") != null) {
+            getCommand("skills").setExecutor(new com.novaglade.skillsboss.commands.SkillsCommand());
+        }
     }
 
     private void registerListeners() {
@@ -36,6 +45,21 @@ public class SkillsBoss extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new com.novaglade.skillsboss.listeners.ProgressionListener(),
                 this);
         getServer().getPluginManager().registerEvents(new com.novaglade.skillsboss.listeners.DeathListener(), this);
+    }
+
+    private void registerCustomRecipes() {
+        // Remove vanilla enchanting table recipe
+        Bukkit.removeRecipe(NamespacedKey.minecraft("enchanting_table"));
+
+        // Custom Enchanting Table: Amethyst Shards surrounding a Book
+        NamespacedKey enchantTableKey = new NamespacedKey(this, "custom_enchanting_table");
+        ShapedRecipe enchantTableRecipe = new ShapedRecipe(enchantTableKey, new ItemStack(Material.ENCHANTING_TABLE));
+        enchantTableRecipe.shape("AAA", "ABA", "AAA");
+        enchantTableRecipe.setIngredient('A', Material.AMETHYST_SHARD);
+        enchantTableRecipe.setIngredient('B', Material.BOOK);
+        Bukkit.addRecipe(enchantTableRecipe);
+
+        logger.info("Custom recipes registered!");
     }
 
     public static SkillsBoss getInstance() {
