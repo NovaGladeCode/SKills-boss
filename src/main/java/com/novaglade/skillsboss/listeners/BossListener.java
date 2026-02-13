@@ -680,11 +680,11 @@ public class BossListener implements Listener {
             boss.setHealth(1200);
         }
         if (boss.getAttribute(Attribute.SCALE) != null)
-            boss.getAttribute(Attribute.SCALE).setBaseValue(3.0);
+            boss.getAttribute(Attribute.SCALE).setBaseValue(4.0);
         if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-            boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(30.0);
+            boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(35.0);
         if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
-            boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
+            boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.38);
 
         boss.getPersistentDataContainer().set(FINAL_BOSS_KEY, PersistentDataType.BYTE, (byte) 2);
         boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 1);
@@ -885,19 +885,47 @@ public class BossListener implements Listener {
                     }
                 }
 
-                // Teleport slam every 7.5 seconds
-                if (ticks % 150 == 75) {
-                    List<Player> nearby = boss.getWorld().getNearbyEntities(boss.getLocation(), 20, 10, 20).stream()
+                // Warp Hammer Attack: Teleport above player and smash down
+                if (ticks > 0 && ticks % 200 == 150) {
+                    List<Player> nearby = boss.getWorld().getNearbyEntities(boss.getLocation(), 25, 15, 25).stream()
                             .filter(e -> e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)
                             .map(e -> (Player) e).collect(Collectors.toList());
                     if (!nearby.isEmpty()) {
                         Player target = nearby.get(new Random().nextInt(nearby.size()));
-                        boss.getWorld().spawnParticle(Particle.REVERSE_PORTAL, boss.getLocation(), 50, 1, 1, 1, 0.5);
-                        boss.teleport(target.getLocation().add(0, 0, 2));
-                        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 2f, 0.3f);
-                        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 3, 1, 1, 1, 0);
-                        target.damage(20, boss);
-                        target.setVelocity(new Vector(0, 1.5, 0));
+                        Location above = target.getLocation().add(0, 4, 0);
+
+                        // Warp Animation
+                        boss.getWorld().spawnParticle(Particle.REVERSE_PORTAL, boss.getLocation(), 80, 1, 2, 1, 0.2);
+                        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1.5f, 0.5f);
+
+                        boss.teleport(above);
+
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                if (!boss.isValid() || !target.isOnline())
+                                    return;
+                                boss.setVelocity(new Vector(0, -2.5, 0)); // Smash down
+                                boss.getWorld().spawnParticle(Particle.SONIC_BOOM, boss.getLocation(), 10, 0.5, 0.5,
+                                        0.5, 0);
+                                boss.getWorld().playSound(boss.getLocation(), Sound.ITEM_MACE_AS_HEAVY_AS_ANYPENNY, 2f,
+                                        0.5f);
+
+                                new BukkitRunnable() {
+                                    @Override
+                                    public void run() {
+                                        if (!boss.isValid())
+                                            return;
+                                        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 5,
+                                                2, 0.5, 2, 0);
+                                        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GENERIC_EXPLODE,
+                                                1.5f, 0.7f);
+                                        target.damage(25, boss);
+                                        target.setVelocity(new Vector(0, 0.8, 0));
+                                    }
+                                }.runTaskLater(SkillsBoss.getInstance(), 5);
+                            }
+                        }.runTaskLater(SkillsBoss.getInstance(), 10);
                     }
                 }
                 ticks++;
