@@ -21,6 +21,8 @@ import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
@@ -61,6 +63,13 @@ public class ProgressionListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
+        // Prevent taking items from the Recipe GUI
+        String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (title.contains("Custom Recipes")) {
+            event.setCancelled(true);
+            return;
+        }
+
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
 
@@ -95,6 +104,13 @@ public class ProgressionListener implements Listener {
 
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
+        // Prevent dragging items in the Recipe GUI
+        String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (title.contains("Custom Recipes")) {
+            event.setCancelled(true);
+            return;
+        }
+
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
         if (event.getWhoClicked() instanceof Player) {
