@@ -331,7 +331,8 @@ public class BossListener implements Listener {
     private void updateBossBar(UUID standUuid, int currentMobs) {
         BossBar bar = activeBars.get(standUuid);
         if (bar != null) {
-            double progress = currentMobs / 8.0;
+            // Scale bar based on expected mob counts (approximate 8-15)
+            double progress = currentMobs / 15.0;
             bar.setProgress(Math.max(0, Math.min(1, progress)));
         }
     }
@@ -365,9 +366,13 @@ public class BossListener implements Listener {
             int waveNum = 0;
             boolean waiting = false;
             int waveTicks = 0;
+            boolean finished = false;
 
             @Override
             public void run() {
+                if (finished)
+                    return;
+
                 if (!anchor.isValid()) {
                     endRitual(anchorUuid, ritualBar);
                     cancel();
@@ -387,7 +392,7 @@ public class BossListener implements Listener {
                         return ent == null || !ent.isValid() || ent.isDead();
                     });
 
-                    if (mobs.isEmpty() && waveTicks >= 10) {
+                    if (mobs.isEmpty() && waveTicks >= 5) { // Reduced delay to 5s
                         waiting = false;
                         waveTicks = 0;
                         anchor.getWorld().playSound(anchor.getLocation(), Sound.ENTITY_WITHER_DEATH, 0.5f, 2f);
@@ -395,11 +400,12 @@ public class BossListener implements Listener {
                     return;
                 }
 
-                if (waveNum < 4) {
+                if (waveNum < 5) {
                     waveNum++;
                     startWave(anchor, ritualBar, waveNum);
                     waiting = true;
                 } else {
+                    finished = true;
                     ritualBar.removeAll();
                     activeBars.remove(anchorUuid);
                     spawnBosses(anchor.getLocation());
@@ -421,11 +427,13 @@ public class BossListener implements Listener {
 
     private void startWave(Entity stand, BossBar bar, int waveId) {
         String[] titles = { "", "§e§lTrial I: The Fallen Sentries", "§9§lTrial II: The Undead Sentinels",
-                "§c§lTrial III: The Avernus Guards", "§4§lTrial IV: The Final Gate" };
+                "§c§lTrial III: The Avernus Guards", "§6§lTrial IV: The Gatekeeper's Advance",
+                "§4§lTrial V: The Final Gate" };
         Component[] msgs = { null,
                 Component.text("The fallen rise in diamond plate...", NamedTextColor.YELLOW),
                 Component.text("The undead manifest from the depths...", NamedTextColor.BLUE),
                 Component.text("The Avernus Guards have arrived.", NamedTextColor.RED),
+                Component.text("The Gatekeeper's forces are bridging the gap...", NamedTextColor.GOLD),
                 Component.text("THE GATEKEEPER HAS AWAKENED!", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD)
         };
 
@@ -488,6 +496,16 @@ public class BossListener implements Listener {
                 }
             }
         } else if (waveId == 4) {
+            for (int i = 0; i < 10; i++) {
+                LivingEntity e = spawnMob(spawnLoc, EntityType.ZOMBIE, "§6Elite Guard", Material.DIAMOND_SWORD,
+                        stand.getUniqueId(), mobs);
+                if (e != null) {
+                    applyDiamondGear(e, 250);
+                    if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
+                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(18.0);
+                }
+            }
+        } else if (waveId == 5) {
             for (int i = 0; i < 4; i++) {
                 LivingEntity s = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
