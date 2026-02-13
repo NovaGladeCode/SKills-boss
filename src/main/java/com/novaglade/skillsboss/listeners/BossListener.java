@@ -145,6 +145,8 @@ public class BossListener implements Listener {
 
     @EventHandler
     public void onAltarInteract(PlayerInteractAtEntityEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND)
+            return;
         Entity entity = event.getRightClicked();
         if (!(entity instanceof ArmorStand))
             return;
