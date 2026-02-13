@@ -81,7 +81,7 @@ public class BossListener implements Listener {
 
     @EventHandler
     public void onAltarPlace(BlockPlaceEvent event) {
-        if (ItemManager.isBossSpawnItem(event.getItemInHand())) {
+        if (ItemManager.isBossSpawnItem(event.getPlayer().getInventory().getItemInMainHand())) {
             // Check for nearby spawner
             if (findNearbySpawner(event.getBlock().getLocation()) == null) {
                 event.setCancelled(true);
@@ -156,6 +156,13 @@ public class BossListener implements Listener {
 
         event.setCancelled(true);
         Player player = event.getPlayer();
+        if (ItemManager.isAltarTurnerItem(player.getInventory().getItemInMainHand())) {
+            stand.setRotation(stand.getLocation().getYaw() + 45, 0);
+            player.playSound(player.getLocation(), Sound.BLOCK_LEVER_CLICK, 1f, 1f);
+            player.sendMessage(Component.text("Altar rotated!", NamedTextColor.YELLOW));
+            return;
+        }
+
         ItemStack hand = player.getInventory().getItemInMainHand();
         if (hand == null || hand.getType() == Material.AIR)
             return;
@@ -668,8 +675,8 @@ public class BossListener implements Listener {
         try {
             // Apply attributes with modern 1.21 names
             if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
-                boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1200);
-                boss.setHealth(1200);
+                boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(3000);
+                boss.setHealth(3000);
             }
 
             org.bukkit.attribute.AttributeInstance scaleAttr = boss.getAttribute(Attribute.SCALE);
@@ -679,7 +686,7 @@ public class BossListener implements Listener {
             }
 
             if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(35.0);
+                boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(60.0);
             if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                 boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.38);
         } catch (Exception e) {
@@ -727,10 +734,10 @@ public class BossListener implements Listener {
                     cancel();
                     return;
                 }
-                suBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 1200.0)));
+                suBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 3000.0)));
 
                 // At 50% HP: shield + freeze + spawn guards
-                if (!guardsSpawned && boss.getHealth() <= 600) {
+                if (!guardsSpawned && boss.getHealth() <= 1500) {
                     guardsSpawned = true;
                     Bukkit.getLogger().info("[SkillsBoss] Supremus below 50% HP. Spawning guards!");
                     shieldedBosses.add(boss.getUniqueId());
@@ -813,6 +820,30 @@ public class BossListener implements Listener {
                                     } catch (Exception ignored) {
                                     }
                                 }
+
+                                // Sentinel Laser Attack
+                                Player laserTarget = sentinel.getWorld()
+                                        .getNearbyEntities(sentinel.getLocation(), 15, 15, 15).stream()
+                                        .filter(e -> e instanceof Player
+                                                && ((Player) e).getGameMode() == GameMode.SURVIVAL)
+                                        .map(e -> (Player) e).findFirst().orElse(null);
+
+                                if (laserTarget != null) {
+                                    Location start = sentinel.getEyeLocation();
+                                    Location end = laserTarget.getEyeLocation();
+                                    Vector dir = end.toVector().subtract(start.toVector()).normalize();
+                                    double dist = start.distance(end);
+
+                                    // Visual Beam
+                                    for (double d = 0; d < dist; d += 0.5) {
+                                        sentinel.getWorld().spawnParticle(Particle.DUST,
+                                                start.clone().add(dir.clone().multiply(d)), 1,
+                                                new Particle.DustOptions(org.bukkit.Color.RED, 1.5f));
+                                    }
+                                    sentinel.getWorld().playSound(start, Sound.ENTITY_ZOMBIE_VILLAGER_CONVERTED, 0.5f,
+                                            2f);
+                                    laserTarget.damage(25, sentinel);
+                                }
                                 // Leash to boss area
                                 if (sentinel.getLocation().distance(boss.getLocation()) > 25)
                                     sentinel.teleport(boss.getLocation());
@@ -880,7 +911,7 @@ public class BossListener implements Listener {
                     }
                     for (Entity e : boss.getNearbyEntities(15, 10, 15)) {
                         if (e instanceof Player && !e.isOp()) {
-                            ((LivingEntity) e).damage(30, boss);
+                            ((LivingEntity) e).damage(60, boss);
                             e.setVelocity(e.getLocation().subtract(boss.getLocation()).toVector().normalize()
                                     .multiply(2.5).setY(0.8));
                         }
@@ -922,7 +953,7 @@ public class BossListener implements Listener {
                                                 2, 0.5, 2, 0);
                                         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GENERIC_EXPLODE,
                                                 1.5f, 0.7f);
-                                        target.damage(25, boss);
+                                        target.damage(50, boss);
                                         target.setVelocity(new Vector(0, 0.8, 0));
                                     }
                                 }.runTaskLater(SkillsBoss.getInstance(), 5);

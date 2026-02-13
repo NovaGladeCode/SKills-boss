@@ -379,6 +379,9 @@ public class AdminCommand implements CommandExecutor {
         } else if (args[1].equalsIgnoreCase("prog1")) {
             player.getInventory().addItem(ItemManager.createProgression1Item());
             sender.sendMessage(Component.text("Received Progression 1 Catalyst!", NamedTextColor.GOLD));
+        } else if (args[1].equalsIgnoreCase("turn")) {
+            player.getInventory().addItem(ItemManager.createAltarTurnerItem());
+            sender.sendMessage(Component.text("Received Altar Turner stick!", NamedTextColor.YELLOW));
         } else {
             sender.sendMessage(Component.text("Unknown item.", NamedTextColor.RED));
         }

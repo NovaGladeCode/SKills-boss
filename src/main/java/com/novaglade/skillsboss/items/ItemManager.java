@@ -31,6 +31,8 @@ public class ItemManager {
             "boss_spawner_item");
     private static final NamespacedKey PROGRESSION_1_KEY = new NamespacedKey(SkillsBoss.getInstance(),
             "progression_1_item");
+    private static final NamespacedKey ALTAR_TURNER_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "altar_turner");
 
     public static ItemStack createBossSpawnerItem() {
         ItemStack item = new ItemStack(Material.SPAWNER);
@@ -185,5 +187,26 @@ public class ItemManager {
         if (item == null || !item.hasItemMeta())
             return false;
         return item.getItemMeta().getPersistentDataContainer().has(PROGRESSION_1_KEY, PersistentDataType.BYTE);
+    }
+
+    public static ItemStack createAltarTurnerItem() {
+        ItemStack item = new ItemStack(Material.STICK);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(
+                    Component.text("Altar Turner", NamedTextColor.YELLOW).decorate(TextDecoration.BOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Right-click an altar ArmorStand to rotate it.", NamedTextColor.GRAY));
+            meta.lore(lore);
+            meta.getPersistentDataContainer().set(ALTAR_TURNER_KEY, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isAltarTurnerItem(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+        return item.getItemMeta().getPersistentDataContainer().has(ALTAR_TURNER_KEY, PersistentDataType.BYTE);
     }
 }
