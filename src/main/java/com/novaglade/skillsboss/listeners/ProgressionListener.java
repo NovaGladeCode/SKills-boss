@@ -9,10 +9,13 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
@@ -182,11 +185,23 @@ public class ProgressionListener implements Listener {
             enchants.put(Enchantment.PROTECTION, 3);
         }
 
-        if (enchants.containsKey(Enchantment.SHARPNESS) && enchants.get(Enchantment.SHARPNESS) > 1) {
-            enchants.put(Enchantment.SHARPNESS, 1);
+        if (enchants.containsKey(Enchantment.SHARPNESS) && enchants.get(Enchantment.SHARPNESS) > 2) {
+            enchants.put(Enchantment.SHARPNESS, 2);
         }
 
         enchants.remove(Enchantment.FIRE_ASPECT);
+    }
+
+    @EventHandler
+    public void onConsume(PlayerItemConsumeEvent event) {
+        if (SkillsBoss.getProgressionLevel() != 1)
+            return;
+
+        if (event.getItem().getType() == Material.ENCHANTED_GOLDEN_APPLE) {
+            event.setCancelled(true);
+            event.getPlayer().sendMessage(Component.text("You cannot eat Enchanted Golden Apples in Phase One!",
+                    NamedTextColor.RED));
+        }
     }
 
     @EventHandler
@@ -201,6 +216,30 @@ public class ProgressionListener implements Listener {
         boolean changed = sanitizeItem(result);
         if (changed) {
             event.setResult(result);
+        }
+    }
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        if (SkillsBoss.getProgressionLevel() == 0) {
+            if (!event.getPlayer().isOp()) {
+                event.setCancelled(true);
+                event.getPlayer()
+                        .sendMessage(Component.text("The world is frozen in Progression 0! You cannot break blocks.",
+                                NamedTextColor.RED));
+            }
+        }
+    }
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        if (SkillsBoss.getProgressionLevel() == 0) {
+            if (!event.getPlayer().isOp()) {
+                event.setCancelled(true);
+                event.getPlayer()
+                        .sendMessage(Component.text("The world is frozen in Progression 0! You cannot place blocks.",
+                                NamedTextColor.RED));
+            }
         }
     }
 
@@ -249,6 +288,9 @@ public class ProgressionListener implements Listener {
 
         int gapCount = 0;
         int cobwebCount = 0;
+        int lavaCount = 0;
+        int windChargeCount = 0;
+        int arrowCount = 0;
 
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
@@ -290,6 +332,31 @@ public class ProgressionListener implements Listener {
                 } else {
                     cobwebCount += item.getAmount();
                 }
+            } else if (item.getType() == Material.LAVA_BUCKET) {
+                if (lavaCount >= 1) {
+                    player.getInventory().setItem(i, null);
+                } else {
+                    lavaCount++;
+                }
+            } else if (item.getType() == Material.WIND_CHARGE) {
+                if (windChargeCount >= 32) {
+                    player.getInventory().setItem(i, null);
+                } else if (windChargeCount + item.getAmount() > 32) {
+                    item.setAmount(32 - windChargeCount);
+                    windChargeCount = 32;
+                } else {
+                    windChargeCount += item.getAmount();
+                }
+            } else if (item.getType() == Material.ARROW || item.getType() == Material.SPECTRAL_ARROW
+                    || item.getType() == Material.TIPPED_ARROW) {
+                if (arrowCount >= 12) {
+                    player.getInventory().setItem(i, null);
+                } else if (arrowCount + item.getAmount() > 12) {
+                    item.setAmount(12 - arrowCount);
+                    arrowCount = 12;
+                } else {
+                    arrowCount += item.getAmount();
+                }
             }
         }
     }
@@ -311,8 +378,8 @@ public class ProgressionListener implements Listener {
         }
 
         if (meta.hasEnchant(Enchantment.SHARPNESS)) {
-            if (meta.getEnchantLevel(Enchantment.SHARPNESS) > 1) {
-                meta.addEnchant(Enchantment.SHARPNESS, 1, true);
+            if (meta.getEnchantLevel(Enchantment.SHARPNESS) > 2) {
+                meta.addEnchant(Enchantment.SHARPNESS, 2, true);
                 changed = true;
             }
         }

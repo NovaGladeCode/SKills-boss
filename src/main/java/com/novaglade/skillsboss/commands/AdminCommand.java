@@ -49,7 +49,13 @@ public class AdminCommand implements CommandExecutor {
                     int level = Integer.parseInt(args[1]);
                     if (level == 0) {
                         if (sender instanceof Player) {
-                            startProgressionZeroTransition((Player) sender);
+                            Player p = (Player) sender;
+                            Location beaconLoc = findNearbyProgression1Beacon(p.getLocation(), 20);
+                            if (beaconLoc != null) {
+                                startProgression0At(p.getWorld(), beaconLoc.clone().add(0.5, 0, 0.5));
+                            } else {
+                                startProgressionZeroTransition(p); // Fallback to player location if no beacon
+                            }
                         } else {
                             sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
                         }
@@ -105,29 +111,88 @@ public class AdminCommand implements CommandExecutor {
     }
 
     private void startProgressionZeroTransition(Player player) {
-        World world = player.getWorld();
-        Location center = player.getLocation();
+        startProgression0At(player.getWorld(), player.getLocation());
+    }
 
-        SkillsBoss.setProgressionLevel(0);
-        world.setSpawnLocation(center);
-        world.getWorldBorder().setCenter(center);
-        world.getWorldBorder().setSize(19);
+    public static void startProgression0At(org.bukkit.World world, Location center) {
+        new BukkitRunnable() {
+            int maxTicks = 5 * 20; // 5 seconds for reset
+            int ticks = maxTicks;
 
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            online.teleport(center);
-            online.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
-            online.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0);
+            @Override
+            public void run() {
+                try {
+                    int seconds = (int) Math.ceil(ticks / 20.0);
 
-            Title startTitle = Title.title(
-                    Component.text("PROGRESSION 0", NamedTextColor.WHITE).decorate(TextDecoration.BOLD),
-                    Component.text("A NEW BEGINNING", NamedTextColor.GRAY),
-                    Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4), Duration.ofSeconds(1)));
-            online.showTitle(startTitle);
-        }
+                    // Massive Vortex
+                    double radius = 1.0 + (maxTicks - ticks) * 0.15;
+                    double angle = ticks * 0.5;
+                    for (int i = 0; i < 8; i++) {
+                        double subAngle = angle + (i * (Math.PI * 2 / 8));
+                        double x = Math.cos(subAngle) * radius;
+                        double z = Math.sin(subAngle) * radius;
+                        double y = (maxTicks - ticks) * 0.2;
 
-        player.sendMessage(
-                Component.text("World has been reset to Progression 0.", NamedTextColor.GREEN)
-                        .decorate(TextDecoration.BOLD));
+                        Location partLoc = center.clone().add(x, y, z);
+                        world.spawnParticle(Particle.DUST, partLoc, 5, new Particle.DustOptions(Color.WHITE, 1.0f));
+                        world.spawnParticle(Particle.FIREWORK, partLoc, 2, 0.1, 0.1, 0.1, 0.05);
+
+                        // Ender Dragon Lasers (End Crystal Beams)
+                        if (ticks % 4 == 0) {
+                            for (int j = 0; j < 15; j++) {
+                                double ratio = j / 15.0;
+                                Location laserPoint = center.clone().add(x * ratio, y * ratio, z * ratio);
+                                world.spawnParticle(Particle.DUST, laserPoint, 1,
+                                        new Particle.DustOptions(org.bukkit.Color.fromRGB(200, 0, 255), 1.0f));
+                            }
+                        }
+                    }
+
+                    if (ticks % 20 == 0 && seconds > 0) {
+                        Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.WHITE)
+                                .decorate(TextDecoration.BOLD);
+                        Title title = Title.title(mainTitle, Component.empty(),
+                                Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800),
+                                        Duration.ofMillis(100)));
+
+                        world.playSound(center, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 0.5f + (seconds * 0.1f));
+                    }
+
+                    if (ticks <= 0) {
+                        SkillsBoss.setProgressionLevel(0);
+                        world.setSpawnLocation(center);
+                        world.getWorldBorder().setCenter(center);
+                        world.getWorldBorder().setSize(19);
+
+                        for (Player online : Bukkit.getOnlinePlayers()) {
+                            if (online.getWorld().equals(world)) {
+                                online.teleport(center);
+                                online.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
+                                online.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0);
+
+                                Title startTitle = Title.title(
+                                        Component.text("PROGRESSION 0", NamedTextColor.WHITE)
+                                                .decorate(TextDecoration.BOLD),
+                                        Component.text("A NEW BEGINNING", NamedTextColor.GRAY),
+                                        Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4),
+                                                Duration.ofSeconds(1)));
+                                online.showTitle(startTitle);
+                            }
+                        }
+
+                        // Delete the beacon catalyst if present
+                        if (center.getBlock().getType() == Material.BEACON) {
+                            center.getBlock().setType(Material.AIR);
+                        }
+
+                        cancel();
+                    }
+                    ticks--;
+                } catch (Exception e) {
+                    cancel();
+                }
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
     private static void startProgressionOneCountdown(org.bukkit.World world) {
