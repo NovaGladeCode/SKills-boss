@@ -322,6 +322,46 @@ public class BossListener implements Listener {
     }
 
     @EventHandler
+    public void onSentryShoot(EntityShootBowEvent event) {
+        if (!(event.getEntity() instanceof Skeleton))
+            return;
+        Skeleton sentry = (Skeleton) event.getEntity();
+        String name = PlainTextComponentSerializer.plainText()
+                .serialize(sentry.customName() != null ? sentry.customName() : Component.empty());
+
+        if (name.contains("Fallen Sentry")) {
+            event.setCancelled(true);
+            Entity target = event.getEntity().getTarget();
+            if (target == null) {
+                target = sentry.getWorld().getNearbyEntities(sentry.getLocation(), 15, 15, 15).stream()
+                        .filter(e -> e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)
+                        .findFirst().orElse(null);
+            }
+
+            if (target instanceof LivingEntity) {
+                LivingEntity victim = (LivingEntity) target;
+                Location start = sentry.getEyeLocation();
+                Location end = victim.getEyeLocation();
+                Vector dir = end.toVector().subtract(start.toVector()).normalize();
+                double dist = start.distance(end);
+
+                // Laser effect
+                for (double d = 0; d < dist; d += 0.5) {
+                    sentry.getWorld().spawnParticle(Particle.DUST,
+                            start.clone().add(dir.clone().multiply(d)), 1,
+                            new Particle.DustOptions(org.bukkit.Color.RED, 1.2f));
+                }
+                sentry.getWorld().playSound(start, Sound.ENTITY_ZOMBIE_VILLAGER_CONVERTED, 0.5f, 2f);
+                victim.damage(6, sentry); // 3 hearts
+            }
+        } else if (sentry.getPersistentDataContainer()
+                .has(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"), PersistentDataType.BYTE)) {
+            // Existing explosive arrow logic if needed, but wasn't implemented before.
+            // We can leave it for now or implement it if the user asks.
+        }
+    }
+
+    @EventHandler
     public void onBossHit(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof WitherSkeleton && event.getEntity() instanceof Player) {
             WitherSkeleton boss = (WitherSkeleton) event.getDamager();
