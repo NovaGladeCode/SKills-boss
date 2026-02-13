@@ -896,7 +896,7 @@ public class BossListener implements Listener {
                                 boss.setVelocity(new Vector(0, -2.5, 0)); // Smash down
                                 boss.getWorld().spawnParticle(Particle.SONIC_BOOM, boss.getLocation(), 10, 0.5, 0.5,
                                         0.5, 0);
-                                boss.getWorld().playSound(boss.getLocation(), Sound.ITEM_MACE_AS_HEAVY_AS_ANYPENNY, 2f,
+                                boss.getWorld().playSound(boss.getLocation(), Sound.ITEM_MACE_SMASH_GROUND, 2f,
                                         0.5f);
 
                                 new BukkitRunnable() {
