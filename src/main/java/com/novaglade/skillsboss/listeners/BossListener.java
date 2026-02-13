@@ -659,33 +659,51 @@ public class BossListener implements Listener {
 
         // Supremus spawns ALONE - no guards yet
         Location spawn = findSafeSpawnLocation(spawnPoint, 0, 0).add(0, 1, 0);
+        Bukkit.getLogger().info("[SkillsBoss] Spawning Supremus at " + spawn.toString());
         WitherSkeleton boss = (WitherSkeleton) loc.getWorld().spawnEntity(spawn, EntityType.WITHER_SKELETON);
         boss.customName(Component.text("§4§lSUPREMUS"));
         boss.setCustomNameVisible(true);
+        boss.setRemoveWhenFarAway(false);
 
-        if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
-            boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1200);
-            boss.setHealth(1200);
+        try {
+            if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
+                boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1200);
+                boss.setHealth(1200);
+            }
+            // Try SCALE (1.20.5+) or GENERIC_SCALE
+            org.bukkit.attribute.AttributeInstance scaleAttr = boss.getAttribute(Attribute.SCALE);
+            if (scaleAttr != null) {
+                scaleAttr.setBaseValue(4.0);
+                Bukkit.getLogger().info("[SkillsBoss] Applied SCALE: 4.0");
+            } else {
+                // Fallback for older versions or if SCALE is not present
+                org.bukkit.attribute.AttributeInstance genericScaleAttr = boss.getAttribute(Attribute.GENERIC_SCALE);
+                if (genericScaleAttr != null) {
+                    genericScaleAttr.setBaseValue(4.0);
+                    Bukkit.getLogger().info("[SkillsBoss] Applied GENERIC_SCALE: 4.0");
+                } else {
+                    Bukkit.getLogger().warning("[SkillsBoss] Could not find SCALE or GENERIC_SCALE attribute!");
+                }
+            }
+
+            if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null)
+                boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(35.0);
+            if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
+                boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.38);
+        } catch (Exception e) {
+            Bukkit.getLogger().severe("[SkillsBoss] Error setting boss attributes: " + e.getMessage());
         }
-        if (boss.getAttribute(Attribute.SCALE) != null)
-            boss.getAttribute(Attribute.SCALE).setBaseValue(4.0);
-        if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-            boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(35.0);
-        if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
-            boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.38);
 
         boss.getPersistentDataContainer().set(FINAL_BOSS_KEY, PersistentDataType.BYTE, (byte) 2);
         boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 1);
 
-        // NO shield, NO frozen AI - Supremus fights immediately
-        Set<UUID> minions = Collections.synchronizedSet(new HashSet<>());
-        bossMinions.put(boss.getUniqueId(), minions);
-
+        // Equipment
         boss.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
         boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
         boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
         boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
         boss.getEquipment().setItemInMainHand(new ItemStack(Material.MACE));
+
         boss.getEquipment().setItemInMainHandDropChance(0f);
         boss.getEquipment().setHelmetDropChance(0f);
         boss.getEquipment().setChestplateDropChance(0f);
@@ -694,6 +712,9 @@ public class BossListener implements Listener {
 
         ritualTeam.addEntry(boss.getUniqueId().toString());
         bossGroup.add(boss.getUniqueId());
+
+        Set<UUID> minions = Collections.synchronizedSet(new HashSet<>());
+        bossMinions.put(boss.getUniqueId(), minions);
 
         BossBar suBar = Bukkit.createBossBar("§4§lSUPREMUS", BarColor.RED, BarStyle.SEGMENTED_20);
         Bukkit.getOnlinePlayers().forEach(suBar::addPlayer);
@@ -719,6 +740,7 @@ public class BossListener implements Listener {
                 // At 50% HP: shield + freeze + spawn guards
                 if (!guardsSpawned && boss.getHealth() <= 600) {
                     guardsSpawned = true;
+                    Bukkit.getLogger().info("[SkillsBoss] Supremus below 50% HP. Spawning guards!");
                     shieldedBosses.add(boss.getUniqueId());
                     boss.setInvulnerable(true);
                     boss.setAI(false);
@@ -917,6 +939,7 @@ public class BossListener implements Listener {
                     }
                 }
                 ticks++;
+
             }
         }.runTaskTimer(SkillsBoss.getInstance(), 20, 5);
     }
