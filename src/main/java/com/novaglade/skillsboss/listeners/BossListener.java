@@ -331,7 +331,7 @@ public class BossListener implements Listener {
 
         if (name.contains("Fallen Sentry")) {
             event.setCancelled(true);
-            Entity target = event.getEntity().getTarget();
+            Entity target = sentry.getTarget();
             if (target == null) {
                 target = sentry.getWorld().getNearbyEntities(sentry.getLocation(), 15, 15, 15).stream()
                         .filter(e -> e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)
