@@ -115,84 +115,31 @@ public class AdminCommand implements CommandExecutor {
     }
 
     public static void startProgression0At(org.bukkit.World world, Location center) {
-        new BukkitRunnable() {
-            int maxTicks = 5 * 20; // 5 seconds for reset
-            int ticks = maxTicks;
+        SkillsBoss.setProgressionLevel(0);
+        world.setSpawnLocation(center);
+        world.getWorldBorder().setCenter(center);
+        world.getWorldBorder().setSize(19);
 
-            @Override
-            public void run() {
-                try {
-                    int seconds = (int) Math.ceil(ticks / 20.0);
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (online.getWorld().equals(world)) {
+                online.teleport(center);
+                online.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
+                online.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0);
 
-                    // Massive Vortex
-                    double radius = 1.0 + (maxTicks - ticks) * 0.15;
-                    double angle = ticks * 0.5;
-                    for (int i = 0; i < 8; i++) {
-                        double subAngle = angle + (i * (Math.PI * 2 / 8));
-                        double x = Math.cos(subAngle) * radius;
-                        double z = Math.sin(subAngle) * radius;
-                        double y = (maxTicks - ticks) * 0.2;
-
-                        Location partLoc = center.clone().add(x, y, z);
-                        world.spawnParticle(Particle.DUST, partLoc, 5, new Particle.DustOptions(Color.WHITE, 1.0f));
-                        world.spawnParticle(Particle.FIREWORK, partLoc, 2, 0.1, 0.1, 0.1, 0.05);
-
-                        // Ender Dragon Lasers (End Crystal Beams)
-                        if (ticks % 4 == 0) {
-                            for (int j = 0; j < 15; j++) {
-                                double ratio = j / 15.0;
-                                Location laserPoint = center.clone().add(x * ratio, y * ratio, z * ratio);
-                                world.spawnParticle(Particle.DUST, laserPoint, 1,
-                                        new Particle.DustOptions(org.bukkit.Color.fromRGB(200, 0, 255), 1.0f));
-                            }
-                        }
-                    }
-
-                    if (ticks % 20 == 0 && seconds > 0) {
-                        Component mainTitle = Component.text(String.valueOf(seconds), NamedTextColor.WHITE)
-                                .decorate(TextDecoration.BOLD);
-                        Title title = Title.title(mainTitle, Component.empty(),
-                                Title.Times.times(Duration.ofMillis(100), Duration.ofMillis(800),
-                                        Duration.ofMillis(100)));
-
-                        world.playSound(center, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 0.5f + (seconds * 0.1f));
-                    }
-
-                    if (ticks <= 0) {
-                        SkillsBoss.setProgressionLevel(0);
-                        world.setSpawnLocation(center);
-                        world.getWorldBorder().setCenter(center);
-                        world.getWorldBorder().setSize(19);
-
-                        for (Player online : Bukkit.getOnlinePlayers()) {
-                            if (online.getWorld().equals(world)) {
-                                online.teleport(center);
-                                online.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 1f, 1f);
-                                online.spawnParticle(Particle.EXPLOSION_EMITTER, center, 20, 2, 2, 2, 0);
-
-                                Title startTitle = Title.title(
-                                        Component.text("PROGRESSION 0", NamedTextColor.WHITE)
-                                                .decorate(TextDecoration.BOLD),
-                                        Component.text("A NEW BEGINNING", NamedTextColor.GRAY),
-                                        Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4),
-                                                Duration.ofSeconds(1)));
-                                online.showTitle(startTitle);
-                            }
-                        }
-
-                        // Delete the beacon catalyst if present
-                        if (center.getBlock().getType() == Material.BEACON) {
-                            center.getBlock().setType(Material.AIR);
-                        }
-
-                        cancel();
-                    }
-                    ticks--;
-                } catch (Exception e) {
-                    cancel();
-                }
+                Title startTitle = Title.title(
+                        Component.text("PROGRESSION 0", NamedTextColor.WHITE)
+                                .decorate(TextDecoration.BOLD),
+                        Component.text("A NEW BEGINNING", NamedTextColor.GRAY),
+                        Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(4),
+                                Duration.ofSeconds(1)));
+                online.showTitle(startTitle);
             }
-        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
+        }
+
+        // Delete the beacon catalyst if present
+        if (center.getBlock().getType() == Material.BEACON) {
+            center.getBlock().setType(Material.AIR);
+        }
     }
 
     private static void startProgressionOneCountdown(org.bukkit.World world) {
@@ -235,6 +182,16 @@ public class AdminCommand implements CommandExecutor {
                                 Location laserPoint = center.clone().add(x * ratio, y * ratio, z * ratio);
                                 world.spawnParticle(Particle.DUST, laserPoint, 1,
                                         new Particle.DustOptions(org.bukkit.Color.AQUA, 0.5f));
+                            }
+                        }
+
+                        // Ender Dragon Lasers (End Crystal Beams from Vortex to Center)
+                        if (ticks % 3 == 0) {
+                            for (int j = 0; j < 15; j++) {
+                                double ratio = j / 15.0;
+                                Location laserPoint = center.clone().add(x * ratio, y * ratio, z * ratio);
+                                world.spawnParticle(Particle.DUST, laserPoint, 1,
+                                        new Particle.DustOptions(org.bukkit.Color.fromRGB(200, 0, 255), 1.0f));
                             }
                         }
                     }
