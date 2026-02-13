@@ -400,7 +400,7 @@ public class BossListener implements Listener {
                     return;
                 }
 
-                if (waveNum < 5) {
+                if (waveNum < 4) {
                     waveNum++;
                     startWave(anchor, ritualBar, waveNum);
                     waiting = true;
@@ -427,13 +427,11 @@ public class BossListener implements Listener {
 
     private void startWave(Entity stand, BossBar bar, int waveId) {
         String[] titles = { "", "§e§lTrial I: The Fallen Sentries", "§9§lTrial II: The Undead Sentinels",
-                "§c§lTrial III: The Avernus Guards", "§6§lTrial IV: The Gatekeeper's Advance",
-                "§4§lTrial V: The Final Gate" };
+                "§c§lTrial III: The Avernus Guards", "§4§lTrial IV: The Final Gate" };
         Component[] msgs = { null,
                 Component.text("The fallen rise in diamond plate...", NamedTextColor.YELLOW),
                 Component.text("The undead manifest from the depths...", NamedTextColor.BLUE),
                 Component.text("The Avernus Guards have arrived.", NamedTextColor.RED),
-                Component.text("The Gatekeeper's forces are bridging the gap...", NamedTextColor.GOLD),
                 Component.text("THE GATEKEEPER HAS AWAKENED!", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD)
         };
 
@@ -496,16 +494,6 @@ public class BossListener implements Listener {
                 }
             }
         } else if (waveId == 4) {
-            for (int i = 0; i < 10; i++) {
-                LivingEntity e = spawnMob(spawnLoc, EntityType.ZOMBIE, "§6Elite Guard", Material.DIAMOND_SWORD,
-                        stand.getUniqueId(), mobs);
-                if (e != null) {
-                    applyDiamondGear(e, 250);
-                    if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(18.0);
-                }
-            }
-        } else if (waveId == 5) {
             for (int i = 0; i < 4; i++) {
                 LivingEntity s = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
