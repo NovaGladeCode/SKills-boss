@@ -666,24 +666,16 @@ public class BossListener implements Listener {
         boss.setRemoveWhenFarAway(false);
 
         try {
+            // Apply attributes with modern 1.21 names
             if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
                 boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1200);
                 boss.setHealth(1200);
             }
-            // Try SCALE (1.20.5+) or GENERIC_SCALE
+
             org.bukkit.attribute.AttributeInstance scaleAttr = boss.getAttribute(Attribute.SCALE);
             if (scaleAttr != null) {
                 scaleAttr.setBaseValue(4.0);
                 Bukkit.getLogger().info("[SkillsBoss] Applied SCALE: 4.0");
-            } else {
-                // Fallback for older versions or if SCALE is not present
-                org.bukkit.attribute.AttributeInstance genericScaleAttr = boss.getAttribute(Attribute.GENERIC_SCALE);
-                if (genericScaleAttr != null) {
-                    genericScaleAttr.setBaseValue(4.0);
-                    Bukkit.getLogger().info("[SkillsBoss] Applied GENERIC_SCALE: 4.0");
-                } else {
-                    Bukkit.getLogger().warning("[SkillsBoss] Could not find SCALE or GENERIC_SCALE attribute!");
-                }
             }
 
             if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null)
