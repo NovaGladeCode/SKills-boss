@@ -210,14 +210,7 @@ public class ProgressionListener implements Listener {
 
     @EventHandler
     public void onConsume(PlayerItemConsumeEvent event) {
-        if (SkillsBoss.getProgressionLevel() != 1)
-            return;
-
-        if (event.getItem().getType() == Material.ENCHANTED_GOLDEN_APPLE) {
-            event.setCancelled(true);
-            event.getPlayer().sendMessage(Component.text("You cannot eat Enchanted Golden Apples in Phase One!",
-                    NamedTextColor.RED));
-        }
+        // Restriction removed
     }
 
     @EventHandler
@@ -327,53 +320,6 @@ public class ProgressionListener implements Listener {
 
             // 2. Enchantment limits
             sanitizeItem(item);
-
-            // 3. Gap and Cobweb limits
-            // Gaps/Cobwebs are restricted for everyone in Progression 1
-            if (item.getType() == Material.GOLDEN_APPLE || item.getType() == Material.ENCHANTED_GOLDEN_APPLE) {
-                if (gapCount >= 8) {
-                    player.getInventory().setItem(i, null);
-                } else if (gapCount + item.getAmount() > 8) {
-                    item.setAmount(8 - gapCount);
-                    gapCount = 8;
-                } else {
-                    gapCount += item.getAmount();
-                }
-            } else if (item.getType() == Material.COBWEB) {
-                if (cobwebCount >= 8) {
-                    player.getInventory().setItem(i, null);
-                } else if (cobwebCount + item.getAmount() > 8) {
-                    item.setAmount(8 - cobwebCount);
-                    cobwebCount = 8;
-                } else {
-                    cobwebCount += item.getAmount();
-                }
-            } else if (item.getType() == Material.LAVA_BUCKET) {
-                if (lavaCount >= 1) {
-                    player.getInventory().setItem(i, null);
-                } else {
-                    lavaCount++;
-                }
-            } else if (item.getType() == Material.WIND_CHARGE) {
-                if (windChargeCount >= 32) {
-                    player.getInventory().setItem(i, null);
-                } else if (windChargeCount + item.getAmount() > 32) {
-                    item.setAmount(32 - windChargeCount);
-                    windChargeCount = 32;
-                } else {
-                    windChargeCount += item.getAmount();
-                }
-            } else if (item.getType() == Material.ARROW || item.getType() == Material.SPECTRAL_ARROW
-                    || item.getType() == Material.TIPPED_ARROW) {
-                if (arrowCount >= 12) {
-                    player.getInventory().setItem(i, null);
-                } else if (arrowCount + item.getAmount() > 12) {
-                    item.setAmount(12 - arrowCount);
-                    arrowCount = 12;
-                } else {
-                    arrowCount += item.getAmount();
-                }
-            }
         }
     }
 
