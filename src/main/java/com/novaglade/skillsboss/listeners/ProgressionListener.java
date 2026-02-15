@@ -46,8 +46,8 @@ public class ProgressionListener implements Listener {
             Material.DIAMOND_LEGGINGS,
             Material.DIAMOND_BOOTS,
             Material.DIAMOND_SWORD,
-            Material.DIAMOND_AXE,
             Material.DIAMOND_PICKAXE,
+            Material.DIAMOND_AXE,
             Material.DIAMOND_SHOVEL,
             Material.DIAMOND_HOE,
             Material.NETHERITE_HELMET,
@@ -55,10 +55,10 @@ public class ProgressionListener implements Listener {
             Material.NETHERITE_LEGGINGS,
             Material.NETHERITE_BOOTS,
             Material.NETHERITE_SWORD,
+            Material.NETHERITE_PICKAXE,
             Material.NETHERITE_AXE,
             Material.NETHERITE_SHOVEL,
             Material.NETHERITE_HOE,
-            Material.NETHERITE_PICKAXE,
             Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
 
     @EventHandler
@@ -205,6 +205,14 @@ public class ProgressionListener implements Listener {
             enchants.put(Enchantment.SHARPNESS, 2);
         }
 
+        if (enchants.containsKey(Enchantment.EFFICIENCY) && enchants.get(Enchantment.EFFICIENCY) > 2) {
+            enchants.put(Enchantment.EFFICIENCY, 2);
+        }
+
+        if (enchants.containsKey(Enchantment.POWER) && enchants.get(Enchantment.POWER) > 2) {
+            enchants.put(Enchantment.POWER, 2);
+        }
+
         enchants.remove(Enchantment.FIRE_ASPECT);
     }
 
@@ -332,20 +340,31 @@ public class ProgressionListener implements Listener {
             return false;
         boolean changed = false;
 
-        if (meta.hasEnchant(Enchantment.PROTECTION)) {
-            if (meta.getEnchantLevel(Enchantment.PROTECTION) > 3) {
-                meta.addEnchant(Enchantment.PROTECTION, 3, true);
-                changed = true;
-            }
+        // Protection limit: 3
+        if (meta.hasEnchant(Enchantment.PROTECTION) && meta.getEnchantLevel(Enchantment.PROTECTION) > 3) {
+            meta.addEnchant(Enchantment.PROTECTION, 3, true);
+            changed = true;
         }
 
-        if (meta.hasEnchant(Enchantment.SHARPNESS)) {
-            if (meta.getEnchantLevel(Enchantment.SHARPNESS) > 2) {
-                meta.addEnchant(Enchantment.SHARPNESS, 2, true);
-                changed = true;
-            }
+        // Sharpness limit: 2
+        if (meta.hasEnchant(Enchantment.SHARPNESS) && meta.getEnchantLevel(Enchantment.SHARPNESS) > 2) {
+            meta.addEnchant(Enchantment.SHARPNESS, 2, true);
+            changed = true;
         }
 
+        // Efficiency limit: 2
+        if (meta.hasEnchant(Enchantment.EFFICIENCY) && meta.getEnchantLevel(Enchantment.EFFICIENCY) > 2) {
+            meta.addEnchant(Enchantment.EFFICIENCY, 2, true);
+            changed = true;
+        }
+
+        // Power limit: 2
+        if (meta.hasEnchant(Enchantment.POWER) && meta.getEnchantLevel(Enchantment.POWER) > 2) {
+            meta.addEnchant(Enchantment.POWER, 2, true);
+            changed = true;
+        }
+
+        // Remove Fire Aspect if present
         if (meta.hasEnchant(Enchantment.FIRE_ASPECT)) {
             meta.removeEnchant(Enchantment.FIRE_ASPECT);
             changed = true;
