@@ -1215,4 +1215,78 @@ public class BossListener implements Listener {
         e.getWorld().spawnParticle(Particle.FLAME, spawnLoc, 5, 0.2, 0.2, 0.2, 0.02);
         return e;
     }
+
+    public static void spawnWarlordBoss(Location loc) {
+        if (instance == null) return;
+        loc.getWorld().strikeLightningEffect(loc);
+        loc.getWorld().spawnParticle(Particle.FLAME, loc, 100, 1, 1, 1, 0.1);
+        loc.getWorld().playSound(loc, Sound.ENTITY_PIGLIN_BRUTE_ANGRY, 2f, 0.5f);
+
+        PiglinBrute boss = (PiglinBrute) loc.getWorld().spawnEntity(loc, EntityType.PIGLIN_BRUTE);
+        boss.customName(Component.text("§c§lWarlord"));
+        boss.setCustomNameVisible(true);
+        boss.setRemoveWhenFarAway(false);
+        boss.setImmuneToZombification(true);
+
+        if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
+            boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(800.0);
+            boss.setHealth(800.0);
+        }
+        if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null) boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(30.0);
+        if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null) boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
+
+        boss.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
+        boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
+        boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
+        boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
+        ItemStack ax = new ItemStack(Material.NETHERITE_AXE);
+        ax.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FIRE_ASPECT, 2);
+        boss.getEquipment().setItemInMainHand(ax);
+
+        boss.getEquipment().setItemInMainHandDropChance(0f);
+        boss.getEquipment().setHelmetDropChance(0f);
+        boss.getEquipment().setChestplateDropChance(0f);
+        boss.getEquipment().setLeggingsDropChance(0f);
+        boss.getEquipment().setBootsDropChance(0f);
+
+        BossBar wBar = Bukkit.createBossBar("§c§lWarlord", BarColor.RED, BarStyle.SEGMENTED_12);
+        Bukkit.getOnlinePlayers().forEach(wBar::addPlayer);
+        instance.activeBars.put(boss.getUniqueId(), wBar);
+        instance.bossGroup.add(boss.getUniqueId());
+
+        new BukkitRunnable() {
+            int ticks = 0;
+            @Override
+            public void run() {
+                if (!boss.isValid()) {
+                    wBar.removeAll();
+                    instance.activeBars.remove(boss.getUniqueId());
+                    cancel();
+                    return;
+                }
+                wBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 800.0)));
+
+                if (ticks % 5 == 0) {
+                    boss.getWorld().spawnParticle(Particle.FLAME, boss.getLocation().add(0, 1, 0), 5, 0.5, 0.5, 0.5, 0.05);
+                    boss.getWorld().spawnParticle(Particle.LAVA, boss.getLocation().add(0, 1, 0), 2, 0.3, 0.3, 0.3, 0.02);
+                }
+
+                if (ticks % 100 == 0) {
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GHAST_SHOOT, 1f, 0.5f);
+                    for (int i = 0; i < 360; i += 20) {
+                        double a = Math.toRadians(i);
+                        Location pLoc = boss.getLocation().add(Math.cos(a) * 4, 0.5, Math.sin(a) * 4);
+                        boss.getWorld().spawnParticle(Particle.FLAME, pLoc, 3, 0.1, 0.1, 0.1, 0.1);
+                    }
+                    boss.getWorld().getNearbyEntities(boss.getLocation(), 6, 6, 6).forEach(e -> {
+                        if (e instanceof Player && !e.isOp()) {
+                            e.setFireTicks(100);
+                            ((LivingEntity) e).damage(15, boss);
+                        }
+                    });
+                }
+                ticks++;
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 20, 5);
+    }
 }

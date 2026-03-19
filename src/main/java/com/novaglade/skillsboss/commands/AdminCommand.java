@@ -95,6 +95,24 @@ public class AdminCommand implements CommandExecutor {
             case "give":
                 handleGive(sender, args);
                 break;
+            case "warlord":
+                if (sender instanceof Player) {
+                    Player p = (Player) sender;
+                    com.novaglade.skillsboss.listeners.BossListener.spawnWarlordBoss(p.getLocation());
+                    sender.sendMessage(Component.text("Warlord spawned!", NamedTextColor.GREEN));
+                } else {
+                    sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+                }
+                break;
+            case "trader":
+                if (sender instanceof Player) {
+                    Player p = (Player) sender;
+                    com.novaglade.skillsboss.listeners.ProgressionListener.spawnPiglinTrader(p.getLocation());
+                    sender.sendMessage(Component.text("Piglin Trader spawned!", NamedTextColor.GREEN));
+                } else {
+                    sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+                }
+                break;
             case "reload":
                 SkillsBoss.getInstance().reloadConfig();
                 sender.sendMessage(Component.text("Config reloaded.", NamedTextColor.GREEN));
@@ -419,6 +437,10 @@ public class AdminCommand implements CommandExecutor {
         sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal|prog1> ", NamedTextColor.YELLOW)
                 .append(Component.text("- Give legendary gear, ritual items, portal obsidian, or progression catalyst",
                         NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/admin warlord ", NamedTextColor.YELLOW)
+                .append(Component.text("- Spawn the Warlord Boss at your location", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/admin trader ", NamedTextColor.YELLOW)
+                .append(Component.text("- Spawn the Piglin Trader at your location", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin reload ", NamedTextColor.YELLOW)
                 .append(Component.text("- Reload plugin config", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin version ", NamedTextColor.YELLOW)

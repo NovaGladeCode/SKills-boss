@@ -265,6 +265,10 @@ public class ProgressionListener implements Listener {
         if (SkillsBoss.getProgressionLevel() < 1)
             return;
         if (event.getInventory().getType() == org.bukkit.event.inventory.InventoryType.MERCHANT) {
+            String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+            if (title.contains("Piglin Trader")) {
+                return; // Allow the piglin trader interface
+            }
             if (event.getPlayer() instanceof Player) {
                 Player p = (Player) event.getPlayer();
                 if (!p.isOp()) {
@@ -374,5 +378,67 @@ public class ProgressionListener implements Listener {
             item.setItemMeta(meta);
         }
         return changed;
+    }
+
+    public static void spawnPiglinTrader(org.bukkit.Location loc) {
+        org.bukkit.entity.Piglin trader = (org.bukkit.entity.Piglin) loc.getWorld().spawnEntity(loc, org.bukkit.entity.EntityType.PIGLIN);
+        trader.setImmuneToZombification(true);
+        trader.setAI(false); // Make it stationary
+        trader.customName(net.kyori.adventure.text.Component.text("§6Piglin Trader"));
+        trader.setCustomNameVisible(true);
+        trader.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "is_piglin_trader"), org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+        trader.getEquipment().clear();
+    }
+
+    @EventHandler
+    public void onEntityInteract(org.bukkit.event.player.PlayerInteractEntityEvent event) {
+        if (event.getRightClicked() instanceof org.bukkit.entity.Piglin) {
+            org.bukkit.entity.Piglin p = (org.bukkit.entity.Piglin) event.getRightClicked();
+            if (p.getPersistentDataContainer().has(new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "is_piglin_trader"), org.bukkit.persistence.PersistentDataType.BYTE)) {
+                event.setCancelled(true);
+                openTraderMenu(event.getPlayer());
+            }
+        }
+    }
+
+    private void openTraderMenu(Player player) {
+        // We use string for merchant title to be safe with standard Spigot API or Paper
+        org.bukkit.inventory.Merchant merchant = null;
+        try {
+            // Paper variant
+            java.lang.reflect.Method createMerchantComponent = org.bukkit.Bukkit.class.getMethod("createMerchant", net.kyori.adventure.text.Component.class);
+            merchant = (org.bukkit.inventory.Merchant) createMerchantComponent.invoke(null, net.kyori.adventure.text.Component.text("Piglin Trader"));
+        } catch (Exception e) {
+            // Spigot variant
+            merchant = org.bukkit.Bukkit.createMerchant("Piglin Trader");
+        }
+        
+        if (merchant == null) return;
+
+        java.util.List<org.bukkit.inventory.MerchantRecipe> recipes = new java.util.ArrayList<>();
+        
+        ItemStack goldIngot = new ItemStack(Material.GOLD_INGOT, 5);
+        ItemStack enderPearl = new ItemStack(Material.ENDER_PEARL, 1);
+        org.bukkit.inventory.MerchantRecipe recipe1 = new org.bukkit.inventory.MerchantRecipe(enderPearl, 9999);
+        recipe1.addIngredient(goldIngot);
+        recipes.add(recipe1);
+        
+        ItemStack netheriteDrop = new ItemStack(Material.NETHERITE_SCRAP, 1);
+        ItemStack goldBlock = new ItemStack(Material.GOLD_BLOCK, 1);
+        org.bukkit.inventory.MerchantRecipe recipe2 = new org.bukkit.inventory.MerchantRecipe(netheriteDrop, 9999);
+        recipe2.addIngredient(goldBlock);
+        recipes.add(recipe2);
+
+        ItemStack strPotion = new ItemStack(Material.POTION);
+        org.bukkit.inventory.meta.PotionMeta pMeta = (org.bukkit.inventory.meta.PotionMeta) strPotion.getItemMeta();
+        pMeta.addCustomEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.STRENGTH, 2400, 1), true);
+        pMeta.displayName(net.kyori.adventure.text.Component.text("§cBrute's Strength"));
+        strPotion.setItemMeta(pMeta);
+        org.bukkit.inventory.MerchantRecipe recipe3 = new org.bukkit.inventory.MerchantRecipe(strPotion, 9999);
+        recipe3.addIngredient(new ItemStack(Material.GOLD_INGOT, 10));
+        recipes.add(recipe3);
+
+        merchant.setRecipes(recipes);
+        player.openMerchant(merchant, true);
     }
 }
