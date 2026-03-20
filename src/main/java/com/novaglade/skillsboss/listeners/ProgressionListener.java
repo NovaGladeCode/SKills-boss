@@ -523,16 +523,13 @@ public class ProgressionListener implements Listener {
             waterBottle
         };
 
-        // Generate 3 random unique trades
-        java.util.Set<Integer> usedIndices = new java.util.HashSet<>();
+        // Shuffle items to guarantee no duplicates
+        java.util.List<ItemStack> shuffled = new java.util.ArrayList<>(java.util.Arrays.asList(finalItems));
+        java.util.Collections.shuffle(shuffled, rand);
+
+        // Generate 3 unique trades
         for (int i = 0; i < 3; i++) {
-            int index = rand.nextInt(finalItems.length);
-            while (usedIndices.contains(index)) {
-                index = rand.nextInt(finalItems.length);
-            }
-            usedIndices.add(index);
-            
-            ItemStack output = finalItems[index].clone();
+            ItemStack output = shuffled.get(i).clone();
             org.bukkit.inventory.MerchantRecipe recipe = new org.bukkit.inventory.MerchantRecipe(output, 9999);
             
             ItemStack cost1;
