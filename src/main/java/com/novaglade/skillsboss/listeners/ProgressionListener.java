@@ -479,12 +479,12 @@ public class ProgressionListener implements Listener {
             org.bukkit.entity.PiglinBrute p = (org.bukkit.entity.PiglinBrute) event.getRightClicked();
             if (p.getPersistentDataContainer().has(new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "is_piglin_trader"), org.bukkit.persistence.PersistentDataType.BYTE)) {
                 event.setCancelled(true);
-                openTraderMenu(event.getPlayer());
+                openTraderMenu(event.getPlayer(), p);
             }
         }
     }
 
-    private void openTraderMenu(Player player) {
+    private void openTraderMenu(Player player, org.bukkit.entity.PiglinBrute traderEntity) {
         org.bukkit.inventory.Merchant merchant = null;
         try {
             java.lang.reflect.Method createMerchantComponent = org.bukkit.Bukkit.class.getMethod("createMerchant", net.kyori.adventure.text.Component.class);
@@ -496,7 +496,8 @@ public class ProgressionListener implements Listener {
         if (merchant == null) return;
 
         java.util.List<org.bukkit.inventory.MerchantRecipe> recipes = new java.util.ArrayList<>();
-        java.util.Random rand = new java.util.Random();
+        long seed = traderEntity.getUniqueId().getMostSignificantBits() ^ traderEntity.getUniqueId().getLeastSignificantBits();
+        java.util.Random rand = new java.util.Random(seed);
         
         // Define possible selling items
         ItemStack[] sellableItems = new ItemStack[] {
@@ -537,6 +538,28 @@ public class ProgressionListener implements Listener {
             }
             
             recipes.add(recipe);
+        }
+
+        // Add guaranteed enchanted book trade
+        ItemStack enchantedBook = new ItemStack(Material.ENCHANTED_BOOK);
+        org.bukkit.inventory.meta.EnchantmentStorageMeta emeta = (org.bukkit.inventory.meta.EnchantmentStorageMeta) enchantedBook.getItemMeta();
+        java.util.List<Enchantment> availableEnchants = new java.util.ArrayList<>();
+        for (Enchantment e : org.bukkit.Registry.ENCHANTMENT) {
+            if (!e.isCursed()) {
+                availableEnchants.add(e);
+            }
+        }
+        if (!availableEnchants.isEmpty()) {
+            Enchantment selectedEnch = availableEnchants.get(rand.nextInt(availableEnchants.size()));
+            int maxLevel = selectedEnch.getMaxLevel();
+            int level = maxLevel > 0 ? rand.nextInt(maxLevel) + 1 : 1;
+            emeta.addStoredEnchant(selectedEnch, level, true);
+            enchantedBook.setItemMeta(emeta);
+            
+            org.bukkit.inventory.MerchantRecipe bookRecipe = new org.bukkit.inventory.MerchantRecipe(enchantedBook, 9999);
+            Material cur1 = currencies[rand.nextInt(currencies.length)];
+            bookRecipe.addIngredient(new ItemStack(cur1, rand.nextInt(10) + 1));
+            recipes.add(bookRecipe);
         }
 
         merchant.setRecipes(recipes);
