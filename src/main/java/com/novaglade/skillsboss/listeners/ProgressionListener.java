@@ -523,25 +523,58 @@ public class ProgressionListener implements Listener {
             waterBottle
         };
 
-        // Currency types
-        Material[] currencies = new Material[] { Material.GOLD_INGOT, Material.GOLD_BLOCK, Material.GILDED_BLACKSTONE };
-        
         // Generate 3 random trades
         for (int i = 0; i < 3; i++) {
             ItemStack output = finalItems[rand.nextInt(finalItems.length)].clone();
             org.bukkit.inventory.MerchantRecipe recipe = new org.bukkit.inventory.MerchantRecipe(output, 9999);
             
-            // Randomly choose 1 or 2 cost inputs
-            Material cur1 = currencies[rand.nextInt(currencies.length)];
-            int amt1 = rand.nextInt(10) + 1;
-            recipe.addIngredient(new ItemStack(cur1, amt1));
-            
-            if (rand.nextBoolean()) {
-                Material cur2 = currencies[rand.nextInt(currencies.length)];
-                int amt2 = rand.nextInt(5) + 1;
-                recipe.addIngredient(new ItemStack(cur2, amt2));
+            ItemStack cost1;
+            switch (output.getType()) {
+                case GLASS:
+                    cost1 = new ItemStack(Material.GOLD_INGOT, rand.nextInt(4) + 1);
+                    break;
+                case BOOKSHELF:
+                    cost1 = new ItemStack(Material.GOLD_INGOT, rand.nextInt(5) + 4);
+                    break;
+                case ENDER_PEARL:
+                    if (rand.nextBoolean()) {
+                        cost1 = new ItemStack(Material.GOLD_INGOT, rand.nextInt(9) + 4);
+                    } else {
+                        cost1 = new ItemStack(Material.GOLD_BLOCK, 1);
+                    }
+                    break;
+                case OBSIDIAN:
+                    if (rand.nextInt(100) < 80) {
+                        cost1 = new ItemStack(Material.GOLD_BLOCK, rand.nextInt(3) + 1);
+                    } else {
+                        cost1 = new ItemStack(Material.GILDED_BLACKSTONE, rand.nextInt(6) + 3);
+                    }
+                    break;
+                case IRON_INGOT:
+                    cost1 = new ItemStack(Material.GOLD_INGOT, rand.nextInt(11) + 5);
+                    break;
+                case NETHER_WART:
+                    cost1 = new ItemStack(Material.GOLD_INGOT, rand.nextInt(6) + 3);
+                    break;
+                case DIAMOND:
+                    if (rand.nextInt(100) < 80) {
+                        cost1 = new ItemStack(Material.GOLD_BLOCK, rand.nextInt(3) + 2);
+                    } else {
+                        cost1 = new ItemStack(Material.GILDED_BLACKSTONE, rand.nextInt(3) + 1);
+                    }
+                    break;
+                case POTION:
+                    org.bukkit.inventory.meta.PotionMeta pm = (org.bukkit.inventory.meta.PotionMeta) output.getItemMeta();
+                    if (pm.getBasePotionType() == org.bukkit.potion.PotionType.WATER) {
+                        cost1 = new ItemStack(Material.GOLD_INGOT, rand.nextInt(4) + 2);
+                    } else {
+                        cost1 = new ItemStack(Material.GOLD_BLOCK, rand.nextInt(2) + 1);
+                    }
+                    break;
+                default:
+                    cost1 = new ItemStack(Material.GOLD_INGOT, 5);
             }
-            
+            recipe.addIngredient(cost1);
             recipes.add(recipe);
         }
 
@@ -562,8 +595,13 @@ public class ProgressionListener implements Listener {
             enchantedBook.setItemMeta(emeta);
             
             org.bukkit.inventory.MerchantRecipe bookRecipe = new org.bukkit.inventory.MerchantRecipe(enchantedBook, 9999);
-            Material cur1 = currencies[rand.nextInt(currencies.length)];
-            bookRecipe.addIngredient(new ItemStack(cur1, rand.nextInt(10) + 1));
+            ItemStack bookCost;
+            if (rand.nextInt(100) < 80) {
+                bookCost = new ItemStack(Material.GOLD_BLOCK, rand.nextInt(4) + 2);
+            } else {
+                bookCost = new ItemStack(Material.GILDED_BLACKSTONE, rand.nextInt(3) + 1);
+            }
+            bookRecipe.addIngredient(bookCost);
             recipes.add(bookRecipe);
         }
 
