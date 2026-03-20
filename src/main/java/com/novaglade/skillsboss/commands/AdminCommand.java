@@ -89,6 +89,38 @@ public class AdminCommand implements CommandExecutor {
                     sender.sendMessage(Component.text("Invalid number.", NamedTextColor.RED));
                 }
                 break;
+            case "test":
+                if (args.length >= 3 && args[1].equalsIgnoreCase("progression")) {
+                    if (!(sender instanceof Player)) {
+                        sender.sendMessage(Component.text("Must be run by a player.", NamedTextColor.RED));
+                        return true;
+                    }
+                    Player p = (Player) sender;
+                    try {
+                        int level = Integer.parseInt(args[2]);
+                        SkillsBoss.setProgressionLevel(level);
+                        String worldName = "world";
+                        if (level >= 2) {
+                            worldName = "world_nether";
+                        }
+                        World targetWorld = Bukkit.getWorld(worldName);
+                        if (targetWorld == null && level >= 2) {
+                            // Fallback if generic nether name isn't found
+                            targetWorld = Bukkit.getWorlds().stream().filter(w -> w.getEnvironment() == World.Environment.NETHER).findFirst().orElse(null);
+                        }
+                        if (targetWorld != null) {
+                            p.teleport(targetWorld.getSpawnLocation());
+                            sender.sendMessage(Component.text("Set Progression to " + level + " and teleported to " + targetWorld.getName(), NamedTextColor.GREEN));
+                        } else {
+                            sender.sendMessage(Component.text("Set Progression to " + level + " but could not find target dimension.", NamedTextColor.YELLOW));
+                        }
+                    } catch (NumberFormatException e) {
+                        sender.sendMessage(Component.text("Invalid number.", NamedTextColor.RED));
+                    }
+                } else {
+                    sender.sendMessage(Component.text("Usage: /admin test progression <0|1|2>", NamedTextColor.RED));
+                }
+                break;
             case "setprog":
                 if (args.length < 2) {
                     sender.sendMessage(Component.text("Usage: /admin setprog <level>", NamedTextColor.RED));
