@@ -35,6 +35,29 @@ public class ItemManager {
             "altar_turner");
     private static final NamespacedKey TRADER_EGG_KEY = new NamespacedKey(SkillsBoss.getInstance(),
             "trader_spawn_egg");
+    private static final NamespacedKey TRADER_SPAWNER_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "trader_spawner_item");
+
+    public static ItemStack createTraderSpawnerItem() {
+        ItemStack item = new ItemStack(Material.POLISHED_BLACKSTONE);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(Component.text("Piglin Trader Spawner", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Place this block to create a permanent Trader camp.", NamedTextColor.GRAY));
+            lore.add(Component.text("It routinely spawns Piglin Traders and cannot be easily broken.", NamedTextColor.GRAY));
+            meta.lore(lore);
+            meta.getPersistentDataContainer().set(TRADER_SPAWNER_KEY, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isTraderSpawnerItem(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+        return item.getItemMeta().getPersistentDataContainer().has(TRADER_SPAWNER_KEY, PersistentDataType.BYTE);
+    }
 
     public static ItemStack createTraderSpawnItem() {
         ItemStack item = new ItemStack(Material.PIGLIN_SPAWN_EGG);

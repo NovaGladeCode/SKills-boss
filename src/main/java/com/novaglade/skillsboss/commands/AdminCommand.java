@@ -475,6 +475,9 @@ public class AdminCommand implements CommandExecutor {
         } else if (args[1].equalsIgnoreCase("traderegg")) {
             player.getInventory().addItem(ItemManager.createTraderSpawnItem());
             sender.sendMessage(Component.text("Received Piglin Trader Spawn Egg!", NamedTextColor.GOLD));
+        } else if (args[1].equalsIgnoreCase("traderspawner")) {
+            player.getInventory().addItem(ItemManager.createTraderSpawnerItem());
+            sender.sendMessage(Component.text("Received Piglin Trader Spawner!", NamedTextColor.GOLD));
         } else {
             sender.sendMessage(Component.text("Unknown item.", NamedTextColor.RED));
         }
@@ -489,8 +492,8 @@ public class AdminCommand implements CommandExecutor {
                 .append(Component.text("- Immediately jump to a progression level", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin altar reset ", NamedTextColor.YELLOW)
                 .append(Component.text("- Clear all ritual entities and bars", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal|prog1|traderegg> ", NamedTextColor.YELLOW)
-                .append(Component.text("- Give legendary gear, ritual items, portal obsidian, or progression catalyst",
+        sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal|prog1|traderegg|traderspawner> ", NamedTextColor.YELLOW)
+                .append(Component.text("- Give legendary gear, ritual items, portal obsidian, or progression catalyst and spawners",
                         NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin warlord ", NamedTextColor.YELLOW)
                 .append(Component.text("- Spawn the Warlord Boss at your location", NamedTextColor.GRAY)));

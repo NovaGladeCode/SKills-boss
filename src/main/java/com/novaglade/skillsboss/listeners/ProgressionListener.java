@@ -38,6 +38,27 @@ public class ProgressionListener implements Listener {
                 }
             }
         }, 20L, 20L); // Every second
+
+        // Periodic task for Trader Spawners
+        org.bukkit.Bukkit.getScheduler().runTaskTimer(SkillsBoss.getInstance(), () -> {
+            org.bukkit.NamespacedKey spawnerKey = new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "trader_spawner_marker");
+            org.bukkit.NamespacedKey traderKey = new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "is_piglin_trader");
+            
+            for (org.bukkit.World w : org.bukkit.Bukkit.getWorlds()) {
+                for (org.bukkit.entity.Marker marker : w.getEntitiesByClass(org.bukkit.entity.Marker.class)) {
+                    if (marker.getPersistentDataContainer().has(spawnerKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
+                        boolean hasTrader = marker.getNearbyEntities(5, 5, 5).stream().anyMatch(ent -> 
+                            ent instanceof org.bukkit.entity.PiglinBrute && 
+                            ent.getPersistentDataContainer().has(traderKey, org.bukkit.persistence.PersistentDataType.BYTE) &&
+                            ent.isValid() && !ent.isDead()
+                        );
+                        if (!hasTrader) {
+                            spawnPiglinTrader(marker.getLocation());
+                        }
+                    }
+                }
+            }
+        }, 100L, 200L); // Every 10 seconds
     }
 
     private static final Set<Material> RESTRICTED_ITEMS = EnumSet.of(
@@ -244,6 +265,28 @@ public class ProgressionListener implements Listener {
                 event.getPlayer()
                         .sendMessage(Component.text("The world is frozen in Progression 0! You cannot break blocks.",
                                 NamedTextColor.RED));
+                return;
+            }
+        }
+
+        // Unbreakable Trader Spawner Check
+        org.bukkit.block.Block b = event.getBlock();
+        if (b.getType() == Material.POLISHED_BLACKSTONE || b.getType() == Material.BARRIER) {
+            org.bukkit.Location center = b.getLocation().add(0.5, 0.5, 0.5);
+            boolean isSpawner = b.getWorld().getNearbyEntities(center, 0.1, 0.1, 0.1).stream()
+                .anyMatch(ent -> ent instanceof org.bukkit.entity.Marker && ent.getPersistentDataContainer().has(new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "trader_spawner_marker"), org.bukkit.persistence.PersistentDataType.BYTE));
+            
+            if (isSpawner) {
+                if (!event.getPlayer().isOp() || !event.getPlayer().isSneaking()) {
+                    event.setCancelled(true);
+                    event.getPlayer().sendMessage(Component.text("This spawner is unbreakable!", NamedTextColor.RED));
+                } else {
+                    // Break it and remove marker
+                    b.getWorld().getNearbyEntities(center, 0.1, 0.1, 0.1).stream()
+                        .filter(ent -> ent instanceof org.bukkit.entity.Marker)
+                        .forEach(org.bukkit.entity.Entity::remove);
+                    event.getPlayer().sendMessage(Component.text("Trader spawner removed.", NamedTextColor.GREEN));
+                }
             }
         }
     }
@@ -256,7 +299,16 @@ public class ProgressionListener implements Listener {
                 event.getPlayer()
                         .sendMessage(Component.text("The world is frozen in Progression 0! You cannot place blocks.",
                                 NamedTextColor.RED));
+                return;
             }
+        }
+
+        ItemStack item = event.getItemInHand();
+        if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "trader_spawner_item"), org.bukkit.persistence.PersistentDataType.BYTE)) {
+            org.bukkit.Location center = event.getBlock().getLocation().add(0.5, 0.5, 0.5);
+            org.bukkit.entity.Marker marker = (org.bukkit.entity.Marker) center.getWorld().spawnEntity(center, org.bukkit.entity.EntityType.MARKER);
+            marker.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "trader_spawner_marker"), org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+            event.getPlayer().sendMessage(Component.text("Trader Spawner placed! It cannot be easily broken.", NamedTextColor.GREEN));
         }
     }
 
