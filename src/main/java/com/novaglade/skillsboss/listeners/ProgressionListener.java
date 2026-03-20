@@ -381,7 +381,7 @@ public class ProgressionListener implements Listener {
     }
 
     public static void spawnPiglinTrader(org.bukkit.Location loc) {
-        org.bukkit.entity.Piglin trader = (org.bukkit.entity.Piglin) loc.getWorld().spawnEntity(loc, org.bukkit.entity.EntityType.PIGLIN);
+        org.bukkit.entity.PiglinBrute trader = (org.bukkit.entity.PiglinBrute) loc.getWorld().spawnEntity(loc, org.bukkit.entity.EntityType.PIGLIN_BRUTE);
         trader.setImmuneToZombification(true);
         trader.setAI(false); // Make it stationary
         trader.customName(net.kyori.adventure.text.Component.text("§6Piglin Trader"));
@@ -391,9 +391,28 @@ public class ProgressionListener implements Listener {
     }
 
     @EventHandler
+    public void onPlayerUseTraderEgg(org.bukkit.event.player.PlayerInteractEvent event) {
+        if (!event.getAction().isRightClick()) return;
+        ItemStack item = event.getItem();
+        if (item == null || !item.hasItemMeta()) return;
+        org.bukkit.persistence.PersistentDataContainer pdc = item.getItemMeta().getPersistentDataContainer();
+        if (pdc.has(new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "trader_spawn_egg"), org.bukkit.persistence.PersistentDataType.BYTE)) {
+            event.setCancelled(true);
+            org.bukkit.block.Block clicked = event.getClickedBlock();
+            if (clicked != null) {
+                org.bukkit.Location spawnLoc = clicked.getLocation().add(0.5, 1, 0.5);
+                spawnPiglinTrader(spawnLoc);
+                if (event.getPlayer().getGameMode() != org.bukkit.GameMode.CREATIVE) {
+                    item.setAmount(item.getAmount() - 1);
+                }
+            }
+        }
+    }
+
+    @EventHandler
     public void onEntityInteract(org.bukkit.event.player.PlayerInteractEntityEvent event) {
-        if (event.getRightClicked() instanceof org.bukkit.entity.Piglin) {
-            org.bukkit.entity.Piglin p = (org.bukkit.entity.Piglin) event.getRightClicked();
+        if (event.getRightClicked() instanceof org.bukkit.entity.PiglinBrute) {
+            org.bukkit.entity.PiglinBrute p = (org.bukkit.entity.PiglinBrute) event.getRightClicked();
             if (p.getPersistentDataContainer().has(new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "is_piglin_trader"), org.bukkit.persistence.PersistentDataType.BYTE)) {
                 event.setCancelled(true);
                 openTraderMenu(event.getPlayer());

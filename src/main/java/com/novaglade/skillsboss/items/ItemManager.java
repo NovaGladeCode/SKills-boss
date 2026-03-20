@@ -33,6 +33,28 @@ public class ItemManager {
             "progression_1_item");
     private static final NamespacedKey ALTAR_TURNER_KEY = new NamespacedKey(SkillsBoss.getInstance(),
             "altar_turner");
+    private static final NamespacedKey TRADER_EGG_KEY = new NamespacedKey(SkillsBoss.getInstance(),
+            "trader_spawn_egg");
+
+    public static ItemStack createTraderSpawnItem() {
+        ItemStack item = new ItemStack(Material.PIGLIN_SPAWN_EGG);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(Component.text("Piglin Trader Spawn Egg", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+            List<Component> lore = new ArrayList<>();
+            lore.add(Component.text("Spawns a custom Piglin Trader.", NamedTextColor.GRAY));
+            meta.lore(lore);
+            meta.getPersistentDataContainer().set(TRADER_EGG_KEY, PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isTraderSpawnItem(ItemStack item) {
+        if (item == null || !item.hasItemMeta())
+            return false;
+        return item.getItemMeta().getPersistentDataContainer().has(TRADER_EGG_KEY, PersistentDataType.BYTE);
+    }
 
     public static ItemStack createBossSpawnerItem() {
         ItemStack item = new ItemStack(Material.SPAWNER);

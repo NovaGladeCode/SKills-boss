@@ -42,7 +42,12 @@ public class AdminCommand implements CommandExecutor {
         switch (subCommand) {
             case "progression":
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Usage: /admin progression <0|1>", NamedTextColor.RED));
+                    sender.sendMessage(Component.text("Usage: /admin progression <0|1|reset>", NamedTextColor.RED));
+                    return true;
+                }
+                if (args[1].equalsIgnoreCase("reset")) {
+                    SkillsBoss.setProgressionLevel(-1);
+                    sender.sendMessage(Component.text("Progression reset to -1.", NamedTextColor.GREEN));
                     return true;
                 }
                 try {
@@ -80,6 +85,19 @@ public class AdminCommand implements CommandExecutor {
                     } else {
                         sender.sendMessage(Component.text("Invalid level.", NamedTextColor.RED));
                     }
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(Component.text("Invalid number.", NamedTextColor.RED));
+                }
+                break;
+            case "setprog":
+                if (args.length < 2) {
+                    sender.sendMessage(Component.text("Usage: /admin setprog <level>", NamedTextColor.RED));
+                    return true;
+                }
+                try {
+                    int level = Integer.parseInt(args[1]);
+                    SkillsBoss.setProgressionLevel(level);
+                    sender.sendMessage(Component.text("Progression set abruptly to " + level + ".", NamedTextColor.GREEN));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(Component.text("Invalid number.", NamedTextColor.RED));
                 }
@@ -422,6 +440,9 @@ public class AdminCommand implements CommandExecutor {
         } else if (args[1].equalsIgnoreCase("turn")) {
             player.getInventory().addItem(ItemManager.createAltarTurnerItem());
             sender.sendMessage(Component.text("Received Altar Turner stick!", NamedTextColor.YELLOW));
+        } else if (args[1].equalsIgnoreCase("traderegg")) {
+            player.getInventory().addItem(ItemManager.createTraderSpawnItem());
+            sender.sendMessage(Component.text("Received Piglin Trader Spawn Egg!", NamedTextColor.GOLD));
         } else {
             sender.sendMessage(Component.text("Unknown item.", NamedTextColor.RED));
         }
@@ -430,11 +451,13 @@ public class AdminCommand implements CommandExecutor {
     private void sendHelp(CommandSender sender) {
         sender.sendMessage(
                 Component.text("--- SkillsBoss Admin ---", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
-        sender.sendMessage(Component.text("/admin progression <0|1> ", NamedTextColor.YELLOW)
-                .append(Component.text("- Start progression stages", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/admin progression <0|1|reset> ", NamedTextColor.YELLOW)
+                .append(Component.text("- Start progression stages or reset them", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/admin setprog <level> ", NamedTextColor.YELLOW)
+                .append(Component.text("- Immediately jump to a progression level", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin altar reset ", NamedTextColor.YELLOW)
                 .append(Component.text("- Clear all ritual entities and bars", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal|prog1> ", NamedTextColor.YELLOW)
+        sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal|prog1|traderegg> ", NamedTextColor.YELLOW)
                 .append(Component.text("- Give legendary gear, ritual items, portal obsidian, or progression catalyst",
                         NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin warlord ", NamedTextColor.YELLOW)
