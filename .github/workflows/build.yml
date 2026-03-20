@@ -31,3 +31,15 @@ jobs:
       with:
         name: SkillsBoss-Plugin
         path: target/*.jar
+
+    - name: Zip Resource Pack
+      run: |
+        cd SkillsBoss-ResourcePack
+        zip -r ../SkillsBoss-ResourcePack.zip .
+        cd ..
+
+    - name: Upload Resource Pack Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SkillsBoss-ResourcePack
+        path: SkillsBoss-ResourcePack.zip
