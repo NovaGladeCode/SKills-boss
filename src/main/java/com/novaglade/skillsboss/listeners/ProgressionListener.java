@@ -499,24 +499,29 @@ public class ProgressionListener implements Listener {
         long seed = traderEntity.getUniqueId().getMostSignificantBits() ^ traderEntity.getUniqueId().getLeastSignificantBits();
         java.util.Random rand = new java.util.Random(seed);
         
-        // Define possible selling items
-        ItemStack[] sellableItems = new ItemStack[] {
-            new ItemStack(Material.ENDER_PEARL, rand.nextInt(3) + 1),
-            new ItemStack(Material.NETHERITE_SCRAP, rand.nextInt(2) + 1),
-            new ItemStack(Material.GOLDEN_APPLE, rand.nextInt(2) + 1),
-            new ItemStack(Material.EXPERIENCE_BOTTLE, rand.nextInt(10) + 5),
-            ItemManager.createCustomItem(Material.DIAMOND_SWORD) // Sometimes sell a custom weapon
-        };
+        // Potion of Fire Resistance
+        ItemStack fireRes = new ItemStack(Material.POTION);
+        org.bukkit.inventory.meta.PotionMeta fireResMeta = (org.bukkit.inventory.meta.PotionMeta) fireRes.getItemMeta();
+        fireResMeta.setBasePotionType(org.bukkit.potion.PotionType.FIRE_RESISTANCE);
+        fireRes.setItemMeta(fireResMeta);
+        
+        // Water Bottle
+        ItemStack waterBottle = new ItemStack(Material.POTION);
+        org.bukkit.inventory.meta.PotionMeta waterMeta = (org.bukkit.inventory.meta.PotionMeta) waterBottle.getItemMeta();
+        waterMeta.setBasePotionType(org.bukkit.potion.PotionType.WATER);
+        waterBottle.setItemMeta(waterMeta);
 
-        // Add Strength Potion to possibilities
-        ItemStack strPotion = new ItemStack(Material.POTION);
-        org.bukkit.inventory.meta.PotionMeta pMeta = (org.bukkit.inventory.meta.PotionMeta) strPotion.getItemMeta();
-        pMeta.addCustomEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.STRENGTH, 2400, 1), true);
-        pMeta.displayName(net.kyori.adventure.text.Component.text("§cBrute's Strength"));
-        strPotion.setItemMeta(pMeta);
-        ItemStack[] finalItems = new ItemStack[sellableItems.length + 1];
-        System.arraycopy(sellableItems, 0, finalItems, 0, sellableItems.length);
-        finalItems[sellableItems.length] = strPotion;
+        ItemStack[] finalItems = new ItemStack[] {
+            new ItemStack(Material.GLASS, rand.nextInt(9) + 8),
+            new ItemStack(Material.BOOKSHELF, rand.nextInt(4) + 1),
+            new ItemStack(Material.ENDER_PEARL, rand.nextInt(3) + 1),
+            fireRes,
+            new ItemStack(Material.OBSIDIAN, rand.nextInt(5) + 4),
+            new ItemStack(Material.IRON_INGOT, rand.nextInt(9) + 4),
+            new ItemStack(Material.NETHER_WART, rand.nextInt(5) + 4),
+            new ItemStack(Material.DIAMOND, rand.nextInt(3) + 1),
+            waterBottle
+        };
 
         // Currency types
         Material[] currencies = new Material[] { Material.GOLD_INGOT, Material.GOLD_BLOCK, Material.GILDED_BLACKSTONE };
@@ -545,7 +550,7 @@ public class ProgressionListener implements Listener {
         org.bukkit.inventory.meta.EnchantmentStorageMeta emeta = (org.bukkit.inventory.meta.EnchantmentStorageMeta) enchantedBook.getItemMeta();
         java.util.List<Enchantment> availableEnchants = new java.util.ArrayList<>();
         for (Enchantment e : org.bukkit.Registry.ENCHANTMENT) {
-            if (!e.isCursed()) {
+            if (!e.isCursed() && !e.getKey().getKey().equals("swift_sneak")) {
                 availableEnchants.add(e);
             }
         }
