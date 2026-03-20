@@ -47,12 +47,12 @@ public class ProgressionListener implements Listener {
             for (org.bukkit.World w : org.bukkit.Bukkit.getWorlds()) {
                 for (org.bukkit.entity.Marker marker : w.getEntitiesByClass(org.bukkit.entity.Marker.class)) {
                     if (marker.getPersistentDataContainer().has(spawnerKey, org.bukkit.persistence.PersistentDataType.BYTE)) {
-                        boolean hasTrader = marker.getNearbyEntities(5, 5, 5).stream().anyMatch(ent -> 
+                        long traderCount = marker.getNearbyEntities(250, 250, 250).stream().filter(ent -> 
                             ent instanceof org.bukkit.entity.PiglinBrute && 
                             ent.getPersistentDataContainer().has(traderKey, org.bukkit.persistence.PersistentDataType.BYTE) &&
                             ent.isValid() && !ent.isDead()
-                        );
-                        if (!hasTrader) {
+                        ).count();
+                        if (traderCount < 6) {
                             spawnPiglinTrader(marker.getLocation());
                         }
                     }
@@ -277,15 +277,15 @@ public class ProgressionListener implements Listener {
                 .anyMatch(ent -> ent instanceof org.bukkit.entity.Marker && ent.getPersistentDataContainer().has(new org.bukkit.NamespacedKey(SkillsBoss.getInstance(), "trader_spawner_marker"), org.bukkit.persistence.PersistentDataType.BYTE));
             
             if (isSpawner) {
-                if (!event.getPlayer().isOp() || !event.getPlayer().isSneaking()) {
+                if (!event.getPlayer().isOp()) {
                     event.setCancelled(true);
-                    event.getPlayer().sendMessage(Component.text("This spawner is unbreakable!", NamedTextColor.RED));
+                    event.getPlayer().sendMessage(Component.text("This Trader Spawner can only be broken by an OP!", NamedTextColor.RED));
                 } else {
                     // Break it and remove marker
                     b.getWorld().getNearbyEntities(center, 0.1, 0.1, 0.1).stream()
                         .filter(ent -> ent instanceof org.bukkit.entity.Marker)
                         .forEach(org.bukkit.entity.Entity::remove);
-                    event.getPlayer().sendMessage(Component.text("Trader spawner removed.", NamedTextColor.GREEN));
+                    event.getPlayer().sendMessage(Component.text("Trader Spawner removed.", NamedTextColor.GREEN));
                 }
             }
         }
