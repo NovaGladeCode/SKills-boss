@@ -57,6 +57,10 @@ public class BossListener implements Listener {
     private final Set<UUID> activatingStands = Collections.synchronizedSet(new HashSet<>());
     private final Map<UUID, Set<UUID>> bossMinions = new ConcurrentHashMap<>();
     private final Set<UUID> shieldedBosses = Collections.synchronizedSet(new HashSet<>());
+    
+    // Warlord Event State
+    public final List<UUID> warlordSpawners = new ArrayList<>();
+    public boolean warlordCountdownActive = false;
 
     private Team ritualTeam;
 
@@ -317,6 +321,24 @@ public class BossListener implements Listener {
         if (event.getEntity() instanceof ArmorStand) {
             if (event.getEntity().getPersistentDataContainer().has(ALTAR_KEY, PersistentDataType.BYTE)) {
                 event.setCancelled(true);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onSpawnerDeath(EntityDeathEvent event) {
+        if (warlordSpawners.contains(event.getEntity().getUniqueId())) {
+            warlordSpawners.remove(event.getEntity().getUniqueId());
+            event.getDrops().clear();
+            event.setDroppedExp(0);
+            
+            Location deathLoc = event.getEntity().getLocation();
+            deathLoc.getWorld().strikeLightningEffect(deathLoc);
+            deathLoc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, deathLoc, 10, 2, 2, 2, 0);
+            playerBroadcast(deathLoc.getWorld(), Component.text("A Demonic Spawner has been destroyed! " + warlordSpawners.size() + " remaining.", NamedTextColor.YELLOW).decorate(TextDecoration.BOLD));
+            
+            if (warlordSpawners.isEmpty() && !warlordCountdownActive) {
+                startWarlordCountdown(deathLoc.getWorld());
             }
         }
     }
@@ -1089,6 +1111,12 @@ public class BossListener implements Listener {
             @Override
             public void run() {
                 if (ticks > 200) {
+                    org.bukkit.World nether = Bukkit.getWorlds().stream()
+                            .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NETHER)
+                            .findFirst().orElse(null);
+                    if (nether != null) {
+                        startWarlordEvent(nether);
+                    }
                     cancel();
                     return;
                 }
@@ -1223,24 +1251,31 @@ public class BossListener implements Listener {
         loc.getWorld().playSound(loc, Sound.ENTITY_PIGLIN_BRUTE_ANGRY, 2f, 0.5f);
 
         PiglinBrute boss = (PiglinBrute) loc.getWorld().spawnEntity(loc, EntityType.PIGLIN_BRUTE);
-        boss.customName(Component.text("§c§lWarlord"));
+        boss.customName(Component.text("§c§lMassive Warlord"));
         boss.setCustomNameVisible(true);
         boss.setRemoveWhenFarAway(false);
         boss.setImmuneToZombification(true);
 
         if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
-            boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(800.0);
-            boss.setHealth(800.0);
+            boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(3000.0);
+            boss.setHealth(3000.0);
         }
-        if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null) boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(30.0);
-        if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null) boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
+        
+        org.bukkit.attribute.AttributeInstance scaleAttr = boss.getAttribute(Attribute.SCALE);
+        if (scaleAttr != null) {
+            scaleAttr.setBaseValue(3.0);
+        }
 
-        boss.getEquipment().setHelmet(new ItemStack(Material.NETHERITE_HELMET));
-        boss.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
-        boss.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
-        boss.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
+        if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null) boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(40.0);
+        if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null) boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40);
+
+        boss.getEquipment().setHelmet(null);
+        boss.getEquipment().setChestplate(null);
+        boss.getEquipment().setLeggings(null);
+        boss.getEquipment().setBoots(null);
         ItemStack ax = new ItemStack(Material.NETHERITE_AXE);
-        ax.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FIRE_ASPECT, 2);
+        ax.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FIRE_ASPECT, 3);
+        ax.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.KNOCKBACK, 2);
         boss.getEquipment().setItemInMainHand(ax);
 
         boss.getEquipment().setItemInMainHandDropChance(0f);
@@ -1249,7 +1284,7 @@ public class BossListener implements Listener {
         boss.getEquipment().setLeggingsDropChance(0f);
         boss.getEquipment().setBootsDropChance(0f);
 
-        BossBar wBar = Bukkit.createBossBar("§c§lWarlord", BarColor.RED, BarStyle.SEGMENTED_12);
+        BossBar wBar = Bukkit.createBossBar("§c§lMassive Warlord", BarColor.RED, BarStyle.SEGMENTED_12);
         Bukkit.getOnlinePlayers().forEach(wBar::addPlayer);
         instance.activeBars.put(boss.getUniqueId(), wBar);
         instance.bossGroup.add(boss.getUniqueId());
@@ -1264,29 +1299,179 @@ public class BossListener implements Listener {
                     cancel();
                     return;
                 }
-                wBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 800.0)));
+                wBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 3000.0)));
 
                 if (ticks % 5 == 0) {
                     boss.getWorld().spawnParticle(Particle.FLAME, boss.getLocation().add(0, 1, 0), 5, 0.5, 0.5, 0.5, 0.05);
                     boss.getWorld().spawnParticle(Particle.LAVA, boss.getLocation().add(0, 1, 0), 2, 0.3, 0.3, 0.3, 0.02);
                 }
 
-                if (ticks % 100 == 0) {
-                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GHAST_SHOOT, 1f, 0.5f);
-                    for (int i = 0; i < 360; i += 20) {
+                // Fire attack
+                if (ticks > 0 && ticks % 100 == 0) {
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GHAST_SHOOT, 1.5f, 0.5f);
+                    for (int i = 0; i < 360; i += 15) {
                         double a = Math.toRadians(i);
-                        Location pLoc = boss.getLocation().add(Math.cos(a) * 4, 0.5, Math.sin(a) * 4);
-                        boss.getWorld().spawnParticle(Particle.FLAME, pLoc, 3, 0.1, 0.1, 0.1, 0.1);
+                        Location pLoc = boss.getLocation().add(Math.cos(a) * 6, 0.5, Math.sin(a) * 6);
+                        boss.getWorld().spawnParticle(Particle.FLAME, pLoc, 5, 0.2, 0.2, 0.2, 0.1);
+                        boss.getWorld().spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, pLoc, 2, 0.1, 0.1, 0.1, 0.05);
                     }
-                    boss.getWorld().getNearbyEntities(boss.getLocation(), 6, 6, 6).forEach(e -> {
+                    boss.getWorld().getNearbyEntities(boss.getLocation(), 10, 10, 10).forEach(e -> {
                         if (e instanceof Player && !e.isOp()) {
-                            e.setFireTicks(100);
-                            ((LivingEntity) e).damage(15, boss);
+                            e.setFireTicks(160);
+                            ((LivingEntity) e).damage(25, boss);
                         }
                     });
                 }
+
+                // Massive pull and cleave attack specifically for large groups
+                if (ticks > 0 && ticks % 160 == 80) {
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 2f, 0.5f);
+                    boss.getWorld().spawnParticle(Particle.REVERSE_PORTAL, boss.getLocation(), 200, 8, 2, 8, 0.1);
+                    boss.getWorld().getNearbyEntities(boss.getLocation(), 20, 15, 20).forEach(e -> {
+                        if (e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL) {
+                            Vector pull = boss.getLocation().toVector().subtract(e.getLocation().toVector()).normalize().multiply(1.5).setY(0.3);
+                            e.setVelocity(pull);
+                            ((Player) e).sendMessage(Component.text("The Warlord pulls you in!", NamedTextColor.RED).decorate(TextDecoration.BOLD));
+                        }
+                    });
+
+                    // Follow up with a huge cleave
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            if (!boss.isValid()) return;
+                            boss.swingMainHand();
+                            boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 2f, 0.5f);
+                            boss.getWorld().spawnParticle(Particle.SWEEP_ATTACK, boss.getLocation().add(0, 1, 0), 20, 3, 0.5, 3, 0);
+                            boss.getWorld().spawnParticle(Particle.SONIC_BOOM, boss.getLocation(), 3, 0, 0, 0, 0);
+                            
+                            boss.getWorld().getNearbyEntities(boss.getLocation(), 8, 5, 8).forEach(e -> {
+                                if (e instanceof Player && !e.isOp()) {
+                                    ((LivingEntity) e).damage(40, boss);
+                                    e.setVelocity(e.getLocation().toVector().subtract(boss.getLocation().toVector()).normalize().multiply(2.0).setY(0.5));
+                                }
+                            });
+                        }
+                    }.runTaskLater(SkillsBoss.getInstance(), 15);
+                }
+
                 ticks++;
             }
         }.runTaskTimer(SkillsBoss.getInstance(), 20, 5);
+    }
+    
+    public void startWarlordEvent(org.bukkit.World world) {
+        if (!world.getEnvironment().equals(org.bukkit.World.Environment.NETHER)) {
+            playerBroadcast(world, Component.text("The Warlord event can only begin in the Nether!", NamedTextColor.RED));
+            return;
+        }
+        
+        warlordSpawners.clear();
+        warlordCountdownActive = false;
+        Location center = world.getSpawnLocation();
+        
+        // Spawn 4 demonic spawners
+        double[][] offsets = {{40, 40}, {-40, 40}, {40, -40}, {-40, -40}};
+        for (int i = 0; i < 4; i++) {
+            Location sLoc = findSafeSpawnLocation(center, offsets[i][0], offsets[i][1]);
+            MagmaCube spawner = (MagmaCube) world.spawnEntity(sLoc, EntityType.MAGMA_CUBE);
+            spawner.setSize(4);
+            spawner.customName(Component.text("§5§lDemonic Spawner"));
+            spawner.setCustomNameVisible(true);
+            spawner.setAI(false);
+            if (spawner.getAttribute(Attribute.MAX_HEALTH) != null) {
+                spawner.getAttribute(Attribute.MAX_HEALTH).setBaseValue(400);
+                spawner.setHealth(400);
+            }
+            warlordSpawners.add(spawner.getUniqueId());
+            world.strikeLightningEffect(sLoc);
+        }
+        
+        playerBroadcast(world, Component.text("THE CATACLYSM BEGINS!", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD));
+        playerBroadcast(world, Component.text("Follow your compass to find and destroy the 4 Demonic Spawners!", NamedTextColor.GOLD));
+        
+        // Give everyone a compass
+        ItemStack compass = new ItemStack(Material.COMPASS);
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p.getWorld().equals(world)) {
+                if (!p.getInventory().contains(Material.COMPASS)) {
+                    p.getInventory().addItem(compass);
+                }
+            }
+        }
+        
+        // Compass updating & mob spawning task
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (warlordSpawners.isEmpty() || warlordCountdownActive) {
+                    cancel();
+                    return;
+                }
+                
+                // Spawn mobs around spawners occasionally
+                if (Math.random() < 0.2) {
+                    for (UUID id : warlordSpawners) {
+                        Entity e = Bukkit.getEntity(id);
+                        if (e != null && e.isValid()) {
+                            e.getWorld().spawnParticle(Particle.PORTAL, e.getLocation(), 50, 4, 4, 4, 0.1);
+                            if (Math.random() < 0.3) {
+                                e.getWorld().spawnEntity(findSafeSpawnLocation(e.getLocation(), (Math.random()*6)-3, (Math.random()*6)-3), EntityType.WITHER_SKELETON);
+                            }
+                        }
+                    }
+                }
+                
+                // Update compasses
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (p.getWorld().equals(world) && p.getInventory().contains(Material.COMPASS)) {
+                        Entity closest = null;
+                        double minDist = Double.MAX_VALUE;
+                        for (UUID id : warlordSpawners) {
+                            Entity e = Bukkit.getEntity(id);
+                            if (e != null && e.isValid()) {
+                                double d = e.getLocation().distanceSquared(p.getLocation());
+                                if (d < minDist) {
+                                    minDist = d;
+                                    closest = e;
+                                }
+                            }
+                        }
+                        if (closest != null) {
+                            p.setCompassTarget(closest.getLocation());
+                        }
+                    }
+                }
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
+    }
+    
+    private void startWarlordCountdown(org.bukkit.World world) {
+        warlordCountdownActive = true;
+        playerBroadcast(world, Component.text("All Demonic Spawners are destroyed! The Warlord arrives in 2 minutes!", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+        
+        new BukkitRunnable() {
+            int ticksLeft = 120 * 20; // 2 minutes
+            @Override
+            public void run() {
+                if (ticksLeft <= 0) {
+                    playerBroadcast(world, Component.text("THE MASSIVE WARLORD HAS ARRIVED!", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD));
+                    spawnWarlordBoss(world.getSpawnLocation());
+                    cancel();
+                    return;
+                }
+                
+                if (ticksLeft % 20 == 0) {
+                    int seconds = ticksLeft / 20;
+                    if (seconds == 60 || seconds == 30 || seconds == 10 || seconds <= 5) {
+                        playerBroadcast(world, Component.text("Warlord spawns in " + seconds + " seconds!", NamedTextColor.YELLOW));
+                        for (Player p : world.getPlayers()) {
+                            p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1f);
+                        }
+                    }
+                }
+                ticksLeft--;
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 }

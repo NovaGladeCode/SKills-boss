@@ -42,7 +42,7 @@ public class AdminCommand implements CommandExecutor {
         switch (subCommand) {
             case "progression":
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Usage: /admin progression <0|1|reset>", NamedTextColor.RED));
+                    sender.sendMessage(Component.text("Usage: /admin progression <0|1|2|reset>", NamedTextColor.RED));
                     return true;
                 }
                 if (args[1].equalsIgnoreCase("reset")) {
@@ -81,6 +81,24 @@ public class AdminCommand implements CommandExecutor {
                         } else {
                             sender.sendMessage(
                                     Component.text("Must be run by player to determine world.", NamedTextColor.RED));
+                        }
+                    } else if (level == 2) {
+                        if (sender instanceof Player) {
+                            Player p = (Player) sender;
+                            SkillsBoss.setProgressionLevel(2);
+                            String worldName = "world_nether";
+                            World targetWorld = Bukkit.getWorld(worldName);
+                            if (targetWorld == null) {
+                                targetWorld = Bukkit.getWorlds().stream().filter(w -> w.getEnvironment() == World.Environment.NETHER).findFirst().orElse(null);
+                            }
+                            if (targetWorld != null) {
+                                com.novaglade.skillsboss.listeners.BossListener.getInstance().startWarlordEvent(targetWorld);
+                                sender.sendMessage(Component.text("Progression II and Warlord Event started in " + targetWorld.getName(), NamedTextColor.GREEN));
+                            } else {
+                                sender.sendMessage(Component.text("Could not find target dimension.", NamedTextColor.YELLOW));
+                            }
+                        } else {
+                            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
                         }
                     } else {
                         sender.sendMessage(Component.text("Invalid level.", NamedTextColor.RED));
@@ -486,7 +504,7 @@ public class AdminCommand implements CommandExecutor {
     private void sendHelp(CommandSender sender) {
         sender.sendMessage(
                 Component.text("--- SkillsBoss Admin ---", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
-        sender.sendMessage(Component.text("/admin progression <0|1|reset> ", NamedTextColor.YELLOW)
+        sender.sendMessage(Component.text("/admin progression <0|1|2|reset> ", NamedTextColor.YELLOW)
                 .append(Component.text("- Start progression stages or reset them", NamedTextColor.GRAY)));
         sender.sendMessage(Component.text("/admin setprog <level> ", NamedTextColor.YELLOW)
                 .append(Component.text("- Immediately jump to a progression level", NamedTextColor.GRAY)));
