@@ -702,6 +702,11 @@ public class BossListener implements Listener {
         return base.clone().add(offsetX, 1, offsetZ);
     }
 
+    public static void spawnSupremusDirect(Location loc) {
+        if (instance == null) return;
+        instance.spawnBosses(loc);
+    }
+
     private void spawnBosses(Location loc) {
         Location spawnPoint = findNearbySpawner(loc);
         if (spawnPoint == null)

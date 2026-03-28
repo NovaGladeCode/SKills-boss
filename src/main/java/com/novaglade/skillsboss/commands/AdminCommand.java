@@ -2,17 +2,20 @@ package com.novaglade.skillsboss.commands;
 
 import com.novaglade.skillsboss.SkillsBoss;
 import com.novaglade.skillsboss.items.ItemManager;
+import com.novaglade.skillsboss.listeners.BossListener;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.TileState;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
+import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.*;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -21,9 +24,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
 import java.time.Duration;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
-public class AdminCommand implements CommandExecutor {
+public class AdminCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -163,14 +167,11 @@ public class AdminCommand implements CommandExecutor {
             case "give":
                 handleGive(sender, args);
                 break;
+            case "boss":
+                handleBossSpawn(sender, args);
+                break;
             case "warlord":
-                if (sender instanceof Player) {
-                    Player p = (Player) sender;
-                    com.novaglade.skillsboss.listeners.BossListener.spawnWarlordBoss(p.getLocation());
-                    sender.sendMessage(Component.text("Warlord spawned!", NamedTextColor.GREEN));
-                } else {
-                    sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
-                }
+                handleWarlord(sender, args);
                 break;
             case "trader":
                 if (sender instanceof Player) {
@@ -180,6 +181,28 @@ public class AdminCommand implements CommandExecutor {
                 } else {
                     sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
                 }
+                break;
+            case "killall":
+                handleKillAll(sender, args);
+                break;
+            case "heal":
+                handleHeal(sender, args);
+                break;
+            case "tp":
+                handleTeleport(sender, args);
+                break;
+            case "status":
+                handleStatus(sender);
+                break;
+            case "worldborder":
+            case "wb":
+                handleWorldBorder(sender, args);
+                break;
+            case "god":
+                handleGodMode(sender);
+                break;
+            case "time":
+                handleTime(sender, args);
                 break;
             case "reload":
                 SkillsBoss.getInstance().reloadConfig();
@@ -463,7 +486,7 @@ public class AdminCommand implements CommandExecutor {
         Player player = (Player) sender;
 
         if (args.length < 2) {
-            sender.sendMessage(Component.text("Usage: /admin give <diamondarmor|waveboss|portal>", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Usage: /admin give <diamondarmor|netheritearmor|waveboss|portal|allitems>", NamedTextColor.RED));
             return;
         }
 
@@ -474,13 +497,20 @@ public class AdminCommand implements CommandExecutor {
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_BOOTS));
             player.getInventory().addItem(ItemManager.createCustomItem(Material.DIAMOND_SWORD));
             sender.sendMessage(Component.text("Received custom diamond armor and sword!", NamedTextColor.GREEN));
+        } else if (args[1].equalsIgnoreCase("netheritearmor")) {
+            player.getInventory().addItem(new ItemStack(Material.NETHERITE_HELMET));
+            player.getInventory().addItem(new ItemStack(Material.NETHERITE_CHESTPLATE));
+            player.getInventory().addItem(new ItemStack(Material.NETHERITE_LEGGINGS));
+            player.getInventory().addItem(new ItemStack(Material.NETHERITE_BOOTS));
+            player.getInventory().addItem(new ItemStack(Material.NETHERITE_SWORD));
+            sender.sendMessage(Component.text("Received netherite armor and sword!", NamedTextColor.GREEN));
         } else if (args[1].equalsIgnoreCase("bossspawn1") || args[1].equalsIgnoreCase("waveboss")
                 || args[1].equalsIgnoreCase("wavespawn")) {
             player.getInventory().addItem(ItemManager.createBossSpawnItem());
             player.getInventory().addItem(ItemManager.createBossSpawnerItem());
             sender.sendMessage(Component.text("Received Ritual Core and Ritual Spawner!", NamedTextColor.LIGHT_PURPLE));
         } else if (args[1].equalsIgnoreCase("portal")) {
-            player.getInventory().addItem(new ItemStack(Material.BARRIER, 64)); // Give a stack for building
+            player.getInventory().addItem(new ItemStack(Material.BARRIER, 64));
             player.getInventory().addItem(ItemManager.createPortalCoreBlock());
             sender.sendMessage(
                     Component.text("Received Portal Frame Blocks and Ignition Core!", NamedTextColor.LIGHT_PURPLE));
@@ -496,31 +526,520 @@ public class AdminCommand implements CommandExecutor {
         } else if (args[1].equalsIgnoreCase("traderspawner")) {
             player.getInventory().addItem(ItemManager.createTraderSpawnerItem());
             sender.sendMessage(Component.text("Received Piglin Trader Spawner!", NamedTextColor.GOLD));
+        } else if (args[1].equalsIgnoreCase("food")) {
+            player.getInventory().addItem(new ItemStack(Material.GOLDEN_APPLE, 64));
+            player.getInventory().addItem(new ItemStack(Material.COOKED_BEEF, 64));
+            sender.sendMessage(Component.text("Received food supplies!", NamedTextColor.GREEN));
+        } else if (args[1].equalsIgnoreCase("allitems")) {
+            player.getInventory().addItem(ItemManager.createBossSpawnItem());
+            player.getInventory().addItem(ItemManager.createBossSpawnerItem());
+            player.getInventory().addItem(ItemManager.createPortalCoreBlock());
+            player.getInventory().addItem(new ItemStack(Material.BARRIER, 64));
+            player.getInventory().addItem(ItemManager.createProgression1Item());
+            player.getInventory().addItem(ItemManager.createAltarTurnerItem());
+            player.getInventory().addItem(ItemManager.createTraderSpawnItem());
+            player.getInventory().addItem(ItemManager.createTraderSpawnerItem());
+            sender.sendMessage(Component.text("Received all admin items!", NamedTextColor.GREEN));
         } else {
-            sender.sendMessage(Component.text("Unknown item.", NamedTextColor.RED));
+            sender.sendMessage(Component.text("Unknown item. Options: diamondarmor, netheritearmor, wavespawn, portal, prog1, turn, traderegg, traderspawner, food, allitems", NamedTextColor.RED));
         }
     }
 
+    // ===========================
+    //   BOSS SPAWNING
+    // ===========================
+    private void handleBossSpawn(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+            return;
+        }
+        Player p = (Player) sender;
+
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /admin boss <supremus|warlord>", NamedTextColor.RED));
+            return;
+        }
+
+        String bossType = args[1].toLowerCase();
+        switch (bossType) {
+            case "supremus":
+                // Spawn Supremus directly at player location (skips ritual)
+                BossListener bl = BossListener.getInstance();
+                if (bl != null) {
+                    // Use reflection-free approach: call spawnBosses through the listener 
+                    // Since spawnBosses is private, we trigger via a public mechanism
+                    // For now, spawn a simulated direct boss
+                    sender.sendMessage(Component.text("Spawning Supremus at your location...", NamedTextColor.GOLD));
+                    BossListener.spawnSupremusDirect(p.getLocation());
+                } else {
+                    sender.sendMessage(Component.text("BossListener not initialized!", NamedTextColor.RED));
+                }
+                break;
+            case "warlord":
+                BossListener.spawnWarlordBoss(p.getLocation());
+                sender.sendMessage(Component.text("Warlord Boss spawned at your location!", NamedTextColor.GREEN));
+                break;
+            default:
+                sender.sendMessage(Component.text("Unknown boss type. Options: supremus, warlord", NamedTextColor.RED));
+                break;
+        }
+    }
+
+    // ===========================
+    //   WARLORD COMMAND
+    // ===========================
+    private void handleWarlord(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+            return;
+        }
+        Player p = (Player) sender;
+
+        if (args.length >= 2 && args[1].equalsIgnoreCase("event")) {
+            // Start the full warlord event with spawners + countdown
+            World targetWorld = p.getWorld();
+            if (args.length >= 3) {
+                World named = Bukkit.getWorld(args[2]);
+                if (named != null) targetWorld = named;
+            }
+            BossListener.getInstance().startWarlordEvent(targetWorld);
+            sender.sendMessage(Component.text("Warlord Event started in " + targetWorld.getName() + "!", NamedTextColor.GREEN));
+        } else {
+            // Direct spawn
+            BossListener.spawnWarlordBoss(p.getLocation());
+            sender.sendMessage(Component.text("Warlord Boss spawned!", NamedTextColor.GREEN));
+        }
+    }
+
+    // ===========================
+    //   KILL ALL
+    // ===========================
+    private void handleKillAll(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /admin killall <bosses|mobs|all|hostile>", NamedTextColor.RED));
+            return;
+        }
+
+        World world;
+        if (sender instanceof Player) {
+            world = ((Player) sender).getWorld();
+        } else {
+            world = Bukkit.getWorlds().get(0);
+        }
+
+        String type = args[1].toLowerCase();
+        int count = 0;
+
+        switch (type) {
+            case "bosses":
+                // Reset the entire ritual/boss system
+                BossListener.getInstance().resetRitualSystem();
+                sender.sendMessage(Component.text("All bosses, bars, and ritual entities cleared!", NamedTextColor.GREEN));
+                return;
+            case "mobs":
+                // Kill all non-player living entities with custom names (wave mobs, sentinels, etc.)
+                for (Entity e : world.getEntities()) {
+                    if (e instanceof LivingEntity && !(e instanceof Player) && e.customName() != null) {
+                        ((LivingEntity) e).setHealth(0);
+                        count++;
+                    }
+                }
+                sender.sendMessage(Component.text("Killed " + count + " named mobs in " + world.getName() + "!", NamedTextColor.GREEN));
+                break;
+            case "hostile":
+                // Kill all hostile mobs
+                for (Entity e : world.getEntities()) {
+                    if (e instanceof Monster) {
+                        ((LivingEntity) e).setHealth(0);
+                        count++;
+                    }
+                }
+                sender.sendMessage(Component.text("Killed " + count + " hostile mobs in " + world.getName() + "!", NamedTextColor.GREEN));
+                break;
+            case "all":
+                // Kill all non-player living entities
+                for (Entity e : world.getEntities()) {
+                    if (e instanceof LivingEntity && !(e instanceof Player)) {
+                        ((LivingEntity) e).setHealth(0);
+                        count++;
+                    }
+                }
+                // Also reset bosses
+                BossListener.getInstance().resetRitualSystem();
+                sender.sendMessage(Component.text("Killed " + count + " entities and cleared boss state in " + world.getName() + "!", NamedTextColor.GREEN));
+                break;
+            default:
+                sender.sendMessage(Component.text("Unknown type. Options: bosses, mobs, hostile, all", NamedTextColor.RED));
+                break;
+        }
+    }
+
+    // ===========================
+    //   HEAL
+    // ===========================
+    private void handleHeal(CommandSender sender, String[] args) {
+        if (args.length >= 2) {
+            // Heal specific player
+            Player target = Bukkit.getPlayerExact(args[1]);
+            if (target != null) {
+                healPlayer(target);
+                sender.sendMessage(Component.text("Healed " + target.getName() + "!", NamedTextColor.GREEN));
+            } else if (args[1].equalsIgnoreCase("all")) {
+                int count = 0;
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    healPlayer(p);
+                    count++;
+                }
+                sender.sendMessage(Component.text("Healed " + count + " players!", NamedTextColor.GREEN));
+            } else {
+                sender.sendMessage(Component.text("Player not found.", NamedTextColor.RED));
+            }
+        } else if (sender instanceof Player) {
+            healPlayer((Player) sender);
+            sender.sendMessage(Component.text("Healed!", NamedTextColor.GREEN));
+        } else {
+            sender.sendMessage(Component.text("Usage: /admin heal [player|all]", NamedTextColor.RED));
+        }
+    }
+
+    private void healPlayer(Player p) {
+        if (p.getAttribute(Attribute.MAX_HEALTH) != null) {
+            p.setHealth(p.getAttribute(Attribute.MAX_HEALTH).getValue());
+        }
+        p.setFoodLevel(20);
+        p.setSaturation(20f);
+        p.setFireTicks(0);
+        p.getActivePotionEffects().forEach(e -> p.removePotionEffect(e.getType()));
+        p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 2));
+    }
+
+    // ===========================
+    //   TELEPORT
+    // ===========================
+    private void handleTeleport(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+            return;
+        }
+        Player p = (Player) sender;
+
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /admin tp <nether|overworld|end|spawn>", NamedTextColor.RED));
+            return;
+        }
+
+        String dest = args[1].toLowerCase();
+        World targetWorld = null;
+
+        switch (dest) {
+            case "nether":
+                targetWorld = Bukkit.getWorld("world_nether");
+                if (targetWorld == null) {
+                    targetWorld = Bukkit.getWorlds().stream()
+                            .filter(w -> w.getEnvironment() == World.Environment.NETHER)
+                            .findFirst().orElse(null);
+                }
+                break;
+            case "overworld":
+            case "world":
+                targetWorld = Bukkit.getWorld("world");
+                if (targetWorld == null) {
+                    targetWorld = Bukkit.getWorlds().stream()
+                            .filter(w -> w.getEnvironment() == World.Environment.NORMAL)
+                            .findFirst().orElse(null);
+                }
+                break;
+            case "end":
+                targetWorld = Bukkit.getWorld("world_the_end");
+                if (targetWorld == null) {
+                    targetWorld = Bukkit.getWorlds().stream()
+                            .filter(w -> w.getEnvironment() == World.Environment.THE_END)
+                            .findFirst().orElse(null);
+                }
+                break;
+            case "spawn":
+                p.teleport(p.getWorld().getSpawnLocation());
+                sender.sendMessage(Component.text("Teleported to spawn!", NamedTextColor.GREEN));
+                return;
+            default:
+                // Try to find world by name
+                targetWorld = Bukkit.getWorld(args[1]);
+                break;
+        }
+
+        if (targetWorld != null) {
+            p.teleport(targetWorld.getSpawnLocation());
+            sender.sendMessage(Component.text("Teleported to " + targetWorld.getName() + "!", NamedTextColor.GREEN));
+        } else {
+            sender.sendMessage(Component.text("Could not find world: " + args[1], NamedTextColor.RED));
+        }
+    }
+
+    // ===========================
+    //   STATUS
+    // ===========================
+    private void handleStatus(CommandSender sender) {
+        sender.sendMessage(Component.text("═══════ SkillsBoss Status ═══════", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+
+        // Progression Level
+        int level = SkillsBoss.getProgressionLevel();
+        NamedTextColor levelColor;
+        switch (level) {
+            case -1: levelColor = NamedTextColor.GRAY; break;
+            case 0: levelColor = NamedTextColor.WHITE; break;
+            case 1: levelColor = NamedTextColor.GREEN; break;
+            case 2: levelColor = NamedTextColor.RED; break;
+            default: levelColor = NamedTextColor.YELLOW; break;
+        }
+        sender.sendMessage(Component.text("  Progression Level: ", NamedTextColor.YELLOW)
+                .append(Component.text(String.valueOf(level), levelColor).decorate(TextDecoration.BOLD)));
+
+        // Online Players
+        sender.sendMessage(Component.text("  Players Online: ", NamedTextColor.YELLOW)
+                .append(Component.text(String.valueOf(Bukkit.getOnlinePlayers().size()), NamedTextColor.AQUA)));
+
+        // World Info
+        if (sender instanceof Player) {
+            Player p = (Player) sender;
+            World w = p.getWorld();
+            sender.sendMessage(Component.text("  Current World: ", NamedTextColor.YELLOW)
+                    .append(Component.text(w.getName() + " (" + w.getEnvironment().name() + ")", NamedTextColor.AQUA)));
+            sender.sendMessage(Component.text("  World Border: ", NamedTextColor.YELLOW)
+                    .append(Component.text(String.format("%.0f blocks", w.getWorldBorder().getSize()), NamedTextColor.AQUA)));
+
+            // Count nearby entities
+            int hostileCount = 0, bossCount = 0, namedCount = 0;
+            for (Entity e : w.getEntities()) {
+                if (e instanceof Monster) hostileCount++;
+                if (e.customName() != null && e instanceof LivingEntity && !(e instanceof Player)) namedCount++;
+            }
+            sender.sendMessage(Component.text("  Hostile Mobs: ", NamedTextColor.YELLOW)
+                    .append(Component.text(String.valueOf(hostileCount), NamedTextColor.RED)));
+            sender.sendMessage(Component.text("  Named Entities: ", NamedTextColor.YELLOW)
+                    .append(Component.text(String.valueOf(namedCount), NamedTextColor.LIGHT_PURPLE)));
+        }
+
+        // Warlord Event Status
+        BossListener bl = BossListener.getInstance();
+        if (bl != null) {
+            int spawnerCount = bl.warlordSpawners.size();
+            boolean countdown = bl.warlordCountdownActive;
+            if (spawnerCount > 0 || countdown) {
+                sender.sendMessage(Component.text("  Warlord Event: ", NamedTextColor.YELLOW)
+                        .append(Component.text("ACTIVE", NamedTextColor.RED).decorate(TextDecoration.BOLD)));
+                sender.sendMessage(Component.text("    Spawners Remaining: ", NamedTextColor.GRAY)
+                        .append(Component.text(String.valueOf(spawnerCount), NamedTextColor.RED)));
+                sender.sendMessage(Component.text("    Countdown Active: ", NamedTextColor.GRAY)
+                        .append(Component.text(countdown ? "Yes" : "No", countdown ? NamedTextColor.GREEN : NamedTextColor.RED)));
+            } else {
+                sender.sendMessage(Component.text("  Warlord Event: ", NamedTextColor.YELLOW)
+                        .append(Component.text("Inactive", NamedTextColor.GRAY)));
+            }
+        }
+
+        sender.sendMessage(Component.text("═════════════════════════════════", NamedTextColor.GOLD));
+    }
+
+    // ===========================
+    //   WORLD BORDER
+    // ===========================
+    private void handleWorldBorder(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+            return;
+        }
+        Player p = (Player) sender;
+
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /admin wb <size|reset|center>", NamedTextColor.RED));
+            return;
+        }
+
+        if (args[1].equalsIgnoreCase("reset")) {
+            p.getWorld().getWorldBorder().reset();
+            sender.sendMessage(Component.text("World border reset!", NamedTextColor.GREEN));
+        } else if (args[1].equalsIgnoreCase("center")) {
+            p.getWorld().getWorldBorder().setCenter(p.getLocation());
+            sender.sendMessage(Component.text("World border centered on you!", NamedTextColor.GREEN));
+        } else {
+            try {
+                double size = Double.parseDouble(args[1]);
+                p.getWorld().getWorldBorder().setCenter(p.getWorld().getSpawnLocation());
+                p.getWorld().getWorldBorder().setSize(size);
+                sender.sendMessage(Component.text("World border set to " + size + " blocks!", NamedTextColor.GREEN));
+            } catch (NumberFormatException e) {
+                sender.sendMessage(Component.text("Invalid size. Usage: /admin wb <number|reset|center>", NamedTextColor.RED));
+            }
+        }
+    }
+
+    // ===========================
+    //   GOD MODE
+    // ===========================
+    private void handleGodMode(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+            return;
+        }
+        Player p = (Player) sender;
+        boolean isInvulnerable = p.isInvulnerable();
+        p.setInvulnerable(!isInvulnerable);
+
+        if (!isInvulnerable) {
+            p.sendMessage(Component.text("God Mode: ", NamedTextColor.YELLOW)
+                    .append(Component.text("ENABLED", NamedTextColor.GREEN).decorate(TextDecoration.BOLD)));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.SATURATION, Integer.MAX_VALUE, 0, true, false));
+        } else {
+            p.sendMessage(Component.text("God Mode: ", NamedTextColor.YELLOW)
+                    .append(Component.text("DISABLED", NamedTextColor.RED).decorate(TextDecoration.BOLD)));
+            p.removePotionEffect(PotionEffectType.SATURATION);
+        }
+    }
+
+    // ===========================
+    //   TIME
+    // ===========================
+    private void handleTime(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+            return;
+        }
+        Player p = (Player) sender;
+
+        if (args.length < 2) {
+            sender.sendMessage(Component.text("Usage: /admin time <day|night|noon|midnight|<ticks>>", NamedTextColor.RED));
+            return;
+        }
+
+        String t = args[1].toLowerCase();
+        switch (t) {
+            case "day":
+                p.getWorld().setTime(1000);
+                break;
+            case "noon":
+                p.getWorld().setTime(6000);
+                break;
+            case "night":
+                p.getWorld().setTime(13000);
+                break;
+            case "midnight":
+                p.getWorld().setTime(18000);
+                break;
+            default:
+                try {
+                    long ticks = Long.parseLong(t);
+                    p.getWorld().setTime(ticks);
+                } catch (NumberFormatException e) {
+                    sender.sendMessage(Component.text("Invalid time. Options: day, noon, night, midnight, or a tick value.", NamedTextColor.RED));
+                    return;
+                }
+                break;
+        }
+        sender.sendMessage(Component.text("Time set to " + t + "!", NamedTextColor.GREEN));
+    }
+
+    // ===========================
+    //   HELP
+    // ===========================
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(
-                Component.text("--- SkillsBoss Admin ---", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
-        sender.sendMessage(Component.text("/admin progression <0|1|2|reset> ", NamedTextColor.YELLOW)
-                .append(Component.text("- Start progression stages or reset them", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin setprog <level> ", NamedTextColor.YELLOW)
-                .append(Component.text("- Immediately jump to a progression level", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin altar reset ", NamedTextColor.YELLOW)
-                .append(Component.text("- Clear all ritual entities and bars", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin give <diamondarmor|wavespawn|portal|prog1|traderegg|traderspawner> ", NamedTextColor.YELLOW)
-                .append(Component.text("- Give legendary gear, ritual items, portal obsidian, or progression catalyst and spawners",
-                        NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin warlord ", NamedTextColor.YELLOW)
-                .append(Component.text("- Spawn the Warlord Boss at your location", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin trader ", NamedTextColor.YELLOW)
-                .append(Component.text("- Spawn the Piglin Trader at your location", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin reload ", NamedTextColor.YELLOW)
-                .append(Component.text("- Reload plugin config", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("/admin version ", NamedTextColor.YELLOW)
-                .append(Component.text("- Show plugin version", NamedTextColor.GRAY)));
-        sender.sendMessage(Component.text("------------------------", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("═══════ SkillsBoss Admin ═══════", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
+
+        sendHelpLine(sender, "/admin progression <0|1|2|reset>", "Start/reset progression stages");
+        sendHelpLine(sender, "/admin setprog <level>", "Immediately set progression level");
+        sendHelpLine(sender, "/admin test progression <level>", "Set progression + teleport to dimension");
+        sendHelpLine(sender, "/admin altar reset", "Clear all ritual entities and bars");
+        sendHelpLine(sender, "/admin boss <supremus|warlord>", "Spawn a boss at your location");
+        sendHelpLine(sender, "/admin warlord [event]", "Spawn warlord or start full event");
+        sendHelpLine(sender, "/admin trader", "Spawn a Piglin Trader");
+        sendHelpLine(sender, "/admin killall <bosses|mobs|hostile|all>", "Kill entities by category");
+        sendHelpLine(sender, "/admin heal [player|all]", "Heal yourself, a player, or everyone");
+        sendHelpLine(sender, "/admin tp <nether|overworld|end|spawn>", "Teleport to a dimension or spawn");
+        sendHelpLine(sender, "/admin give <item>", "Give items (diamondarmor, netheritearmor, wavespawn, portal, prog1, turn, food, allitems)");
+        sendHelpLine(sender, "/admin status", "Show game state and active events");
+        sendHelpLine(sender, "/admin wb <size|reset|center>", "Adjust world border");
+        sendHelpLine(sender, "/admin god", "Toggle god mode (invulnerable + saturation)");
+        sendHelpLine(sender, "/admin time <day|night|noon|midnight>", "Set world time");
+        sendHelpLine(sender, "/admin reload", "Reload plugin config");
+        sendHelpLine(sender, "/admin version", "Show plugin version");
+
+        sender.sendMessage(Component.text("════════════════════════════════", NamedTextColor.GOLD));
+    }
+
+    private void sendHelpLine(CommandSender sender, String cmd, String desc) {
+        sender.sendMessage(Component.text(cmd + " ", NamedTextColor.YELLOW)
+                .append(Component.text("- " + desc, NamedTextColor.GRAY)));
+    }
+
+    // ===========================
+    //   TAB COMPLETION
+    // ===========================
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (!sender.isOp()) return Collections.emptyList();
+
+        List<String> completions = new ArrayList<>();
+
+        if (args.length == 1) {
+            completions.addAll(Arrays.asList(
+                    "progression", "setprog", "test", "altar", "boss", "warlord",
+                    "trader", "killall", "heal", "tp", "give", "status",
+                    "wb", "god", "time", "reload", "version"
+            ));
+        } else if (args.length == 2) {
+            switch (args[0].toLowerCase()) {
+                case "progression":
+                    completions.addAll(Arrays.asList("0", "1", "2", "reset"));
+                    break;
+                case "test":
+                    completions.add("progression");
+                    break;
+                case "altar":
+                    completions.add("reset");
+                    break;
+                case "boss":
+                    completions.addAll(Arrays.asList("supremus", "warlord"));
+                    break;
+                case "warlord":
+                    completions.add("event");
+                    break;
+                case "killall":
+                    completions.addAll(Arrays.asList("bosses", "mobs", "hostile", "all"));
+                    break;
+                case "heal":
+                    completions.add("all");
+                    Bukkit.getOnlinePlayers().forEach(p -> completions.add(p.getName()));
+                    break;
+                case "tp":
+                    completions.addAll(Arrays.asList("nether", "overworld", "end", "spawn"));
+                    break;
+                case "give":
+                    completions.addAll(Arrays.asList(
+                            "diamondarmor", "netheritearmor", "wavespawn", "portal",
+                            "prog1", "turn", "traderegg", "traderspawner", "food", "allitems"
+                    ));
+                    break;
+                case "wb":
+                case "worldborder":
+                    completions.addAll(Arrays.asList("reset", "center", "19", "100", "500", "1000"));
+                    break;
+                case "time":
+                    completions.addAll(Arrays.asList("day", "noon", "night", "midnight"));
+                    break;
+                case "setprog":
+                    completions.addAll(Arrays.asList("-1", "0", "1", "2"));
+                    break;
+            }
+        } else if (args.length == 3) {
+            if (args[0].equalsIgnoreCase("test") && args[1].equalsIgnoreCase("progression")) {
+                completions.addAll(Arrays.asList("0", "1", "2"));
+            }
+        }
+
+        // Filter by what the user has typed
+        String input = args[args.length - 1].toLowerCase();
+        return completions.stream()
+                .filter(s -> s.toLowerCase().startsWith(input))
+                .sorted()
+                .collect(Collectors.toList());
     }
 }

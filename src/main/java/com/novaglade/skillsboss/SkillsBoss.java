@@ -33,7 +33,9 @@ public class SkillsBoss extends JavaPlugin {
 
     private void registerCommands() {
         if (getCommand("admin") != null) {
-            getCommand("admin").setExecutor(new com.novaglade.skillsboss.commands.AdminCommand());
+            com.novaglade.skillsboss.commands.AdminCommand adminCmd = new com.novaglade.skillsboss.commands.AdminCommand();
+            getCommand("admin").setExecutor(adminCmd);
+            getCommand("admin").setTabCompleter(adminCmd);
         }
         if (getCommand("skills") != null) {
             getCommand("skills").setExecutor(new com.novaglade.skillsboss.commands.SkillsCommand());
