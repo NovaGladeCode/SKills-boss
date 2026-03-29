@@ -67,7 +67,6 @@ public class ProgressionListener implements Listener {
             Material.DIAMOND_LEGGINGS,
             Material.DIAMOND_BOOTS,
             Material.DIAMOND_SWORD,
-            Material.DIAMOND_PICKAXE,
             Material.DIAMOND_AXE,
             Material.DIAMOND_SHOVEL,
             Material.DIAMOND_HOE,
@@ -314,24 +313,7 @@ public class ProgressionListener implements Listener {
 
     @EventHandler
     public void onVillagerInteract(org.bukkit.event.inventory.InventoryOpenEvent event) {
-        if (SkillsBoss.getProgressionLevel() < 1)
-            return;
-        if (event.getInventory().getType() == org.bukkit.event.inventory.InventoryType.MERCHANT) {
-            String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-            if (title.contains("Piglin Trader")) {
-                return; // Allow the piglin trader interface
-            }
-            if (event.getPlayer() instanceof Player) {
-                Player p = (Player) event.getPlayer();
-                if (!p.isOp()) {
-                    event.setCancelled(true);
-                    p.sendMessage(
-                            net.kyori.adventure.text.Component.text(
-                                    "Villagers are too terrified to trade in Phase One!",
-                                    net.kyori.adventure.text.format.NamedTextColor.RED));
-                }
-            }
-        }
+        // Villager trading is allowed at all progression levels
     }
 
     @EventHandler
