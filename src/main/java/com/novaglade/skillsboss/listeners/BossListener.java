@@ -271,6 +271,9 @@ public class BossListener implements Listener {
             deathLoc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, deathLoc, 50, 2, 2, 2, 0);
             deathLoc.getWorld().playSound(deathLoc, Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
             deathLoc.getWorld().playSound(deathLoc, Sound.ENTITY_ENDER_DRAGON_DEATH, 1.0f, 0.5f);
+
+            // 30-second countdown then portal pull
+            startBossDeathPortalSequence(deathLoc);
         }
 
         for (Map.Entry<UUID, Set<UUID>> entry : bossMinions.entrySet()) {
@@ -1451,6 +1454,186 @@ public class BossListener implements Listener {
         }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
     }
     
+    private void startBossDeathPortalSequence(Location deathLoc) {
+        transitionActive = true;
+        final World world = deathLoc.getWorld();
+
+        // 30-second countdown with warnings
+        new BukkitRunnable() {
+            int secondsLeft = 30;
+
+            @Override
+            public void run() {
+                if (secondsLeft <= 0) {
+                    // Time's up — spawn portal and pull players
+                    spawnPortalAndPull(deathLoc);
+                    cancel();
+                    return;
+                }
+
+                // Periodic warnings
+                if (secondsLeft == 30 || secondsLeft == 20 || secondsLeft == 10 || secondsLeft <= 5) {
+                    playerBroadcast(world,
+                            Component.text("A dimensional rift is forming... " + secondsLeft + " seconds!",
+                                    NamedTextColor.DARK_PURPLE).decorate(TextDecoration.BOLD));
+                    for (Player p : world.getPlayers()) {
+                        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f,
+                                secondsLeft <= 5 ? 2f : 1f);
+                    }
+                }
+
+                // Ambient rumbling effects during countdown
+                if (secondsLeft % 5 == 0) {
+                    world.strikeLightningEffect(deathLoc.clone().add(
+                            (Math.random() * 10) - 5, 0, (Math.random() * 10) - 5));
+                    world.playSound(deathLoc, Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 0.3f);
+                }
+
+                // Growing particle vortex at death location
+                double radius = 3.0 + ((30 - secondsLeft) * 0.3);
+                for (int i = 0; i < 360; i += 20) {
+                    double angle = Math.toRadians(i + (secondsLeft * 12));
+                    Location pLoc = deathLoc.clone().add(Math.cos(angle) * radius, 0.5, Math.sin(angle) * radius);
+                    world.spawnParticle(Particle.PORTAL, pLoc, 5, 0.1, 0.5, 0.1, 0.1);
+                    world.spawnParticle(Particle.REVERSE_PORTAL, pLoc, 3, 0.1, 0.3, 0.1, 0.05);
+                }
+
+                secondsLeft--;
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 0, 20); // Every second
+    }
+
+    private void spawnPortalAndPull(Location portalLoc) {
+        World world = portalLoc.getWorld();
+
+        // Advance progression
+        SkillsBoss.setProgressionLevel(2);
+
+        // === DRAMATIC LIGHTNING SHOW ===
+        for (int i = 0; i < 8; i++) {
+            double angle = Math.toRadians(i * 45);
+            Location strikePos = portalLoc.clone().add(Math.cos(angle) * 5, 0, Math.sin(angle) * 5);
+            world.strikeLightningEffect(strikePos);
+        }
+        world.strikeLightningEffect(portalLoc);
+        world.playSound(portalLoc, Sound.ENTITY_WITHER_SPAWN, 2f, 0.3f);
+        world.playSound(portalLoc, Sound.BLOCK_END_PORTAL_SPAWN, 2f, 0.5f);
+        world.playSound(portalLoc, Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.3f);
+
+        // Massive particle explosion
+        world.spawnParticle(Particle.EXPLOSION_EMITTER, portalLoc, 10, 2, 2, 2, 0);
+        world.spawnParticle(Particle.REVERSE_PORTAL, portalLoc, 500, 3, 3, 3, 0.5);
+        world.spawnParticle(Particle.SOUL_FIRE_FLAME, portalLoc, 200, 5, 3, 5, 0.1);
+
+        // Show title to all players
+        Title portalTitle = Title.title(
+                Component.text("THE RIFT OPENS", NamedTextColor.DARK_PURPLE).decorate(TextDecoration.BOLD),
+                Component.text("You are being pulled into the Avernus!", NamedTextColor.LIGHT_PURPLE));
+        Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(portalTitle));
+
+        // === BUILD NETHER PORTAL at death location ===
+        Location basePortal = portalLoc.clone();
+        basePortal.setY(Math.floor(basePortal.getY()));
+
+        // Build a 5-wide, 5-tall portal frame
+        for (int x = -2; x <= 2; x++) {
+            for (int y = 0; y <= 5; y++) {
+                Block b = basePortal.clone().add(x, y, 0).getBlock();
+                if (x == -2 || x == 2 || y == 0 || y == 5) {
+                    b.setType(Material.OBSIDIAN);
+                } else {
+                    b.setType(Material.NETHER_PORTAL);
+                }
+            }
+        }
+
+        // Set of portal blocks for proximity detection
+        Set<Location> portalBlockLocs = new HashSet<>();
+        for (int x = -1; x <= 1; x++) {
+            for (int y = 1; y <= 4; y++) {
+                portalBlockLocs.add(basePortal.clone().add(x, y, 0));
+            }
+        }
+
+        // === PULL PLAYERS INTO THE PORTAL ===
+        final Location pullCenter = basePortal.clone().add(0, 2, 0);
+        new BukkitRunnable() {
+            int ticks = 0;
+
+            @Override
+            public void run() {
+                if (ticks > 300) { // 15 seconds max pull time
+                    // Force teleport anyone still in the world
+                    org.bukkit.World nether = Bukkit.getWorlds().stream()
+                            .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NETHER)
+                            .findFirst().orElse(null);
+                    if (nether != null) {
+                        for (Player p : world.getPlayers()) {
+                            p.teleport(nether.getSpawnLocation());
+                            p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
+                            p.sendMessage(
+                                    Component.text("You have been consumed by the Avernus!", NamedTextColor.DARK_RED));
+                        }
+                        startWarlordEvent(nether);
+                    }
+                    transitionActive = false;
+                    cancel();
+                    return;
+                }
+
+                // Continuous lightning around the portal
+                if (ticks % 40 == 0) {
+                    world.strikeLightningEffect(portalLoc.clone().add(
+                            (Math.random() * 16) - 8, 0, (Math.random() * 16) - 8));
+                }
+
+                // Portal ambient effects
+                if (ticks % 5 == 0) {
+                    world.spawnParticle(Particle.PORTAL, pullCenter, 30, 1, 2, 1, 0.5);
+                    world.spawnParticle(Particle.REVERSE_PORTAL, pullCenter, 20, 2, 2, 2, 0.2);
+                    world.spawnParticle(Particle.SOUL_FIRE_FLAME, pullCenter, 5, 0.5, 1, 0.5, 0.05);
+                    world.playSound(pullCenter, Sound.BLOCK_PORTAL_AMBIENT, 0.5f, 0.5f);
+                }
+
+                // Pull all players toward the portal
+                for (Player p : world.getPlayers()) {
+                    double dist = p.getLocation().distance(pullCenter);
+
+                    // Check if close enough to teleport
+                    if (dist < 2.5) {
+                        org.bukkit.World nether = Bukkit.getWorlds().stream()
+                                .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NETHER)
+                                .findFirst().orElse(null);
+                        if (nether != null) {
+                            p.teleport(nether.getSpawnLocation());
+                            p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
+                            p.sendMessage(
+                                    Component.text("You have been consumed by the Avernus!", NamedTextColor.DARK_RED));
+                        }
+                        continue;
+                    }
+
+                    // Pull force — stronger the closer you get
+                    Vector pull = pullCenter.toVector().subtract(p.getLocation().toVector()).normalize();
+                    double force = 0.15 + (Math.max(0, 500 - dist) * 0.003);
+                    if (force > 0.8) force = 0.8;
+
+                    p.setVelocity(p.getVelocity().add(pull.multiply(force)));
+
+                    // Periodic warnings
+                    if (ticks % 40 == 0) {
+                        p.playSound(p.getLocation(), Sound.BLOCK_PORTAL_AMBIENT, 0.5f, 0.5f);
+                        p.sendMessage(
+                                Component.text("The dimensional rift pulls at your soul...", NamedTextColor.DARK_PURPLE)
+                                        .decorate(TextDecoration.ITALIC));
+                    }
+                }
+
+                ticks++;
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
+    }
+
     private void startWarlordCountdown(org.bukkit.World world) {
         warlordCountdownActive = true;
         playerBroadcast(world, Component.text("All Demonic Spawners are destroyed! The Warlord arrives in 2 minutes!", NamedTextColor.GOLD).decorate(TextDecoration.BOLD));
