@@ -313,7 +313,25 @@ public class ProgressionListener implements Listener {
 
     @EventHandler
     public void onVillagerInteract(org.bukkit.event.inventory.InventoryOpenEvent event) {
-        // Villager trading is allowed at all progression levels
+        if (SkillsBoss.getProgressionLevel() < 1)
+            return;
+        if (event.getInventory().getType() == org.bukkit.event.inventory.InventoryType.MERCHANT) {
+            String title = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+            if (title.contains("Piglin Trader")) {
+                return; // Allow the piglin trader interface
+            }
+            // Villagers are now allowed to trade
+            // if (event.getPlayer() instanceof Player) {
+            //     Player p = (Player) event.getPlayer();
+            //     if (!p.isOp()) {
+            //         event.setCancelled(true);
+            //         p.sendMessage(
+            //                 net.kyori.adventure.text.Component.text(
+            //                         "Villagers are too terrified to trade in Phase One!",
+            //                         net.kyori.adventure.text.format.NamedTextColor.RED));
+            //     }
+            // }
+        }
     }
 
     @EventHandler
