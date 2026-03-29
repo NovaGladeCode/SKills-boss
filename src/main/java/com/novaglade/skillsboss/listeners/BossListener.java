@@ -763,6 +763,16 @@ public class BossListener implements Listener {
             Bukkit.getLogger().severe("[SkillsBoss] Error setting boss attributes: " + e.getMessage());
         }
 
+        // Force full health 1 tick later to prevent spawn damage reducing it
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (boss.isValid() && boss.getAttribute(Attribute.MAX_HEALTH) != null) {
+                    boss.setHealth(boss.getAttribute(Attribute.MAX_HEALTH).getValue());
+                }
+            }
+        }.runTaskLater(SkillsBoss.getInstance(), 1);
+
         boss.getPersistentDataContainer().set(FINAL_BOSS_KEY, PersistentDataType.BYTE, (byte) 2);
         boss.getPersistentDataContainer().set(BOSS_PHASE_KEY, PersistentDataType.INTEGER, 1);
 
@@ -1159,7 +1169,7 @@ public class BossListener implements Listener {
                                 .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NETHER)
                                 .findFirst().orElse(null);
                         if (nether != null) {
-                            p.teleport(nether.getSpawnLocation());
+                            p.teleport(findRandomNetherLocation(nether));
                             p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
                             p.sendMessage(
                                     Component.text("You have been consumed by the Avernus!", NamedTextColor.DARK_RED));
@@ -1184,6 +1194,30 @@ public class BossListener implements Listener {
     private void playerBroadcast(World world, Component msg) {
         if (msg != null)
             world.getPlayers().forEach(p -> p.sendMessage(msg));
+    }
+
+    private Location findRandomNetherLocation(org.bukkit.World nether) {
+        Random rand = new Random();
+        Location spawnBase = nether.getSpawnLocation();
+        int attempts = 0;
+        while (attempts < 50) {
+            int rx = spawnBase.getBlockX() + rand.nextInt(401) - 200;
+            int rz = spawnBase.getBlockZ() + rand.nextInt(401) - 200;
+            // Search for safe Y from 32 to 100
+            for (int y = 32; y < 100; y++) {
+                Block ground = nether.getBlockAt(rx, y - 1, rz);
+                Block feet = nether.getBlockAt(rx, y, rz);
+                Block head = nether.getBlockAt(rx, y + 1, rz);
+                if (ground.getType().isSolid() && !ground.getType().toString().contains("LAVA")
+                        && !feet.getType().isSolid() && !feet.isLiquid()
+                        && !head.getType().isSolid() && !head.isLiquid()) {
+                    return new Location(nether, rx + 0.5, y, rz + 0.5);
+                }
+            }
+            attempts++;
+        }
+        // Fallback to nether spawn if no safe block found
+        return spawnBase;
     }
 
     private void triggerBossAbility(LivingEntity boss, int type, boolean enhanced) {
@@ -1562,14 +1596,14 @@ public class BossListener implements Listener {
 
             @Override
             public void run() {
-                if (ticks > 300) { // 15 seconds max pull time
+                if (ticks > 900) { // 45 seconds max pull time
                     // Force teleport anyone still in the world
                     org.bukkit.World nether = Bukkit.getWorlds().stream()
                             .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NETHER)
                             .findFirst().orElse(null);
                     if (nether != null) {
                         for (Player p : world.getPlayers()) {
-                            p.teleport(nether.getSpawnLocation());
+                            p.teleport(findRandomNetherLocation(nether));
                             p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
                             p.sendMessage(
                                     Component.text("You have been consumed by the Avernus!", NamedTextColor.DARK_RED));
@@ -1600,12 +1634,12 @@ public class BossListener implements Listener {
                     double dist = p.getLocation().distance(pullCenter);
 
                     // Check if close enough to teleport
-                    if (dist < 2.5) {
+                    if (dist < 1.5) {
                         org.bukkit.World nether = Bukkit.getWorlds().stream()
                                 .filter(w -> w.getEnvironment() == org.bukkit.World.Environment.NETHER)
                                 .findFirst().orElse(null);
                         if (nether != null) {
-                            p.teleport(nether.getSpawnLocation());
+                            p.teleport(findRandomNetherLocation(nether));
                             p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.5f);
                             p.sendMessage(
                                     Component.text("You have been consumed by the Avernus!", NamedTextColor.DARK_RED));
@@ -1613,10 +1647,10 @@ public class BossListener implements Listener {
                         continue;
                     }
 
-                    // Pull force — stronger the closer you get
+                    // Pull force — slow cinematic pull so you can see it happening
                     Vector pull = pullCenter.toVector().subtract(p.getLocation().toVector()).normalize();
-                    double force = 0.15 + (Math.max(0, 500 - dist) * 0.003);
-                    if (force > 0.8) force = 0.8;
+                    double force = 0.04 + (Math.max(0, 100 - dist) * 0.002);
+                    if (force > 0.25) force = 0.25;
 
                     p.setVelocity(p.getVelocity().add(pull.multiply(force)));
 
