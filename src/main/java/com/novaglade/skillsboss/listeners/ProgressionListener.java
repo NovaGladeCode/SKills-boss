@@ -61,25 +61,7 @@ public class ProgressionListener implements Listener {
         }, 100L, 200L); // Every 10 seconds
     }
 
-    private static final Set<Material> RESTRICTED_ITEMS = EnumSet.of(
-            Material.DIAMOND_HELMET,
-            Material.DIAMOND_CHESTPLATE,
-            Material.DIAMOND_LEGGINGS,
-            Material.DIAMOND_BOOTS,
-            Material.DIAMOND_SWORD,
-            Material.DIAMOND_AXE,
-            Material.DIAMOND_SHOVEL,
-            Material.DIAMOND_HOE,
-            Material.NETHERITE_HELMET,
-            Material.NETHERITE_CHESTPLATE,
-            Material.NETHERITE_LEGGINGS,
-            Material.NETHERITE_BOOTS,
-            Material.NETHERITE_SWORD,
-            Material.NETHERITE_PICKAXE,
-            Material.NETHERITE_AXE,
-            Material.NETHERITE_SHOVEL,
-            Material.NETHERITE_HOE,
-            Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
+    private static final Set<Material> RESTRICTED_ITEMS = EnumSet.noneOf(Material.class);
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -90,7 +72,7 @@ public class ProgressionListener implements Listener {
             return;
         }
 
-        if (SkillsBoss.getProgressionLevel() < 1)
+        if (SkillsBoss.getProgressionLevel() != 1)
             return;
 
         if (!(event.getWhoClicked() instanceof Player))
@@ -131,7 +113,7 @@ public class ProgressionListener implements Listener {
             return;
         }
 
-        if (SkillsBoss.getProgressionLevel() < 1)
+        if (SkillsBoss.getProgressionLevel() != 1)
             return;
         if (event.getWhoClicked() instanceof Player) {
             Player player = (Player) event.getWhoClicked();
@@ -141,7 +123,7 @@ public class ProgressionListener implements Listener {
 
     @EventHandler
     public void onPickup(org.bukkit.event.entity.EntityPickupItemEvent event) {
-        if (SkillsBoss.getProgressionLevel() < 1)
+        if (SkillsBoss.getProgressionLevel() != 1)
             return;
         if (!(event.getEntity() instanceof Player))
             return;
@@ -166,7 +148,7 @@ public class ProgressionListener implements Listener {
 
     @EventHandler
     public void onPrepareCraft(org.bukkit.event.inventory.PrepareItemCraftEvent event) {
-        if (SkillsBoss.getProgressionLevel() < 1)
+        if (SkillsBoss.getProgressionLevel() != 1)
             return;
 
         boolean anyNonOp = event.getViewers().stream().anyMatch(v -> {
@@ -207,6 +189,13 @@ public class ProgressionListener implements Listener {
                         .sendMessage(net.kyori.adventure.text.Component.text("There is no escape from the Avernus!",
                                 net.kyori.adventure.text.format.NamedTextColor.RED));
             }
+        }
+    }
+
+    @EventHandler
+    public void onEntityPortal(org.bukkit.event.entity.EntityPortalEvent event) {
+        if (event.getEntity() instanceof org.bukkit.entity.EnderPearl) {
+            event.setCancelled(true);
         }
     }
 

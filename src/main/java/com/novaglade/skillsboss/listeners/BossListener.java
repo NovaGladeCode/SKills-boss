@@ -549,7 +549,7 @@ public class BossListener implements Listener {
                 if (e != null) {
                     applyDiamondGear(e, 120);
                     if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(12.0);
+                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(2.0);
                 }
             }
         } else if (waveId == 3) {
@@ -560,7 +560,7 @@ public class BossListener implements Listener {
                 if (e != null) {
                     applyDiamondGear(e, 200);
                     if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(15.0);
+                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(3.0);
                     if (e.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                         e.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.30);
                 }
@@ -576,7 +576,7 @@ public class BossListener implements Listener {
                 if (z != null) {
                     applyDiamondGear(z, 120);
                     if (z.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                        z.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(12.0);
+                        z.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(2.0);
                 }
                 LivingEntity w = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
                         Material.DIAMOND_SWORD,
@@ -584,7 +584,7 @@ public class BossListener implements Listener {
                 if (w != null) {
                     applyDiamondGear(w, 200);
                     if (w.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                        w.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(15.0);
+                        w.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(3.0);
                 }
             }
             Skeleton archer = (Skeleton) spawnMob(spawnLoc, EntityType.SKELETON, "§6§lThe Gatekeeper (Archer)",
@@ -605,7 +605,7 @@ public class BossListener implements Listener {
                 if (warrior.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                     warrior.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40);
                 if (warrior.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                    warrior.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(20.0);
+                    warrior.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(15.0);
                 setupWarriorLogic(warrior);
             }
         }
@@ -756,7 +756,7 @@ public class BossListener implements Listener {
             }
 
             if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(60.0);
+                boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(200.0);
             if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                 boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.38);
         } catch (Exception e) {
@@ -991,7 +991,7 @@ public class BossListener implements Listener {
                     }
                     for (Entity e : boss.getNearbyEntities(15, 10, 15)) {
                         if (e instanceof Player && !e.isOp()) {
-                            ((LivingEntity) e).damage(60, boss);
+                            ((LivingEntity) e).damage(80, boss);
                             e.setVelocity(e.getLocation().subtract(boss.getLocation()).toVector().normalize()
                                     .multiply(2.5).setY(0.8));
                         }
@@ -1033,7 +1033,7 @@ public class BossListener implements Listener {
                                                 2, 0.5, 2, 0);
                                         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_GENERIC_EXPLODE,
                                                 1.5f, 0.7f);
-                                        target.damage(50, boss);
+                                        target.damage(80, boss);
                                         target.setVelocity(new Vector(0, 0.8, 0));
                                     }
                                 }.runTaskLater(SkillsBoss.getInstance(), 5);
@@ -1308,7 +1308,7 @@ public class BossListener implements Listener {
             scaleAttr.setBaseValue(3.0);
         }
 
-        if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null) boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(40.0);
+        if (boss.getAttribute(Attribute.ATTACK_DAMAGE) != null) boss.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(120.0);
         if (boss.getAttribute(Attribute.MOVEMENT_SPEED) != null) boss.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40);
 
         boss.getEquipment().setHelmet(null);
@@ -1360,7 +1360,7 @@ public class BossListener implements Listener {
                     boss.getWorld().getNearbyEntities(boss.getLocation(), 10, 10, 10).forEach(e -> {
                         if (e instanceof Player && !e.isOp()) {
                             e.setFireTicks(160);
-                            ((LivingEntity) e).damage(25, boss);
+                            ((LivingEntity) e).damage(40, boss);
                         }
                     });
                 }
@@ -1389,7 +1389,7 @@ public class BossListener implements Listener {
                             
                             boss.getWorld().getNearbyEntities(boss.getLocation(), 8, 5, 8).forEach(e -> {
                                 if (e instanceof Player && !e.isOp()) {
-                                    ((LivingEntity) e).damage(40, boss);
+                                    ((LivingEntity) e).damage(60, boss);
                                     e.setVelocity(e.getLocation().toVector().subtract(boss.getLocation().toVector()).normalize().multiply(2.0).setY(0.5));
                                 }
                             });
