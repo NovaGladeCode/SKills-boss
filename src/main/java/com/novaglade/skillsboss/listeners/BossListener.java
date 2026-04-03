@@ -534,78 +534,95 @@ public class BossListener implements Listener {
         spawnLoc.getWorld().strikeLightningEffect(spawnLoc);
         spawnLoc.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, spawnLoc, 2, 1, 1, 1, 0);
 
+        int mobsToSpawn = (int) spawnLoc.getWorld().getPlayers().stream()
+                .filter(p -> p.getLocation().distanceSquared(spawnLoc) <= 2500)
+                .count();
+        if (mobsToSpawn < 1) {
+            mobsToSpawn = 1;
+        }
+
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
         if (waveId == 1) {
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < mobsToSpawn; i++) {
                 LivingEntity e = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
-                if (e != null)
-                    applyDiamondGear(e, 120);
+                if (e != null) {
+                    applyDiamondGear(e, 30);
+                    applyNetherSkin(e, "Wither");
+                }
             }
         } else if (waveId == 2) {
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < mobsToSpawn; i++) {
                 LivingEntity e = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (e != null) {
-                    applyDiamondGear(e, 120);
+                    applyDiamondGear(e, 30);
+                    applyNetherSkin(e, "Demon");
                     if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(2.0);
+                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.0);
                 }
             }
         } else if (waveId == 3) {
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < mobsToSpawn; i++) {
                 LivingEntity e = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
                         Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (e != null) {
-                    applyDiamondGear(e, 200);
+                    applyDiamondGear(e, 50);
+                    applyNetherSkin(e, "Devil");
                     if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(3.0);
+                        e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.5);
                     if (e.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                         e.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.30);
                 }
             }
         } else if (waveId == 4) {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < mobsToSpawn; i++) {
                 LivingEntity s = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
-                if (s != null)
-                    applyDiamondGear(s, 120);
+                if (s != null) {
+                    applyDiamondGear(s, 30);
+                    applyNetherSkin(s, "Wither");
+                }
                 LivingEntity z = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (z != null) {
-                    applyDiamondGear(z, 120);
+                    applyDiamondGear(z, 30);
+                    applyNetherSkin(z, "Demon");
                     if (z.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                        z.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(2.0);
+                        z.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.0);
                 }
                 LivingEntity w = spawnMob(spawnLoc, EntityType.WITHER_SKELETON, "§cAvernus Guard",
                         Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (w != null) {
-                    applyDiamondGear(w, 200);
+                    applyDiamondGear(w, 50);
+                    applyNetherSkin(w, "Devil");
                     if (w.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                        w.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(3.0);
+                        w.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.5);
                 }
             }
             Skeleton archer = (Skeleton) spawnMob(spawnLoc, EntityType.SKELETON, "§6§lThe Gatekeeper (Archer)",
                     Material.BOW,
                     stand.getUniqueId(), mobs);
             if (archer != null) {
-                applyDiamondGear(archer, 400);
+                applyDiamondGear(archer, 200);
+                applyNetherSkin(archer, "Hell");
                 archer.getPersistentDataContainer().set(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
                         PersistentDataType.BYTE, (byte) 1);
                 ItemStack bow = archer.getEquipment().getItemInMainHand();
-                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 5);
-                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, 3);
+                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.POWER, 10);
+                bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.PUNCH, 5);
             }
             WitherSkeleton warrior = (WitherSkeleton) spawnMob(spawnLoc, EntityType.WITHER_SKELETON,
-                    "§6§lThe Gatekeeper (Warrior)", Material.DIAMOND_SWORD, stand.getUniqueId(), mobs);
+                    "§6§lThe Gatekeeper (Warrior)", Material.CHAIN, stand.getUniqueId(), mobs);
             if (warrior != null) {
-                applyDiamondGear(warrior, 250);
+                applyChainmailGear(warrior, 150);
+                applyNetherSkin(warrior, "Diablo");
                 if (warrior.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                     warrior.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40);
                 if (warrior.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                    warrior.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(15.0);
+                    warrior.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(7.0);
                 setupWarriorLogic(warrior);
             }
         }
@@ -635,7 +652,7 @@ public class BossListener implements Listener {
                             warrior.swingMainHand();
                             warrior.getWorld().playSound(warrior.getLocation(), Sound.ENTITY_ZOMBIE_ATTACK_IRON_DOOR,
                                     1f, 0.5f);
-                            target.damage(25, warrior);
+                            target.damage(12, warrior);
                             target.setVelocity(warrior.getLocation().getDirection().multiply(2.5).setY(0.8));
                             target.sendMessage(Component.text("The Gatekeeper SMASHES you away!", NamedTextColor.GOLD)
                                     .decorate(TextDecoration.BOLD));
@@ -644,6 +661,31 @@ public class BossListener implements Listener {
                 }
             }
         }.runTaskTimer(SkillsBoss.getInstance(), 100, 300);
+    }
+
+    private void applyChainmailGear(LivingEntity e, double health) {
+        if (e.getAttribute(Attribute.MAX_HEALTH) != null) {
+            e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(health);
+            e.setHealth(health);
+        }
+        e.getEquipment().setHelmet(new ItemStack(Material.CHAINMAIL_HELMET));
+        e.getEquipment().setChestplate(new ItemStack(Material.CHAINMAIL_CHESTPLATE));
+        e.getEquipment().setLeggings(new ItemStack(Material.CHAINMAIL_LEGGINGS));
+        e.getEquipment().setBoots(new ItemStack(Material.CHAINMAIL_BOOTS));
+
+        e.getEquipment().setHelmetDropChance(0);
+        e.getEquipment().setChestplateDropChance(0);
+        e.getEquipment().setLeggingsDropChance(0);
+        e.getEquipment().setBootsDropChance(0);
+        e.getEquipment().setItemInMainHandDropChance(0);
+    }
+
+    private void applyNetherSkin(LivingEntity e, String playerName) {
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        org.bukkit.inventory.meta.SkullMeta meta = (org.bukkit.inventory.meta.SkullMeta) head.getItemMeta();
+        meta.setOwner(playerName);
+        head.setItemMeta(meta);
+        e.getEquipment().setHelmet(head);
     }
 
     private void applyDiamondGear(LivingEntity e, double health) {
@@ -745,8 +787,8 @@ public class BossListener implements Listener {
         try {
             // Apply attributes with modern 1.21 names
             if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
-                boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(3000);
-                boss.setHealth(3000);
+                boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1500);
+                boss.setHealth(1500);
             }
 
             org.bukkit.attribute.AttributeInstance scaleAttr = boss.getAttribute(Attribute.SCALE);
@@ -801,10 +843,13 @@ public class BossListener implements Listener {
 
         final Location bossSpawnPoint = spawnPoint.clone();
 
+        setupSupremusSpinAttack(boss);
+
         // Boss behavior loop
         new BukkitRunnable() {
             int ticks = 0;
-            boolean guardsSpawned = false;
+            double[] thresholds = {1200, 900, 600, 300, 150};
+            boolean[] spawnedSentinels = new boolean[5];
 
             @Override
             public void run() {
@@ -814,121 +859,33 @@ public class BossListener implements Listener {
                     cancel();
                     return;
                 }
-                suBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 3000.0)));
+                suBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 1500.0)));
 
-                // At 50% HP: shield + freeze + spawn guards
-                if (!guardsSpawned && boss.getHealth() <= 1500) {
-                    guardsSpawned = true;
-                    Bukkit.getLogger().info("[SkillsBoss] Supremus below 50% HP. Spawning guards!");
-                    shieldedBosses.add(boss.getUniqueId());
-                    boss.setInvulnerable(true);
-                    boss.setAI(false);
+                // At 5 thresholds: shield + freeze + spawn one sentinel
+                for (int i = 0; i < 5; i++) {
+                    if (!spawnedSentinels[i] && boss.getHealth() <= thresholds[i]) {
+                        spawnedSentinels[i] = true;
+                        
+                        Bukkit.getLogger().info("[SkillsBoss] Supremus below threshold " + thresholds[i] + "!");
+                        shieldedBosses.add(boss.getUniqueId());
+                        boss.setInvulnerable(true);
+                        boss.setAI(false);
 
-                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2f, 0.3f);
-                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.5f);
-                    boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10, 2, 2, 2, 0);
-                    boss.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), 200, 3, 3, 3, 0.1);
+                        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 2f, 0.3f);
+                        boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.5f);
+                        boss.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, boss.getLocation(), 10, 2, 2, 2, 0);
+                        boss.getWorld().spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), 200, 3, 3, 3, 0.1);
 
-                    Title guardTitle = Title.title(
-                            Component.text("THE GUARD AWAKENS!", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD),
-                            Component.text("Destroy the Sentinels to break the shield!", NamedTextColor.GOLD));
-                    Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(guardTitle));
-                    playerBroadcast(boss.getWorld(),
-                            Component.text("SUPREMUS IS SHIELDED! DESTROY HIS GUARD!", NamedTextColor.GOLD)
-                                    .decorate(TextDecoration.BOLD));
+                        Title guardTitle = Title.title(
+                                Component.text("A SENTINEL AWAKENS!", NamedTextColor.DARK_RED).decorate(TextDecoration.BOLD),
+                                Component.text("Destroy it to break the shield!", NamedTextColor.GOLD));
+                        Bukkit.getOnlinePlayers().forEach(p -> p.showTitle(guardTitle));
+                        playerBroadcast(boss.getWorld(),
+                                Component.text("SUPREMUS IS SHIELDED! DESTROY HIS SENTINEL!", NamedTextColor.GOLD)
+                                        .decorate(TextDecoration.BOLD));
 
-                    // Spawn 5 sentinels in safe locations around the boss
-                    String[] sentinelNames = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel",
-                            "§c§lWar Sentinel", "§8§lShadow Sentinel" };
-                    Material[] sentinelDrops = { Material.DIAMOND_HELMET, Material.DIAMOND_CHESTPLATE,
-                            Material.DIAMOND_LEGGINGS, Material.DIAMOND_BOOTS, Material.DIAMOND_SWORD };
-                    for (int i = 0; i < 5; i++) {
-                        double angle = i * Math.PI * 2 / 5;
-                        Location sLoc = findSafeSpawnLocation(boss.getLocation(), Math.cos(angle) * 6,
-                                Math.sin(angle) * 6);
-
-                        // Lightning at spawn point
-                        boss.getWorld().strikeLightningEffect(sLoc);
-
-                        WitherSkeleton sentinel = (WitherSkeleton) boss.getWorld().spawnEntity(sLoc,
-                                EntityType.WITHER_SKELETON);
-                        sentinel.customName(Component.text(sentinelNames[i]));
-                        sentinel.setCustomNameVisible(true);
-
-                        if (sentinel.getAttribute(Attribute.MAX_HEALTH) != null) {
-                            sentinel.getAttribute(Attribute.MAX_HEALTH).setBaseValue(200);
-                            sentinel.setHealth(200);
-                        }
-                        if (sentinel.getAttribute(Attribute.ATTACK_DAMAGE) != null)
-                            sentinel.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(20.0);
-                        if (sentinel.getAttribute(Attribute.MOVEMENT_SPEED) != null)
-                            sentinel.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
-
-                        sentinel.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
-                        sentinel.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
-                        sentinel.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
-                        sentinel.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
-                        sentinel.getEquipment().setItemInMainHand(new ItemStack(Material.DIAMOND_SWORD));
-                        sentinel.getEquipment().setHelmetDropChance(0f);
-                        sentinel.getEquipment().setChestplateDropChance(0f);
-                        sentinel.getEquipment().setLeggingsDropChance(0f);
-                        sentinel.getEquipment().setBootsDropChance(0f);
-                        sentinel.getEquipment().setItemInMainHandDropChance(0f);
-
-                        // Tag sentinel to drop legendary item
-                        sentinel.getPersistentDataContainer().set(DROP_ITEM_KEY, PersistentDataType.STRING,
-                                sentinelDrops[i].name());
-
-                        ritualTeam.addEntry(sentinel.getUniqueId().toString());
-                        minions.add(sentinel.getUniqueId());
-
-                        // Sentinel ability loop
-                        final int type = i;
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                if (!sentinel.isValid()) {
-                                    cancel();
-                                    return;
-                                }
-                                // Ambient particles
-                                sentinel.getWorld().spawnParticle(Particle.ENCHANT, sentinel.getLocation().add(0, 1, 0),
-                                        5, 0.3, 0.5, 0.3, 0.5);
-                                if (Math.random() < 0.15) {
-                                    try {
-                                        triggerBossAbility(sentinel, type, false);
-                                    } catch (Exception ignored) {
-                                    }
-                                }
-
-                                // Sentinel Laser Attack
-                                Player laserTarget = sentinel.getWorld()
-                                        .getNearbyEntities(sentinel.getLocation(), 15, 15, 15).stream()
-                                        .filter(e -> e instanceof Player
-                                                && ((Player) e).getGameMode() == GameMode.SURVIVAL)
-                                        .map(e -> (Player) e).findFirst().orElse(null);
-
-                                if (laserTarget != null) {
-                                    Location start = sentinel.getEyeLocation();
-                                    Location end = laserTarget.getEyeLocation();
-                                    Vector dir = end.toVector().subtract(start.toVector()).normalize();
-                                    double dist = start.distance(end);
-
-                                    // Visual Beam
-                                    for (double d = 0; d < dist; d += 0.5) {
-                                        sentinel.getWorld().spawnParticle(Particle.DUST,
-                                                start.clone().add(dir.clone().multiply(d)), 1,
-                                                new Particle.DustOptions(org.bukkit.Color.RED, 1.5f));
-                                    }
-                                    sentinel.getWorld().playSound(start, Sound.ENTITY_ZOMBIE_VILLAGER_CONVERTED, 0.5f,
-                                            2f);
-                                    laserTarget.damage(25, sentinel);
-                                }
-                                // Leash to boss area
-                                if (sentinel.getLocation().distance(boss.getLocation()) > 25)
-                                    sentinel.teleport(boss.getLocation());
-                            }
-                        }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
+                        spawnSentinel(boss, i, minions);
+                        break;
                     }
                 }
 
@@ -1299,8 +1256,8 @@ public class BossListener implements Listener {
         boss.setImmuneToZombification(true);
 
         if (boss.getAttribute(Attribute.MAX_HEALTH) != null) {
-            boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(3000.0);
-            boss.setHealth(3000.0);
+            boss.getAttribute(Attribute.MAX_HEALTH).setBaseValue(1500.0);
+            boss.setHealth(1500.0);
         }
         
         org.bukkit.attribute.AttributeInstance scaleAttr = boss.getAttribute(Attribute.SCALE);
@@ -1341,7 +1298,7 @@ public class BossListener implements Listener {
                     cancel();
                     return;
                 }
-                wBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 3000.0)));
+                wBar.setProgress(Math.max(0, Math.min(1, boss.getHealth() / 1500.0)));
 
                 if (ticks % 5 == 0) {
                     boss.getWorld().spawnParticle(Particle.FLAME, boss.getLocation().add(0, 1, 0), 5, 0.5, 0.5, 0.5, 0.05);
@@ -1402,6 +1359,165 @@ public class BossListener implements Listener {
         }.runTaskTimer(SkillsBoss.getInstance(), 20, 5);
     }
     
+    private void setupSupremusSpinAttack(WitherSkeleton boss) {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!boss.isValid()) {
+                    cancel();
+                    return;
+                }
+                if (shieldedBosses.contains(boss.getUniqueId())) return;
+                
+                // Switch target randomly
+                List<Player> targets = boss.getWorld().getNearbyEntities(boss.getLocation(), 20, 20, 20).stream()
+                        .filter(e -> e instanceof Player && ((Player) e).getGameMode() == GameMode.SURVIVAL)
+                        .map(e -> (Player) e).collect(Collectors.toList());
+                if (!targets.isEmpty()) {
+                    boss.setTarget(targets.get(new Random().nextInt(targets.size())));
+                }
+
+                // Periodic spin attack
+                if (Math.random() < 0.25) {
+                    boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 2f, 0.5f);
+                    boss.getWorld().spawnParticle(Particle.SWEEP_ATTACK, boss.getLocation().add(0, 1, 0), 30, 4, 1, 4, 0);
+                    
+                    // Sword landing in a circle
+                    for (int i = 0; i < 8; i++) {
+                        double angle = Math.toRadians(i * 45);
+                        Location dropLoc = boss.getLocation().clone().add(Math.cos(angle) * 5, 5, Math.sin(angle) * 5);
+                        ArmorStand swordStand = (ArmorStand) boss.getWorld().spawnEntity(dropLoc, EntityType.ARMOR_STAND);
+                        swordStand.setVisible(false);
+                        swordStand.setInvulnerable(true);
+                        swordStand.setGravity(true);
+                        swordStand.getEquipment().setItemInMainHand(new ItemStack(Material.NETHERITE_SWORD));
+                        swordStand.setRightArmPose(new EulerAngle(Math.toRadians(180), 0, 0));
+                        
+                        new BukkitRunnable() {
+                            int t = 0;
+                            @Override
+                            public void run() {
+                                if (!swordStand.isValid()) {
+                                    cancel();
+                                    return;
+                                }
+                                if (t++ > 20 || swordStand.isOnGround()) {
+                                    swordStand.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, swordStand.getLocation(), 1, 0.5, 0.5, 0.5, 0);
+                                    swordStand.getWorld().playSound(swordStand.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.5f, 1.5f);
+                                    swordStand.remove();
+                                    cancel();
+                                }
+                            }
+                        }.runTaskTimer(SkillsBoss.getInstance(), 1, 1);
+                    }
+
+                    boss.getNearbyEntities(6, 6, 6).forEach(e -> {
+                        if (e instanceof Player && !e.isOp()) {
+                            ((LivingEntity) e).damage(40, boss);
+                            e.setVelocity(e.getLocation().toVector().subtract(boss.getLocation().toVector()).normalize().multiply(1.5).setY(0.5));
+                        }
+                    });
+                }
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 60, 60);
+    }
+    
+    private void spawnSentinel(WitherSkeleton boss, int i, Set<UUID> minions) {
+        String[] sentinelNames = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel",
+                "§c§lWar Sentinel", "§8§lShadow Sentinel" };
+        String[] skinNames = { "Herobrine", "Lucifer", "Satan", "Reaper", "Entity303" };
+        Material[] sentinelDrops = { Material.DIAMOND_HELMET, Material.DIAMOND_CHESTPLATE,
+                Material.DIAMOND_LEGGINGS, Material.DIAMOND_BOOTS, Material.DIAMOND_SWORD };
+                
+        double angle = i * Math.PI * 2 / 5;
+        Location sLoc = findSafeSpawnLocation(boss.getLocation(), Math.cos(angle) * 6,
+                Math.sin(angle) * 6);
+
+        // Lightning at spawn point
+        boss.getWorld().strikeLightningEffect(sLoc);
+
+        WitherSkeleton sentinel = (WitherSkeleton) boss.getWorld().spawnEntity(sLoc,
+                EntityType.WITHER_SKELETON);
+        sentinel.customName(Component.text(sentinelNames[i]));
+        sentinel.setCustomNameVisible(true);
+
+        if (sentinel.getAttribute(Attribute.MAX_HEALTH) != null) {
+            sentinel.getAttribute(Attribute.MAX_HEALTH).setBaseValue(300);
+            sentinel.setHealth(300);
+        }
+        if (sentinel.getAttribute(Attribute.ATTACK_DAMAGE) != null)
+            sentinel.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(20.0);
+        if (sentinel.getAttribute(Attribute.MOVEMENT_SPEED) != null)
+            sentinel.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
+
+        sentinel.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
+        sentinel.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
+        sentinel.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+        sentinel.getEquipment().setItemInMainHand(new ItemStack(Material.DIAMOND_SWORD));
+        sentinel.getEquipment().setHelmetDropChance(0f);
+        sentinel.getEquipment().setChestplateDropChance(0f);
+        sentinel.getEquipment().setLeggingsDropChance(0f);
+        sentinel.getEquipment().setBootsDropChance(0f);
+        sentinel.getEquipment().setItemInMainHandDropChance(0f);
+        
+        applyNetherSkin(sentinel, skinNames[i]);
+
+        // Tag sentinel to drop legendary item
+        sentinel.getPersistentDataContainer().set(DROP_ITEM_KEY, PersistentDataType.STRING,
+                sentinelDrops[i].name());
+
+        ritualTeam.addEntry(sentinel.getUniqueId().toString());
+        minions.add(sentinel.getUniqueId());
+
+        // Sentinel ability loop
+        final int type = i;
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!sentinel.isValid()) {
+                    cancel();
+                    return;
+                }
+                // Ambient particles
+                sentinel.getWorld().spawnParticle(Particle.ENCHANT, sentinel.getLocation().add(0, 1, 0),
+                        5, 0.3, 0.5, 0.3, 0.5);
+                if (Math.random() < 0.15) {
+                    try {
+                        triggerBossAbility(sentinel, type, false);
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                // Sentinel Laser Attack
+                Player laserTarget = sentinel.getWorld()
+                        .getNearbyEntities(sentinel.getLocation(), 15, 15, 15).stream()
+                        .filter(e -> e instanceof Player
+                                && ((Player) e).getGameMode() == GameMode.SURVIVAL)
+                        .map(e -> (Player) e).findFirst().orElse(null);
+
+                if (laserTarget != null) {
+                    Location start = sentinel.getEyeLocation();
+                    Location end = laserTarget.getEyeLocation();
+                    Vector dir = end.toVector().subtract(start.toVector()).normalize();
+                    double dist = start.distance(end);
+
+                    // Visual Beam
+                    for (double d = 0; d < dist; d += 0.5) {
+                        sentinel.getWorld().spawnParticle(Particle.DUST,
+                                start.clone().add(dir.clone().multiply(d)), 1,
+                                new Particle.DustOptions(org.bukkit.Color.RED, 1.5f));
+                    }
+                    sentinel.getWorld().playSound(start, Sound.ENTITY_ZOMBIE_VILLAGER_CONVERTED, 0.5f,
+                            2f);
+                    laserTarget.damage(25, sentinel);
+                }
+                // Leash to boss area
+                if (sentinel.getLocation().distance(boss.getLocation()) > 25)
+                    sentinel.teleport(boss.getLocation());
+            }
+        }.runTaskTimer(SkillsBoss.getInstance(), 20, 20);
+    }
+
     public void startWarlordEvent(org.bukkit.World world) {
         if (!world.getEnvironment().equals(org.bukkit.World.Environment.NETHER)) {
             playerBroadcast(world, Component.text("The Warlord event can only begin in the Nether!", NamedTextColor.RED));
@@ -1422,8 +1538,8 @@ public class BossListener implements Listener {
             spawner.setCustomNameVisible(true);
             spawner.setAI(false);
             if (spawner.getAttribute(Attribute.MAX_HEALTH) != null) {
-                spawner.getAttribute(Attribute.MAX_HEALTH).setBaseValue(400);
-                spawner.setHealth(400);
+                spawner.getAttribute(Attribute.MAX_HEALTH).setBaseValue(200);
+                spawner.setHealth(200);
             }
             warlordSpawners.add(spawner.getUniqueId());
             world.strikeLightningEffect(sLoc);
