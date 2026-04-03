@@ -526,9 +526,11 @@ public class BossListener implements Listener {
 
     private void spawnWave(Entity stand, int waveId) {
         Location altarLoc = stand.getLocation();
-        Location spawnLoc = findNearbySpawner(altarLoc);
-        if (spawnLoc == null)
-            spawnLoc = altarLoc; // Fallback
+        Location baseSpawnLoc = findNearbySpawner(altarLoc);
+        if (baseSpawnLoc == null)
+            baseSpawnLoc = altarLoc; // Fallback
+            
+        final Location spawnLoc = baseSpawnLoc;
 
         // Spawn shockwave animation
         spawnLoc.getWorld().strikeLightningEffect(spawnLoc);
@@ -542,13 +544,19 @@ public class BossListener implements Listener {
         }
 
         Set<UUID> mobs = activeWaveMobs.get(stand.getUniqueId());
+        String B64_CORRUPT_SKELETON = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZGY5NWZkYTdkZmRjNDVhYTQ0MDY1OGM5NjQxMGQ0YjMyOTBkMzI2ZmNiNjYzNDEwNmU2MzBmZGYxNmJkNTcyIn19fQ==";
+        String B64_CORRUPT_PALADIN = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDAyNjgzMzFhNzkxODA5OTQyNGUzN2IyNjYwOWY3OGE1ZTE1MmU0NjZlZDBkNTQ2ZmRlZjI2NDczZDYyYzdhZiJ9fX0=";
+        String B64_DARK_KNIGHT = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTk1MmM2YjAyM2I3ZjE5YjA4Yjc3NDlkZGMzNGQ5NTc4ZDAyODc3N2JiZGQ2MDAxMmUwMTgzZTY5NjUxYWQ4OSJ9fX0=";
+        String B64_BLOOD_CULTIST = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzViMjM2YmFlNDdhMjJlZDU3NzA0ZDliNDhjZmE3ODdhZWQ4NzIyMTFlZWNmODZlMDBiM2MwZDA4Nzg3NWFjNSJ9fX0=";
+        String B64_BLACK_KNIGHT = "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTBhYjg5NWM2M2U5MGZkNTY4MDM5NGVhZWRhYTFiNTRiMTM4ZWZlYmIzMTg0ZDI4OGM3NmU1M2IyM2I5MWQyZCJ9fX0=";
+        
         if (waveId == 1) {
             for (int i = 0; i < mobsToSpawn; i++) {
                 LivingEntity e = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 if (e != null) {
-                    applyDiamondGear(e, 30);
-                    applyNetherSkin(e, "Wither");
+                    applyCorruptedArmor(e, 30);
+                    applyBase64Skin(e, B64_CORRUPT_SKELETON);
                 }
             }
         } else if (waveId == 2) {
@@ -556,8 +564,8 @@ public class BossListener implements Listener {
                 LivingEntity e = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (e != null) {
-                    applyDiamondGear(e, 30);
-                    applyNetherSkin(e, "Demon");
+                    applyCorruptedArmor(e, 30);
+                    applyBase64Skin(e, B64_CORRUPT_PALADIN);
                     if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
                         e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.0);
                 }
@@ -568,8 +576,8 @@ public class BossListener implements Listener {
                         Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (e != null) {
-                    applyDiamondGear(e, 50);
-                    applyNetherSkin(e, "Devil");
+                    applyCorruptedArmor(e, 50);
+                    applyBase64Skin(e, B64_BLACK_KNIGHT);
                     if (e.getAttribute(Attribute.ATTACK_DAMAGE) != null)
                         e.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.5);
                     if (e.getAttribute(Attribute.MOVEMENT_SPEED) != null)
@@ -581,14 +589,14 @@ public class BossListener implements Listener {
                 LivingEntity s = spawnMob(spawnLoc, EntityType.SKELETON, "§eFallen Sentry", Material.BOW,
                         stand.getUniqueId(), mobs);
                 if (s != null) {
-                    applyDiamondGear(s, 30);
-                    applyNetherSkin(s, "Wither");
+                    applyCorruptedArmor(s, 30);
+                    applyBase64Skin(s, B64_CORRUPT_SKELETON);
                 }
                 LivingEntity z = spawnMob(spawnLoc, EntityType.ZOMBIE, "§9Undead Sentinel", Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (z != null) {
-                    applyDiamondGear(z, 30);
-                    applyNetherSkin(z, "Demon");
+                    applyCorruptedArmor(z, 30);
+                    applyBase64Skin(z, B64_CORRUPT_PALADIN);
                     if (z.getAttribute(Attribute.ATTACK_DAMAGE) != null)
                         z.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.0);
                 }
@@ -596,8 +604,8 @@ public class BossListener implements Listener {
                         Material.DIAMOND_SWORD,
                         stand.getUniqueId(), mobs);
                 if (w != null) {
-                    applyDiamondGear(w, 50);
-                    applyNetherSkin(w, "Devil");
+                    applyCorruptedArmor(w, 50);
+                    applyBase64Skin(w, B64_BLACK_KNIGHT);
                     if (w.getAttribute(Attribute.ATTACK_DAMAGE) != null)
                         w.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(1.5);
                 }
@@ -606,8 +614,8 @@ public class BossListener implements Listener {
                     Material.BOW,
                     stand.getUniqueId(), mobs);
             if (archer != null) {
-                applyDiamondGear(archer, 200);
-                applyNetherSkin(archer, "Hell");
+                applyCorruptedArmor(archer, 200);
+                applyBase64Skin(archer, B64_BLOOD_CULTIST);
                 archer.getPersistentDataContainer().set(new NamespacedKey(SkillsBoss.getInstance(), "explosive_arrow"),
                         PersistentDataType.BYTE, (byte) 1);
                 ItemStack bow = archer.getEquipment().getItemInMainHand();
@@ -617,8 +625,8 @@ public class BossListener implements Listener {
             WitherSkeleton warrior = (WitherSkeleton) spawnMob(spawnLoc, EntityType.WITHER_SKELETON,
                     "§6§lThe Gatekeeper (Warrior)", Material.CHAIN, stand.getUniqueId(), mobs);
             if (warrior != null) {
-                applyChainmailGear(warrior, 150);
-                applyNetherSkin(warrior, "Diablo");
+                applyCorruptedArmor(warrior, 150);
+                applyBase64Skin(warrior, B64_DARK_KNIGHT);
                 if (warrior.getAttribute(Attribute.MOVEMENT_SPEED) != null)
                     warrior.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.40);
                 if (warrior.getAttribute(Attribute.ATTACK_DAMAGE) != null)
@@ -680,23 +688,54 @@ public class BossListener implements Listener {
         e.getEquipment().setItemInMainHandDropChance(0);
     }
 
-    private void applyNetherSkin(LivingEntity e, String playerName) {
+    private void applyBase64Skin(LivingEntity e, String base64) {
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         org.bukkit.inventory.meta.SkullMeta meta = (org.bukkit.inventory.meta.SkullMeta) head.getItemMeta();
-        meta.setOwner(playerName);
-        head.setItemMeta(meta);
-        e.getEquipment().setHelmet(head);
+        org.bukkit.profile.PlayerProfile profile = org.bukkit.Bukkit.createPlayerProfile(java.util.UUID.randomUUID());
+        try {
+            String decoded = new String(java.util.Base64.getDecoder().decode(base64));
+            String url = decoded.substring(decoded.indexOf("\"url\":\"") + 7);
+            url = url.substring(0, url.indexOf("\""));
+            org.bukkit.profile.PlayerTextures textures = profile.getTextures();
+            textures.setSkin(new java.net.URL(url));
+            profile.setTextures(textures);
+            meta.setOwnerProfile(profile);
+            head.setItemMeta(meta);
+            e.getEquipment().setHelmet(head);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
-    private void applyDiamondGear(LivingEntity e, double health) {
+    private void applyCorruptedArmor(LivingEntity e, double health) {
         if (e.getAttribute(Attribute.MAX_HEALTH) != null) {
             e.getAttribute(Attribute.MAX_HEALTH).setBaseValue(health);
             e.setHealth(health);
         }
-        e.getEquipment().setHelmet(new ItemStack(Material.DIAMOND_HELMET));
-        e.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
-        e.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
-        e.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+        
+        ItemStack chest = new ItemStack(Material.LEATHER_CHESTPLATE);
+        ItemStack legs = new ItemStack(Material.LEATHER_LEGGINGS);
+        ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
+        
+        org.bukkit.inventory.meta.LeatherArmorMeta armMeta;
+        
+        for (ItemStack item : new ItemStack[]{chest, legs, boots}) {
+            armMeta = (org.bukkit.inventory.meta.LeatherArmorMeta) item.getItemMeta();
+            armMeta.setColor(org.bukkit.Color.fromRGB(30, 30, 30));
+            org.bukkit.inventory.meta.trim.ArmorMeta trimMeta = (org.bukkit.inventory.meta.trim.ArmorMeta) armMeta;
+            trimMeta.setTrim(new org.bukkit.inventory.meta.trim.ArmorTrim(org.bukkit.inventory.meta.trim.TrimMaterial.REDSTONE, org.bukkit.inventory.meta.trim.TrimPattern.SILENCE));
+            item.setItemMeta(armMeta);
+        }
+        
+        e.getEquipment().setChestplate(chest);
+        e.getEquipment().setLeggings(legs);
+        e.getEquipment().setBoots(boots);
+
+        e.getEquipment().setHelmetDropChance(0);
+        e.getEquipment().setChestplateDropChance(0);
+        e.getEquipment().setLeggingsDropChance(0);
+        e.getEquipment().setBootsDropChance(0);
+        e.getEquipment().setItemInMainHandDropChance(0);
 
         if (e instanceof Skeleton) {
             ItemStack bow = e.getEquipment().getItemInMainHand();
@@ -705,12 +744,6 @@ public class BossListener implements Listener {
                 bow.addUnsafeEnchantment(org.bukkit.enchantments.Enchantment.FLAME, 1);
             }
         }
-
-        e.getEquipment().setHelmetDropChance(0);
-        e.getEquipment().setChestplateDropChance(0);
-        e.getEquipment().setLeggingsDropChance(0);
-        e.getEquipment().setBootsDropChance(0);
-        e.getEquipment().setItemInMainHandDropChance(0);
     }
 
     public static void spawnManualRitual(Location loc) {
@@ -1425,7 +1458,13 @@ public class BossListener implements Listener {
     private void spawnSentinel(WitherSkeleton boss, int i, Set<UUID> minions) {
         String[] sentinelNames = { "§4§lCrimson Sentinel", "§5§lVoid Sentinel", "§1§lFrost Sentinel",
                 "§c§lWar Sentinel", "§8§lShadow Sentinel" };
-        String[] skinNames = { "Herobrine", "Lucifer", "Satan", "Reaper", "Entity303" };
+        String[] skinNames = { 
+            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZGY5NWZkYTdkZmRjNDVhYTQ0MDY1OGM5NjQxMGQ0YjMyOTBkMzI2ZmNiNjYzNDEwNmU2MzBmZGYxNmJkNTcyIn19fQ==", 
+            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDAyNjgzMzFhNzkxODA5OTQyNGUzN2IyNjYwOWY3OGE1ZTE1MmU0NjZlZDBkNTQ2ZmRlZjI2NDczZDYyYzdhZiJ9fX0=", 
+            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMTk1MmM2YjAyM2I3ZjE5YjA4Yjc3NDlkZGMzNGQ5NTc4ZDAyODc3N2JiZGQ2MDAxMmUwMTgzZTY5NjUxYWQ4OSJ9fX0=", 
+            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvMzViMjM2YmFlNDdhMjJlZDU3NzA0ZDliNDhjZmE3ODdhZWQ4NzIyMTFlZWNmODZlMDBiM2MwZDA4Nzg3NWFjNSJ9fX0=", 
+            "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvOTBhYjg5NWM2M2U5MGZkNTY4MDM5NGVhZWRhYTFiNTRiMTM4ZWZlYmIzMTg0ZDI4OGM3NmU1M2IyM2I5MWQyZCJ9fX0=" 
+        };
         Material[] sentinelDrops = { Material.DIAMOND_HELMET, Material.DIAMOND_CHESTPLATE,
                 Material.DIAMOND_LEGGINGS, Material.DIAMOND_BOOTS, Material.DIAMOND_SWORD };
                 
@@ -1441,26 +1480,15 @@ public class BossListener implements Listener {
         sentinel.customName(Component.text(sentinelNames[i]));
         sentinel.setCustomNameVisible(true);
 
-        if (sentinel.getAttribute(Attribute.MAX_HEALTH) != null) {
-            sentinel.getAttribute(Attribute.MAX_HEALTH).setBaseValue(300);
-            sentinel.setHealth(300);
-        }
+        applyCorruptedArmor(sentinel, 300);
+
         if (sentinel.getAttribute(Attribute.ATTACK_DAMAGE) != null)
             sentinel.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(20.0);
         if (sentinel.getAttribute(Attribute.MOVEMENT_SPEED) != null)
             sentinel.getAttribute(Attribute.MOVEMENT_SPEED).setBaseValue(0.35);
 
-        sentinel.getEquipment().setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
-        sentinel.getEquipment().setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
-        sentinel.getEquipment().setBoots(new ItemStack(Material.DIAMOND_BOOTS));
         sentinel.getEquipment().setItemInMainHand(new ItemStack(Material.DIAMOND_SWORD));
-        sentinel.getEquipment().setHelmetDropChance(0f);
-        sentinel.getEquipment().setChestplateDropChance(0f);
-        sentinel.getEquipment().setLeggingsDropChance(0f);
-        sentinel.getEquipment().setBootsDropChance(0f);
-        sentinel.getEquipment().setItemInMainHandDropChance(0f);
-        
-        applyNetherSkin(sentinel, skinNames[i]);
+        applyBase64Skin(sentinel, skinNames[i]);
 
         // Tag sentinel to drop legendary item
         sentinel.getPersistentDataContainer().set(DROP_ITEM_KEY, PersistentDataType.STRING,
