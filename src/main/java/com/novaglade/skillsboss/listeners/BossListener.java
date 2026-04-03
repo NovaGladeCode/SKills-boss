@@ -722,7 +722,7 @@ public class BossListener implements Listener {
         for (ItemStack item : new ItemStack[]{chest, legs, boots}) {
             armMeta = (org.bukkit.inventory.meta.LeatherArmorMeta) item.getItemMeta();
             armMeta.setColor(org.bukkit.Color.fromRGB(30, 30, 30));
-            org.bukkit.inventory.meta.trim.ArmorMeta trimMeta = (org.bukkit.inventory.meta.trim.ArmorMeta) armMeta;
+            org.bukkit.inventory.meta.ArmorMeta trimMeta = (org.bukkit.inventory.meta.ArmorMeta) armMeta;
             trimMeta.setTrim(new org.bukkit.inventory.meta.trim.ArmorTrim(org.bukkit.inventory.meta.trim.TrimMaterial.REDSTONE, org.bukkit.inventory.meta.trim.TrimPattern.SILENCE));
             item.setItemMeta(armMeta);
         }
