@@ -46,7 +46,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         switch (subCommand) {
             case "progression":
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Usage: /admin progression <0|1|2|reset>", NamedTextColor.RED));
+                    sender.sendMessage(Component.text("Usage: /admin progression <0|1|2|3|reset>", NamedTextColor.RED));
                     return true;
                 }
                 if (args[1].equalsIgnoreCase("reset")) {
@@ -104,6 +104,28 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                         } else {
                             sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
                         }
+                    } else if (level == 3) {
+                        if (sender instanceof Player) {
+                            Player p = (Player) sender;
+                            SkillsBoss.setProgressionLevel(3);
+                            String worldName = "world_the_end";
+                            World targetWorld = Bukkit.getWorld(worldName);
+                            if (targetWorld == null) {
+                                targetWorld = Bukkit.getWorlds().stream().filter(w -> w.getEnvironment() == World.Environment.THE_END).findFirst().orElse(null);
+                            }
+                            if (targetWorld != null) {
+                                p.teleport(targetWorld.getSpawnLocation());
+                                sender.sendMessage(Component.text("Progression III: The Void Awakens. Teleported to the End.", NamedTextColor.GREEN));
+                                p.showTitle(net.kyori.adventure.title.Title.title(
+                                    Component.text("PROGRESSION III", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD),
+                                    Component.text("THE NECROMANCER STIRS", NamedTextColor.GRAY)
+                                ));
+                            } else {
+                                sender.sendMessage(Component.text("Could not find The End world.", NamedTextColor.RED));
+                            }
+                        } else {
+                            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+                        }
                     } else {
                         sender.sendMessage(Component.text("Invalid level.", NamedTextColor.RED));
                     }
@@ -133,6 +155,12 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                         if (targetWorld != null) {
                             p.teleport(targetWorld.getSpawnLocation());
                             sender.sendMessage(Component.text("Set Progression to " + level + " and teleported to " + targetWorld.getName(), NamedTextColor.GREEN));
+                            if (level == 3) {
+                                p.showTitle(net.kyori.adventure.title.Title.title(
+                                    Component.text("PROGRESSION III", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD),
+                                    Component.text("THE NECROMANCER STIRS", NamedTextColor.GRAY)
+                                ));
+                            }
                         } else {
                             sender.sendMessage(Component.text("Set Progression to " + level + " but could not find target dimension.", NamedTextColor.YELLOW));
                         }
@@ -140,7 +168,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                         sender.sendMessage(Component.text("Invalid number.", NamedTextColor.RED));
                     }
                 } else {
-                    sender.sendMessage(Component.text("Usage: /admin test progression <0|1|2>", NamedTextColor.RED));
+                    sender.sendMessage(Component.text("Usage: /admin test progression <0|1|2|3>", NamedTextColor.RED));
                 }
                 break;
             case "setprog":
@@ -579,8 +607,12 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                 BossListener.spawnWarlordBoss(p.getLocation());
                 sender.sendMessage(Component.text("Warlord Boss spawned at your location!", NamedTextColor.GREEN));
                 break;
+            case "necromancer":
+                new com.novaglade.skillsboss.listeners.NecromancerBoss().spawnNecromancer(p.getLocation());
+                sender.sendMessage(Component.text("Necromancer Boss spawning at your location!", NamedTextColor.GREEN));
+                break;
             default:
-                sender.sendMessage(Component.text("Unknown boss type. Options: supremus, warlord", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Unknown boss type. Options: supremus, warlord, necromancer", NamedTextColor.RED));
                 break;
         }
     }
@@ -997,7 +1029,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                     completions.add("reset");
                     break;
                 case "boss":
-                    completions.addAll(Arrays.asList("supremus", "warlord"));
+                    completions.addAll(Arrays.asList("supremus", "warlord", "necromancer"));
                     break;
                 case "warlord":
                     completions.add("event");
@@ -1026,12 +1058,12 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                     completions.addAll(Arrays.asList("day", "noon", "night", "midnight"));
                     break;
                 case "setprog":
-                    completions.addAll(Arrays.asList("-1", "0", "1", "2"));
+                    completions.addAll(Arrays.asList("-1", "0", "1", "2", "3"));
                     break;
             }
         } else if (args.length == 3) {
             if (args[0].equalsIgnoreCase("test") && args[1].equalsIgnoreCase("progression")) {
-                completions.addAll(Arrays.asList("0", "1", "2"));
+                completions.addAll(Arrays.asList("0", "1", "2", "3"));
             }
         }
 

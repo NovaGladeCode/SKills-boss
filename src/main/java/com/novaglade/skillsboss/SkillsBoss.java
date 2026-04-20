@@ -47,6 +47,7 @@ public class SkillsBoss extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new com.novaglade.skillsboss.listeners.ProgressionListener(),
                 this);
         getServer().getPluginManager().registerEvents(new com.novaglade.skillsboss.listeners.DeathListener(), this);
+        getServer().getPluginManager().registerEvents(new com.novaglade.skillsboss.listeners.NecromancerBoss(), this);
     }
 
     private void registerCustomRecipes() {
