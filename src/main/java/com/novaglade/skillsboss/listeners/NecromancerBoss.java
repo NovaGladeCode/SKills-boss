@@ -33,15 +33,21 @@ public class NecromancerBoss implements Listener {
     private final Set<UUID> activeBosses = new HashSet<>();
 
     @EventHandler
-    public void onDragonSpawn(CreatureSpawnEvent event) {
-        if (event.getEntityType() == EntityType.ENDER_DRAGON && event.getLocation().getWorld().getEnvironment() == World.Environment.THE_END) {
-            // Cancel dragon spawn regardless
+    public void onEntitySpawn(CreatureSpawnEvent event) {
+        if (event.getEntityType() == EntityType.ENDER_DRAGON) {
             event.setCancelled(true);
-            
-            Location loc = event.getLocation();
-            // Spawn high in the air
-            Location spawnLoc = new Location(loc.getWorld(), 0, 75, 0); 
-            spawnNecromancer(spawnLoc);
+        }
+    }
+
+    @EventHandler
+    public void onPlayerChangedWorld(org.bukkit.event.player.PlayerChangedWorldEvent event) {
+        if (event.getPlayer().getWorld().getEnvironment() == World.Environment.THE_END) {
+            // Remove pre-existing dragons and crystals
+            for (Entity e : event.getPlayer().getWorld().getEntities()) {
+                if (e instanceof EnderDragon || e instanceof EnderCrystal) {
+                    e.remove();
+                }
+            }
         }
     }
 
@@ -79,46 +85,41 @@ public class NecromancerBoss implements Listener {
     }
 
     private void actualSpawn(Location loc) {
-        // Create the base logic entity (an invisible Vither or Zombie)
-        // We use a Zombie for simple AI, but set its health high.
-        Zombie logicEntity = (Zombie) loc.getWorld().spawnEntity(loc, EntityType.ZOMBIE);
-        logicEntity.setInvisible(true);
+        WitherSkeleton logicEntity = (WitherSkeleton) loc.getWorld().spawnEntity(loc, EntityType.WITHER_SKELETON);
+        logicEntity.setInvisible(false);
         logicEntity.setSilent(true);
         logicEntity.setInvulnerable(false);
         logicEntity.setPersistent(true);
         logicEntity.getPersistentDataContainer().set(BOSS_KEY, PersistentDataType.BYTE, (byte) 1);
         
-        // Remove default equipment
         logicEntity.getEquipment().clear();
+        logicEntity.getEquipment().setHelmet(new ItemStack(Material.WITHER_SKELETON_SKULL));
+        logicEntity.getEquipment().setChestplate(new ItemStack(Material.NETHERITE_CHESTPLATE));
+        logicEntity.getEquipment().setLeggings(new ItemStack(Material.NETHERITE_LEGGINGS));
+        logicEntity.getEquipment().setBoots(new ItemStack(Material.NETHERITE_BOOTS));
+
+        ItemStack weapon = new ItemStack(Material.NETHERITE_HOE);
+        org.bukkit.inventory.meta.ItemMeta weaponMeta = weapon.getItemMeta();
+        weaponMeta.addEnchant(org.bukkit.enchantments.Enchantment.SHARPNESS, 5, true);
+        weapon.setItemMeta(weaponMeta);
+        logicEntity.getEquipment().setItemInMainHand(weapon);
         
-        // Attributes
         logicEntity.getAttribute(Attribute.MAX_HEALTH).setBaseValue(2500);
         logicEntity.setHealth(2500);
-        logicEntity.getAttribute(Attribute.SCALE).setBaseValue(3.0); // Make it big
+        if (logicEntity.getAttribute(Attribute.SCALE) != null) {
+             logicEntity.getAttribute(Attribute.SCALE).setBaseValue(2.0);
+        }
         logicEntity.getAttribute(Attribute.FOLLOW_RANGE).setBaseValue(100);
         logicEntity.getAttribute(Attribute.KNOCKBACK_RESISTANCE).setBaseValue(1.0);
 
-        // Custom Model using ItemDisplay
-        ItemDisplay modelDisplay = (ItemDisplay) loc.getWorld().spawnEntity(loc, EntityType.ITEM_DISPLAY);
-        modelDisplay.setItemStack(createModelItem());
-        modelDisplay.getTransformation().getScale().set(4, 4, 4); // Scale up the model
-        modelDisplay.setBillboard(Display.Billboard.CENTER); // Always face player? Or vertical?
-        
-        // Logic to keep model connected to entity
+        // Aura effect directly on the boss
         new BukkitRunnable() {
             @Override
             public void run() {
                 if (!logicEntity.isValid() || logicEntity.isDead()) {
-                    modelDisplay.remove();
                     cancel();
                     return;
                 }
-                // Floating effect: oscillate the Y offset
-                double offset = Math.sin(System.currentTimeMillis() / 500.0) * 0.5;
-                Location newLoc = logicEntity.getLocation().add(0, 2.5 + offset, 0);
-                modelDisplay.teleport(newLoc);
-                
-                // Particle aura
                 logicEntity.getWorld().spawnParticle(Particle.SOUL, logicEntity.getLocation().add(0, 1.5, 0), 3, 1, 1, 1, 0.02);
             }
         }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
@@ -144,17 +145,7 @@ public class NecromancerBoss implements Listener {
         startBossTask(logicEntity);
     }
 
-    private ItemStack createModelItem() {
-        // Using a Phantom Membrane as a base for the custom model
-        ItemStack item = new ItemStack(Material.PHANTOM_MEMBRANE);
-        ItemMeta meta = item.getItemMeta();
-        meta.setCustomModelData(10001); // Set the custom model data for the user to use
-        meta.displayName(Component.text("Necromancer Visual", NamedTextColor.RED));
-        item.setItemMeta(meta);
-        return item;
-    }
-
-    private void startBossTask(Zombie boss) {
+    private void startBossTask(WitherSkeleton boss) {
         new BukkitRunnable() {
             int summonCooldown = 0;
             int attackTicks = 0;
@@ -208,7 +199,7 @@ public class NecromancerBoss implements Listener {
         }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
-    private void performLevitation(Zombie boss) {
+    private void performLevitation(WitherSkeleton boss) {
         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_EVOKER_CAST_SPELL, 2f, 0.5f);
         boss.getWorld().getPlayers().stream()
             .filter(p -> p.getLocation().distanceSquared(boss.getLocation()) < 400)
@@ -218,7 +209,7 @@ public class NecromancerBoss implements Listener {
             });
     }
 
-    private void performSummon(Zombie boss) {
+    private void performSummon(WitherSkeleton boss) {
         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_EVOKER_PREPARE_SUMMON, 2f, 0.5f);
         boss.getWorld().spawnParticle(Particle.GLOW, boss.getLocation(), 100, 5, 2, 5, 0.1);
 
@@ -276,7 +267,7 @@ public class NecromancerBoss implements Listener {
         }.runTaskTimer(SkillsBoss.getInstance(), 0, 1);
     }
 
-    private void performSoulBlast(Zombie boss) {
+    private void performSoulBlast(WitherSkeleton boss) {
         Player target = boss.getWorld().getPlayers().stream()
             .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(boss.getLocation())))
             .orElse(null);
@@ -293,7 +284,7 @@ public class NecromancerBoss implements Listener {
     public void onBossDamage(EntityDamageByEntityEvent event) {
         if (activeBosses.contains(event.getEntity().getUniqueId())) {
             // Boss takes damage
-            Zombie boss = (Zombie) event.getEntity();
+            WitherSkeleton boss = (WitherSkeleton) event.getEntity();
             boss.getWorld().spawnParticle(Particle.WITCH, boss.getLocation().add(0, 1.5, 0), 20, 0.5, 0.5, 0.5, 0.05);
             boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_ZOMBIE_HURT, 1f, 0.5f);
         }
