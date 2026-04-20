@@ -38,13 +38,10 @@ public class NecromancerBoss implements Listener {
             // Cancel dragon spawn regardless
             event.setCancelled(true);
             
-            // Only spawn Necromancer if progression level is at least 3
-            if (SkillsBoss.getProgressionLevel() >= 3) {
-                Location loc = event.getLocation();
-                // Spawn high in the air
-                Location spawnLoc = new Location(loc.getWorld(), 0, 75, 0); 
-                spawnNecromancer(spawnLoc);
-            }
+            Location loc = event.getLocation();
+            // Spawn high in the air
+            Location spawnLoc = new Location(loc.getWorld(), 0, 75, 0); 
+            spawnNecromancer(spawnLoc);
         }
     }
 

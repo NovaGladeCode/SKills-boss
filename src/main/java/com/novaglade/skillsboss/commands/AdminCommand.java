@@ -46,12 +46,12 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         switch (subCommand) {
             case "progression":
                 if (args.length < 2) {
-                    sender.sendMessage(Component.text("Usage: /admin progression <0|1|2|3|reset>", NamedTextColor.RED));
+                    sender.sendMessage(Component.text("Usage: /admin progression <0|1|2|disable>", NamedTextColor.RED));
                     return true;
                 }
-                if (args[1].equalsIgnoreCase("reset")) {
+                if (args[1].equalsIgnoreCase("disable") || args[1].equalsIgnoreCase("reset")) {
                     SkillsBoss.setProgressionLevel(-1);
-                    sender.sendMessage(Component.text("Progression reset to -1.", NamedTextColor.GREEN));
+                    sender.sendMessage(Component.text("Progression disabled. All restrictions lifted.", NamedTextColor.GREEN));
                     return true;
                 }
                 try {
@@ -104,28 +104,6 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                         } else {
                             sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
                         }
-                    } else if (level == 3) {
-                        if (sender instanceof Player) {
-                            Player p = (Player) sender;
-                            SkillsBoss.setProgressionLevel(3);
-                            String worldName = "world_the_end";
-                            World targetWorld = Bukkit.getWorld(worldName);
-                            if (targetWorld == null) {
-                                targetWorld = Bukkit.getWorlds().stream().filter(w -> w.getEnvironment() == World.Environment.THE_END).findFirst().orElse(null);
-                            }
-                            if (targetWorld != null) {
-                                p.teleport(targetWorld.getSpawnLocation());
-                                sender.sendMessage(Component.text("Progression III: The Void Awakens. Teleported to the End.", NamedTextColor.GREEN));
-                                p.showTitle(net.kyori.adventure.title.Title.title(
-                                    Component.text("PROGRESSION III", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD),
-                                    Component.text("THE NECROMANCER STIRS", NamedTextColor.GRAY)
-                                ));
-                            } else {
-                                sender.sendMessage(Component.text("Could not find The End world.", NamedTextColor.RED));
-                            }
-                        } else {
-                            sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
-                        }
                     } else {
                         sender.sendMessage(Component.text("Invalid level.", NamedTextColor.RED));
                     }
@@ -155,12 +133,6 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                         if (targetWorld != null) {
                             p.teleport(targetWorld.getSpawnLocation());
                             sender.sendMessage(Component.text("Set Progression to " + level + " and teleported to " + targetWorld.getName(), NamedTextColor.GREEN));
-                            if (level == 3) {
-                                p.showTitle(net.kyori.adventure.title.Title.title(
-                                    Component.text("PROGRESSION III", NamedTextColor.DARK_PURPLE, TextDecoration.BOLD),
-                                    Component.text("THE NECROMANCER STIRS", NamedTextColor.GRAY)
-                                ));
-                            }
                         } else {
                             sender.sendMessage(Component.text("Set Progression to " + level + " but could not find target dimension.", NamedTextColor.YELLOW));
                         }
@@ -168,7 +140,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                         sender.sendMessage(Component.text("Invalid number.", NamedTextColor.RED));
                     }
                 } else {
-                    sender.sendMessage(Component.text("Usage: /admin test progression <0|1|2|3>", NamedTextColor.RED));
+                    sender.sendMessage(Component.text("Usage: /admin test progression <0|1|2>", NamedTextColor.RED));
                 }
                 break;
             case "setprog":
@@ -218,6 +190,25 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                 break;
             case "tp":
                 handleTeleport(sender, args);
+                break;
+            case "end":
+                if (sender instanceof Player) {
+                    Player targetPlayer = (Player) sender;
+                    World targetEndWorld = Bukkit.getWorld("world_the_end");
+                    if (targetEndWorld == null) {
+                        targetEndWorld = Bukkit.getWorlds().stream()
+                                .filter(w -> w.getEnvironment() == World.Environment.THE_END)
+                                .findFirst().orElse(null);
+                    }
+                    if (targetEndWorld != null) {
+                        targetPlayer.teleport(targetEndWorld.getSpawnLocation());
+                        sender.sendMessage(Component.text("Teleported to The End!", NamedTextColor.GREEN));
+                    } else {
+                        sender.sendMessage(Component.text("Could not find The End world.", NamedTextColor.RED));
+                    }
+                } else {
+                    sender.sendMessage(Component.text("Must be run by player.", NamedTextColor.RED));
+                }
                 break;
             case "status":
                 handleStatus(sender);
@@ -1014,7 +1005,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             completions.addAll(Arrays.asList(
                     "progression", "setprog", "test", "altar", "boss", "warlord",
-                    "trader", "killall", "heal", "tp", "give", "status",
+                    "trader", "killall", "heal", "tp", "end", "status", "give",
                     "wb", "god", "time", "reload", "version"
             ));
         } else if (args.length == 2) {
